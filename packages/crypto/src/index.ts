@@ -1,4 +1,3 @@
-// @agentreceipts/crypto
-// Ed25519 signing and verification for the Action Receipt Protocol
-// Will be implemented in Phase 1
-export {}
+export { canonicalize } from './canonical'
+export { signReceipt, verifyReceipt, getSignablePayload } from './sign'
+export { generateKeyPair, getPublicKeyFromPrivate } from './keys'

@@ -1,5 +1,15 @@
 #!/usr/bin/env npx tsx
-// CLI: npx @agentreceipts/crypto generate-keys
-// Generates an Ed25519 key pair for receipt signing.
-// Will be implemented in Phase 1.
-console.log('@agentreceipts/crypto — key generation will be available in Phase 1')
+import { generateKeyPair } from '../src/keys'
+
+function main() {
+  const { privateKey, publicKey } = generateKeyPair()
+
+  console.log('\nAgent Receipts — Ed25519 Key Pair Generated\n')
+  console.log('Add these to your .env file:\n')
+  console.log(`RECEIPT_SIGNING_PRIVATE_KEY=${privateKey}`)
+  console.log(`RECEIPT_SIGNING_PUBLIC_KEY=${publicKey}`)
+  console.log('\nKeep the private key SECRET. Never commit it to git.')
+  console.log("The public key is safe to share — it's published at /.well-known/receipt-public-key.json\n")
+}
+
+main()

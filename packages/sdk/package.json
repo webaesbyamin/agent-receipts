@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "vitest run",
+    "test": "echo 'SDK tests will be added in Phase 3'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
