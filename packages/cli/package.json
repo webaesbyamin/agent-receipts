@@ -1,0 +1,26 @@
+{
+  "name": "@agentreceipts/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CLI for Agent Receipts — inspect, verify, and manage receipts",
+  "bin": {
+    "agent-receipts": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentreceipts/mcp-server": "workspace:*",
+    "@agentreceipts/crypto": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.2.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}
