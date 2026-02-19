@@ -1,19 +1,59 @@
 # Agent Receipts
 
-> Observability is internal. Receipts are external.
+**Cryptographically signed proof that an AI agent did what it said it did.**
 
-**Agent Receipts** is an implementation of the **Action Receipt Protocol (ARP)** — an open standard for verifiable, signed, immutable proof of autonomous actions performed by agents, tools, or workflows.
+Agent Receipts is a local-first, open-source system for creating verifiable, immutable receipts of autonomous agent actions. Every action is Ed25519-signed, content-hashed, and chain-linked — no hosted API required. Works as an MCP server, Node.js SDK, or CLI.
 
-## The Problem
+## Quick Start: MCP Server
 
-Agents fail silently. There is no standardized way to know if an agent actually did what it said, how well it did it, or whether the output is trustworthy. Existing tools solve developer observability — internal debugging. Nobody is producing a portable, shareable, cryptographically signed proof that an agent performed action X at time Y with result Z.
+Add the Agent Receipts MCP server to your AI tool's config and every action gets a cryptographic receipt automatically.
 
-**Logs are mutable, internal, unverifiable, developer-only.**
-**Receipts are signed, immutable, shareable, third-party verifiable.**
+### Claude Desktop
 
-This is not observability. This is accountability.
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
-## Quick Start
+```json
+{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agentreceipts/mcp-server"]
+    }
+  }
+}
+```
+
+### Claude Code
+
+Add to `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agentreceipts/mcp-server"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agentreceipts/mcp-server"]
+    }
+  }
+}
+```
+
+## Quick Start: SDK
 
 ```bash
 npm install @agentreceipts/sdk
@@ -22,129 +62,267 @@ npm install @agentreceipts/sdk
 ```typescript
 import { AgentReceipts } from '@agentreceipts/sdk'
 
-const ar = new AgentReceipts({
-  apiKey: 'ar_live_xxxxxxxxxxxx',
-  agent: 'quote-generator-v2',
+const ar = new AgentReceipts()
+
+const receipt = await ar.track({
+  action: 'generate_report',
+  input: { query: 'Q4 revenue' },
+  output: { total: 142000 },
 })
 
-// 3 lines to integrate
-const receipt = await ar.track('generate_ppf_quote', {
-  input: { vehicle: 'Tesla Model 3', service: 'full-front-ppf' },
-  execute: async () => {
-    const quote = await generateQuote(params)
-    return quote
-  },
-})
-
-console.log(receipt.verify_url)
-// → https://agentreceipts.com/verify/rcpt_8f3k2j4n
+console.log(receipt.receipt_id)  // rcpt_8f3k2j4n...
+console.log(receipt.signature)   // ed25519 signature
 ```
 
-## Receipt Schema (v0.1)
+## Quick Start: CLI
+
+```bash
+npx @agentreceipts/cli init          # Generate signing keys
+npx @agentreceipts/cli keys          # Show public key
+npx @agentreceipts/cli list          # List all receipts
+npx @agentreceipts/cli verify <id>   # Verify a receipt signature
+```
+
+## How It Works
+
+1. **Agent performs an action** — API call, code generation, data lookup
+2. **Input/output are SHA-256 hashed** — raw data never leaves your machine
+3. **Receipt is created** — action, hashes, timestamp, agent ID, metadata
+4. **Receipt is Ed25519-signed** — with a locally generated private key
+5. **Anyone can verify** — share your public key; recipients verify independently
+
+## MCP Tools Reference
+
+The MCP server exposes 8 tools that AI agents can call directly:
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `track_action` | Track an agent action with automatic hashing | `action`, `input`, `output`, `status` |
+| `create_receipt` | Create a receipt with pre-computed hashes | `action`, `input_hash`, `output_hash` |
+| `complete_receipt` | Complete a pending receipt with results | `receipt_id`, `output`, `status` |
+| `verify_receipt` | Verify the cryptographic signature of a receipt | `receipt_id` |
+| `get_receipt` | Retrieve a receipt by ID | `receipt_id` |
+| `list_receipts` | List receipts with optional filtering | `agent_id`, `status`, `chain_id` |
+| `get_chain` | Get all receipts in a chain ordered by timestamp | `chain_id` |
+| `get_public_key` | Export the Ed25519 public key for verification | — |
+
+## SDK API Reference
+
+### `new AgentReceipts(config?)`
+
+```typescript
+const ar = new AgentReceipts({
+  dataDir: '~/.agent-receipts',  // optional, defaults to ~/.agent-receipts
+})
+```
+
+### `ar.track(params)` — Track a completed action
+
+```typescript
+const receipt = await ar.track({
+  action: 'analyze_data',
+  input: { dataset: 'sales_2024' },
+  output: { summary: 'Revenue up 12%' },
+  agent_id: 'analyst-v2',
+  chain_id: 'chain_abc',              // optional, auto-generated if omitted
+  parent_receipt_id: 'rcpt_prev',     // optional, links to parent receipt
+})
+```
+
+### `ar.start(params)` — Start a pending receipt
+
+```typescript
+const receipt = await ar.start({
+  action: 'long_running_task',
+  input: { job_id: '12345' },
+})
+```
+
+### `ar.complete(receiptId, params)` — Complete a pending receipt
+
+```typescript
+const completed = await ar.complete(receipt.receipt_id, {
+  output: { result: 'done' },
+  status: 'completed',
+})
+```
+
+### `ar.verify(receiptId)` — Verify a receipt signature
+
+```typescript
+const { verified, receipt } = await ar.verify('rcpt_8f3k2j4n')
+// verified: true | false
+```
+
+### `ar.get(receiptId)` — Get a receipt by ID
+
+```typescript
+const receipt = await ar.get('rcpt_8f3k2j4n')
+```
+
+### `ar.list(filter?)` — List receipts
+
+```typescript
+const result = await ar.list({ agent_id: 'my-agent', status: 'completed' })
+// result.data: ActionReceipt[]
+// result.pagination: { page, pageSize, total }
+```
+
+### `ar.getPublicKey()` — Get the signing public key
+
+```typescript
+const publicKey = await ar.getPublicKey()
+// 64-char hex string (Ed25519 public key)
+```
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `init` | Create data directory and generate signing keys |
+| `keys` | Display the public key |
+| `keys --export` | Export public key as JSON |
+| `keys --import <hex>` | Import a private key (64 hex chars) |
+| `inspect <id\|file>` | Pretty-print a receipt |
+| `verify <id\|file>` | Verify a receipt signature |
+| `verify <id\|file> --key <hex>` | Verify with an external public key |
+| `list` | List receipts (default: 50) |
+| `list --agent <id> --status <s>` | Filter by agent or status |
+| `list --json` | Output as JSON |
+| `chain <chain_id>` | Show all receipts in a chain |
+| `chain <chain_id> --tree` | Show chain as visual tree |
+| `stats` | Show aggregate receipt statistics |
+| `export <id>` | Export a single receipt as JSON |
+| `export --all` | Export all receipts as compact JSON |
+| `export --all --pretty` | Export all receipts as formatted JSON |
+
+## Receipt Format
 
 ```json
 {
   "receipt_id": "rcpt_8f3k2j4n",
   "chain_id": "chain_x9f2k",
+  "parent_receipt_id": null,
   "receipt_type": "action",
-  "agent_id": "quote-generator-v2",
-  "action": "generate_ppf_quote",
+  "agent_id": "my-agent",
+  "org_id": "my-org",
+  "action": "generate_report",
+  "status": "completed",
   "input_hash": "sha256:abc123...",
   "output_hash": "sha256:def456...",
-  "status": "completed",
-  "signature": "ed25519:...",
-  "verify_url": "https://agentreceipts.com/verify/rcpt_8f3k2j4n",
-  "timestamp": "2026-02-07T14:32:01.442Z"
+  "output_summary": "Generated Q4 report",
+  "model": "claude-sonnet-4-6",
+  "timestamp": "2026-02-07T14:32:01.442Z",
+  "completed_at": "2026-02-07T14:32:02.100Z",
+  "latency_ms": 658,
+  "cost_usd": 0.003,
+  "signature": "ed25519:<hex>"
 }
 ```
 
-Input and output are hashed client-side with SHA-256. Raw data never leaves your environment. Only hashes are stored.
+Input and output are hashed client-side with SHA-256. Raw data never leaves your environment. Only hashes are stored in the receipt.
 
 ## Verification
 
-Anyone with a receipt ID can verify it — no authentication required:
+Share your public key with anyone who needs to verify your receipts:
 
-```
-GET https://agentreceipts.com/api/v1/verify/rcpt_8f3k2j4n
-```
+```bash
+# Export your public key
+npx @agentreceipts/cli keys --export
 
-The server re-validates the Ed25519 signature against the receipt's deterministic fields and returns:
-
-```json
-{
-  "verified": true,
-  "signature_valid": true,
-  "receipt": { ... }
-}
+# Verify a receipt with an external public key
+npx @agentreceipts/cli verify receipt.json --key <public-key-hex>
 ```
 
-## Receipt Chains
+Verification re-computes the Ed25519 signature over the receipt's deterministic fields and confirms it matches the stored signature. No network requests — fully offline.
 
-Receipts can be linked into chains for multi-step workflows:
+## Configuration
 
-```typescript
-const step1 = await ar.track('decode_vin', {
-  input: { vin: '5YJ3E1EA1NF123456' },
-  execute: async () => decodeVin(vin),
-})
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `AGENT_RECEIPTS_DATA_DIR` | Data directory path | `~/.agent-receipts` |
+| `AGENT_RECEIPTS_AGENT_ID` | Default agent ID | `default-agent` |
+| `AGENT_RECEIPTS_ORG_ID` | Organization ID | `default-org` |
+| `AGENT_RECEIPTS_ENVIRONMENT` | Environment label | `production` |
+| `RECEIPT_SIGNING_PRIVATE_KEY` | Ed25519 private key (hex) | Auto-generated |
+| `RECEIPT_SIGNING_PUBLIC_KEY` | Ed25519 public key (hex) | Derived from private |
 
-const step2 = await ar.track('generate_quote', {
-  input: { vehicle: step1Result },
-  execute: async () => generateQuote(vehicle),
-  parent: step1.receipt_id, // chains automatically
-})
+## Storage
 
-// Both receipts share the same chain_id
-// step2.chain_id === step1.chain_id
+All data is stored locally in the data directory:
+
+```
+~/.agent-receipts/
+├── keys/
+│   ├── private.key          # Ed25519 private key (mode 0600)
+│   └── public.key           # Ed25519 public key
+├── receipts/
+│   └── *.json               # Individual receipt files
+└── config.json              # Agent and org configuration
 ```
 
 ## Architecture
 
 ```
-Layer 3: Dashboard (SaaS)
-  Receipt feed, agent scorecards, chain visualization
-
-Layer 2: Verification API (hosted)
-  POST /receipts, GET /verify/:id (public, no auth)
-
-Layer 1: SDK + Schema (open source)
-  @agentreceipts/sdk — 3 lines to integrate
-  @agentreceipts/schema — Zod + JSON Schema
-  @agentreceipts/crypto — Ed25519 signing
+┌─────────────────────────────────────────────┐
+│                  CLI                         │
+│           @agentreceipts/cli                 │
+├─────────────────────────────────────────────┤
+│           SDK            │   MCP Server      │
+│   @agentreceipts/sdk     │ @agentreceipts/   │
+│                          │   mcp-server      │
+├──────────────────────────┴──────────────────┤
+│              Crypto + Schema                 │
+│   @agentreceipts/crypto  @agentreceipts/     │
+│                            schema            │
+└─────────────────────────────────────────────┘
 ```
 
-## Pricing
+- **schema** — Zod schemas, TypeScript types, JSON Schema for the Action Receipt Protocol
+- **crypto** — Ed25519 key generation, signing, verification, canonical serialization
+- **mcp-server** — MCP protocol server with receipt engine, storage, and key management
+- **sdk** — High-level Node.js SDK wrapping the engine
+- **cli** — Command-line tool for inspecting, verifying, and managing receipts
 
-| Plan | Receipts/mo | Retention | Price |
-|------|------------|-----------|-------|
-| Free | 1,000 | 7 days | $0 |
-| Pro | 25,000 | 30 days | $29/mo |
-| Business | 100,000 | 90 days | $99/mo |
-| Enterprise | Unlimited | Unlimited | Custom |
+## Examples
 
-## Project Structure
+| Example | Description |
+|---------|-------------|
+| [`examples/basic`](./examples/basic) | Simple action tracking with verification |
+| [`examples/chained`](./examples/chained) | Multi-step pipeline with parent/child receipt linking |
+| [`examples/modquote`](./examples/modquote) | Content moderation pipeline with chained receipts |
 
-```
-agent-receipts/
-├── apps/web/            # Next.js 14 — API + Dashboard
-├── packages/
-│   ├── sdk/             # @agentreceipts/sdk
-│   ├── schema/          # @agentreceipts/schema (Zod + JSON Schema)
-│   └── crypto/          # @agentreceipts/crypto (Ed25519)
-├── supabase/            # Database migrations
-├── spec/                # Action Receipt Protocol spec
-└── examples/            # Integration examples
-```
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@agentreceipts/schema` | Zod schemas and TypeScript types for the Action Receipt Protocol |
+| `@agentreceipts/crypto` | Ed25519 signing, verification, and key management |
+| `@agentreceipts/mcp-server` | MCP protocol server with receipt engine and storage |
+| `@agentreceipts/sdk` | High-level Node.js SDK for tracking and verifying receipts |
+| `@agentreceipts/cli` | Command-line tool for managing receipts |
+
+## Roadmap
+
+- [x] Local-first receipt storage with SQLite/JSON
+- [x] Ed25519 signing and verification
+- [x] MCP server with 8 tools
+- [x] Node.js SDK
+- [x] CLI with full command set
+- [ ] Receipt anchoring to blockchain/timestamping services
+- [ ] Multi-agent receipt sharing protocol
+- [ ] Web dashboard for receipt visualization
+- [ ] Receipt compression and archival
 
 ## Development
 
 ```bash
 pnpm install
 pnpm build
-pnpm dev
 pnpm test
+pnpm dev
 ```
 
 ## License
 
-MIT - see [LICENSE](./LICENSE)
+MIT — see [LICENSE](./LICENSE)

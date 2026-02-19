@@ -1,11 +1,13 @@
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, chmod, stat } from 'node:fs/promises'
+import { join } from 'node:path'
+import { createInterface } from 'node:readline'
 import {
   ReceiptStore,
   KeyManager,
   ConfigManager,
   ReceiptEngine,
 } from '@agentreceipts/mcp-server'
-import { verifyReceipt, getSignablePayload } from '@agentreceipts/crypto'
+import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agentreceipts/crypto'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts
@@ -14,14 +16,14 @@ Usage:
   agent-receipts <command> [options]
 
 Commands:
-  init                        Create data directory and generate signing keys
-  keys [--export]             Display or export the public key
-  inspect <id|file>           Pretty-print a receipt
-  verify <id|file> [--key <hex>]  Verify a receipt's signature
-  list [options]              List receipts
-  chain <chain_id>            Show all receipts in a chain
-  stats                       Show aggregate receipt statistics
-  export <id> | --all         Export receipt(s) as JSON to stdout
+  init                              Create data directory and generate signing keys
+  keys [--export] [--import <hex>]  Display, export, or import signing keys
+  inspect <id|file>                 Pretty-print a receipt
+  verify <id|file> [--key <hex>]    Verify a receipt's signature
+  list [options]                    List receipts
+  chain <chain_id> [--tree]         Show all receipts in a chain
+  stats                             Show aggregate receipt statistics
+  export <id> | --all [--pretty]    Export receipt(s) as JSON to stdout
 
 List options:
   --agent <id>                Filter by agent ID
@@ -42,7 +44,7 @@ async function getEngine(dataDir?: string) {
   await keyManager.init()
   const configManager = new ConfigManager(dir)
   await configManager.init()
-  return { engine: new ReceiptEngine(store, keyManager, configManager), keyManager }
+  return { engine: new ReceiptEngine(store, keyManager, configManager), keyManager, dataDir: dir }
 }
 
 async function cmdInit() {
@@ -52,6 +54,60 @@ async function cmdInit() {
 }
 
 async function cmdKeys(args: string[]) {
+  if (args.includes('--import')) {
+    const importIdx = args.indexOf('--import')
+    const hex = args[importIdx + 1]
+    if (!hex) {
+      console.error('Usage: agent-receipts keys --import <hex>')
+      process.exit(1)
+    }
+    if (!/^[a-f0-9]{64}$/i.test(hex)) {
+      console.error('Invalid key: must be 64 hex characters (32 bytes)')
+      process.exit(1)
+    }
+
+    const dataDir = ConfigManager.getDefaultDataDir()
+    const keysDir = join(dataDir, 'keys')
+    const privateKeyPath = join(keysDir, 'private.key')
+
+    // Check if keys already exist
+    let keysExist = false
+    try {
+      await stat(privateKeyPath)
+      keysExist = true
+    } catch {
+      // Does not exist
+    }
+
+    if (keysExist) {
+      if (process.stdin.isTTY) {
+        const answer = await new Promise<string>((resolve) => {
+          const rl = createInterface({ input: process.stdin, output: process.stdout })
+          rl.question('Keys already exist. Overwrite? (y/N) ', (ans) => {
+            rl.close()
+            resolve(ans)
+          })
+        })
+        if (answer.toLowerCase() !== 'y') {
+          console.log('Aborted.')
+          return
+        }
+      } else {
+        console.error('Keys already exist. Use interactive terminal to overwrite.')
+        process.exit(1)
+      }
+    }
+
+    const publicKey = getPublicKeyFromPrivate(hex)
+    await mkdir(keysDir, { recursive: true })
+    await writeFile(privateKeyPath, hex, { encoding: 'utf-8', mode: 0o600 })
+    await chmod(privateKeyPath, 0o600)
+    await writeFile(join(keysDir, 'public.key'), publicKey, 'utf-8')
+
+    console.log(`Keys imported successfully. Public key: ${publicKey}`)
+    return
+  }
+
   const { keyManager } = await getEngine()
   const publicKey = keyManager.getPublicKey()
   if (args.includes('--export')) {
@@ -63,7 +119,7 @@ async function cmdKeys(args: string[]) {
 
 async function cmdInspect(target: string) {
   let receipt
-  if (target.endsWith('.json')) {
+  if (target.endsWith('.json') || target.includes('/')) {
     const data = await readFile(target, 'utf-8')
     receipt = JSON.parse(data)
   } else {
@@ -93,7 +149,7 @@ async function cmdInspect(target: string) {
 
 async function cmdVerify(target: string, args: string[]) {
   let receipt
-  if (target.endsWith('.json')) {
+  if (target.endsWith('.json') || target.includes('/')) {
     const data = await readFile(target, 'utf-8')
     receipt = JSON.parse(data)
   } else {
@@ -119,6 +175,7 @@ async function cmdVerify(target: string, args: string[]) {
 
   if (verified) {
     console.log(`Verified: ${receipt.receipt_id}`)
+    console.log(`Public key: ${publicKey}`)
   } else {
     console.error(`FAILED: ${receipt.receipt_id} — signature invalid`)
     process.exit(1)
@@ -152,13 +209,51 @@ async function cmdList(args: string[]) {
   }
 }
 
-async function cmdChain(chainId: string) {
+async function cmdChain(chainId: string, args: string[]) {
   const { engine } = await getEngine()
   const receipts = await engine.getChain(chainId)
   if (receipts.length === 0) {
     console.log(`No receipts found for chain: ${chainId}`)
     return
   }
+
+  if (args.includes('--tree')) {
+    console.log(`Chain: ${chainId} (${receipts.length} receipts)`)
+
+    // Build parent-child map
+    type Receipt = typeof receipts[number]
+    const childrenOf = new Map<string, Receipt[]>()
+    const roots: Receipt[] = []
+
+    for (const r of receipts) {
+      const parentId = r.parent_receipt_id
+      if (!parentId || !receipts.some((p) => p.receipt_id === parentId)) {
+        roots.push(r)
+      } else {
+        const siblings = childrenOf.get(parentId) ?? []
+        siblings.push(r)
+        childrenOf.set(parentId, siblings)
+      }
+    }
+
+    function renderTree(node: Receipt, prefix: string, isLast: boolean): void {
+      const connector = isLast ? '└─' : '├─'
+      const ts = node.timestamp.replace('T', ' ').replace(/\.\d+Z$/, '')
+      console.log(`${prefix}${connector} ${node.receipt_id} ${node.action} [${node.status}] ${ts}`)
+      const children = childrenOf.get(node.receipt_id) ?? []
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]!
+        const childPrefix = prefix + (isLast ? '   ' : '│  ')
+        renderTree(child, childPrefix, i === children.length - 1)
+      }
+    }
+
+    for (let i = 0; i < roots.length; i++) {
+      renderTree(roots[i]!, '', i === roots.length - 1)
+    }
+    return
+  }
+
   console.log(`Chain: ${chainId} (${receipts.length} receipts)`)
   for (let i = 0; i < receipts.length; i++) {
     const r = receipts[i]!
@@ -191,9 +286,13 @@ async function cmdStats() {
 
 async function cmdExport(target: string, args: string[]) {
   const { engine } = await getEngine()
+  const isPretty = args.includes('--pretty')
   if (target === '--all' || args.includes('--all')) {
     const result = await engine.list(undefined, 1, 10000)
-    console.log(JSON.stringify(result.data, null, 2))
+    const sorted = result.data.sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+    console.log(JSON.stringify(sorted, null, isPretty ? 2 : undefined))
   } else {
     const receipt = await engine.get(target)
     if (!receipt) {
@@ -238,7 +337,7 @@ async function main() {
       break
     case 'chain':
       if (!args[1]) { console.error('Usage: agent-receipts chain <chain_id>'); process.exit(1) }
-      await cmdChain(args[1])
+      await cmdChain(args[1], args.slice(2))
       break
     case 'stats':
       await cmdStats()
