@@ -6,8 +6,8 @@ import {
   KeyManager,
   ConfigManager,
   ReceiptEngine,
-} from '@agentreceipts/mcp-server'
-import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agentreceipts/crypto'
+} from '@agent-receipts/mcp-server'
+import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts

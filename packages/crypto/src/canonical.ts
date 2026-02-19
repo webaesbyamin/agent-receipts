@@ -1,4 +1,4 @@
-import type { SignablePayload } from '@agentreceipts/schema'
+import type { SignablePayload } from '@agent-receipts/schema'
 
 /**
  * Produce a canonical JSON string from a SignablePayload.

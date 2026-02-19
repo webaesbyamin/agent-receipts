@@ -1,33 +1,33 @@
-# @agentreceipts/cli
+# @agent-receipts/cli
 
 Command-line tool for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Inspect, verify, and manage cryptographically signed receipts.
 
 ## Install
 
 ```bash
-npm install -g @agentreceipts/cli
+npm install -g @agent-receipts/cli
 ```
 
 Or use directly with npx:
 
 ```bash
-npx @agentreceipts/cli <command>
+npx @agent-receipts/cli <command>
 ```
 
 ## Quick Start
 
 ```bash
 # Generate signing keys
-npx @agentreceipts/cli init
+npx @agent-receipts/cli init
 
 # Show your public key (share this for third-party verification)
-npx @agentreceipts/cli keys
+npx @agent-receipts/cli keys
 
 # List all receipts
-npx @agentreceipts/cli list
+npx @agent-receipts/cli list
 
 # Verify a receipt
-npx @agentreceipts/cli verify <receipt-id>
+npx @agent-receipts/cli verify <receipt-id>
 ```
 
 ## Commands

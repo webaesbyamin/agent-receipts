@@ -1,5 +1,5 @@
 {
-  "name": "@agentreceipts/example-chained",
+  "name": "@agent-receipts/example-chained",
   "version": "0.1.1",
   "private": true,
   "description": "Receipt chains demo",
@@ -7,7 +7,7 @@
     "start": "npx tsx index.ts"
   },
   "dependencies": {
-    "@agentreceipts/sdk": "workspace:*"
+    "@agent-receipts/sdk": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

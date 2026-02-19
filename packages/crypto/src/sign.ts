@@ -1,6 +1,6 @@
 import { sign, verify, etc, getPublicKey } from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha512'
-import type { SignablePayload } from '@agentreceipts/schema'
+import type { SignablePayload } from '@agent-receipts/schema'
 import { canonicalize } from './canonical'
 
 // Configure noble/ed25519 to use sha512 for sync operations.

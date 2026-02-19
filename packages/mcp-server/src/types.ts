@@ -1,4 +1,4 @@
-import type { ReceiptStatus, ReceiptType, Environment } from '@agentreceipts/schema'
+import type { ReceiptStatus, ReceiptType, Environment } from '@agent-receipts/schema'
 
 export interface StorageConfig {
   dataDir: string

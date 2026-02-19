@@ -1,4 +1,4 @@
-# @agentreceipts/schema
+# @agent-receipts/schema
 
 ## 0.1.0
 

@@ -17,7 +17,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -32,7 +32,7 @@ Add to `.mcp.json` in your project root:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -47,7 +47,7 @@ Add to `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -56,11 +56,11 @@ Add to `.cursor/mcp.json` in your project root:
 ## Quick Start: SDK
 
 ```bash
-npm install @agentreceipts/sdk
+npm install @agent-receipts/sdk
 ```
 
 ```typescript
-import { AgentReceipts } from '@agentreceipts/sdk'
+import { AgentReceipts } from '@agent-receipts/sdk'
 
 const ar = new AgentReceipts()
 
@@ -77,10 +77,10 @@ console.log(receipt.signature)   // ed25519 signature
 ## Quick Start: CLI
 
 ```bash
-npx @agentreceipts/cli init          # Generate signing keys
-npx @agentreceipts/cli keys          # Show public key
-npx @agentreceipts/cli list          # List all receipts
-npx @agentreceipts/cli verify <id>   # Verify a receipt signature
+npx @agent-receipts/cli init          # Generate signing keys
+npx @agent-receipts/cli keys          # Show public key
+npx @agent-receipts/cli list          # List all receipts
+npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 ```
 
 ## How It Works
@@ -228,10 +228,10 @@ Share your public key with anyone who needs to verify your receipts:
 
 ```bash
 # Export your public key
-npx @agentreceipts/cli keys --export
+npx @agent-receipts/cli keys --export
 
 # Verify a receipt with an external public key
-npx @agentreceipts/cli verify receipt.json --key <public-key-hex>
+npx @agent-receipts/cli verify receipt.json --key <public-key-hex>
 ```
 
 Verification re-computes the Ed25519 signature over the receipt's deterministic fields and confirms it matches the stored signature. No network requests — fully offline.
@@ -266,14 +266,14 @@ All data is stored locally in the data directory:
 ```
 ┌─────────────────────────────────────────────┐
 │                  CLI                         │
-│           @agentreceipts/cli                 │
+│           @agent-receipts/cli                 │
 ├─────────────────────────────────────────────┤
 │           SDK            │   MCP Server      │
-│   @agentreceipts/sdk     │ @agentreceipts/   │
+│   @agent-receipts/sdk     │ @agent-receipts/   │
 │                          │   mcp-server      │
 ├──────────────────────────┴──────────────────┤
 │              Crypto + Schema                 │
-│   @agentreceipts/crypto  @agentreceipts/     │
+│   @agent-receipts/crypto  @agent-receipts/     │
 │                            schema            │
 └─────────────────────────────────────────────┘
 ```
@@ -296,11 +296,11 @@ All data is stored locally in the data directory:
 
 | Package | Description |
 |---------|-------------|
-| `@agentreceipts/schema` | Zod schemas and TypeScript types for the Action Receipt Protocol |
-| `@agentreceipts/crypto` | Ed25519 signing, verification, and key management |
-| `@agentreceipts/mcp-server` | MCP protocol server with receipt engine and storage |
-| `@agentreceipts/sdk` | High-level Node.js SDK for tracking and verifying receipts |
-| `@agentreceipts/cli` | Command-line tool for managing receipts |
+| `@agent-receipts/schema` | Zod schemas and TypeScript types for the Action Receipt Protocol |
+| `@agent-receipts/crypto` | Ed25519 signing, verification, and key management |
+| `@agent-receipts/mcp-server` | MCP protocol server with receipt engine and storage |
+| `@agent-receipts/sdk` | High-level Node.js SDK for tracking and verifying receipts |
+| `@agent-receipts/cli` | Command-line tool for managing receipts |
 
 ## Roadmap
 

@@ -1,5 +1,5 @@
 {
-  "name": "@agentreceipts/cli",
+  "name": "@agent-receipts/cli",
   "version": "0.1.0",
   "type": "module",
   "description": "CLI for Agent Receipts — inspect, verify, and manage receipts",
@@ -38,8 +38,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentreceipts/mcp-server": "workspace:*",
-    "@agentreceipts/crypto": "workspace:*"
+    "@agent-receipts/mcp-server": "workspace:*",
+    "@agent-receipts/crypto": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

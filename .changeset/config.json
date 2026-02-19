@@ -4,10 +4,10 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@agentreceipts/schema", "@agentreceipts/crypto", "@agentreceipts/mcp-server", "@agentreceipts/sdk", "@agentreceipts/cli"]
+    ["@agent-receipts/schema", "@agent-receipts/crypto", "@agent-receipts/mcp-server", "@agent-receipts/sdk", "@agent-receipts/cli"]
   ],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@agentreceipts/web"]
+  "ignore": ["@agent-receipts/web"]
 }

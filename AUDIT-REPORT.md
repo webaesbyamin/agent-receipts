@@ -47,8 +47,8 @@
 ### Workspace Configurations (all correct)
 - `packages/schema/package.json` — correct exports (`cjs`, `esm`, `types`), dependencies (`zod ^3.23.0`), devDeps (`tsup`, `typescript`, `vitest`)
 - `packages/crypto/package.json` — correct exports, `@noble/ed25519 ^2.1.0`, `bin` field for `generate-keys`
-- `packages/sdk/package.json` — correct exports, workspace dependency on `@agentreceipts/schema`
-- `apps/web/package.json` — workspace deps on `@agentreceipts/schema` + `@agentreceipts/crypto`, Next.js 14, React 18, Supabase JS + SSR, Tailwind CSS
+- `packages/sdk/package.json` — correct exports, workspace dependency on `@agent-receipts/schema`
+- `apps/web/package.json` — workspace deps on `@agent-receipts/schema` + `@agent-receipts/crypto`, Next.js 14, React 18, Supabase JS + SSR, Tailwind CSS
 - All `tsconfig.json` files correctly extend `../../tsconfig.base.json`
 - All `tsup.config.ts` files correctly configured (`cjs` + `esm`, `dts: true`, `clean: true`, `sourcemap: true`)
 
@@ -97,7 +97,7 @@
 - `examples/basic/` — exists with `package.json` and placeholder `index.ts`
 - `examples/chained/` — exists with `package.json` and placeholder `index.ts`
 - `examples/modquote/` — exists with `package.json` and placeholder `index.ts`
-- All have correct workspace dependencies on `@agentreceipts/sdk`
+- All have correct workspace dependencies on `@agent-receipts/sdk`
 
 ### Git History
 - Single commit: `8722667 feat: initial project structure — Phase 0`
@@ -110,9 +110,9 @@
 ## 4. What's Built but Broken
 
 ### Tests Fail (exit code 1)
-- `@agentreceipts/crypto:test` — **fails**: "No test files found, exiting with code 1"
-- `@agentreceipts/sdk:test` — **fails**: "No test files found, exiting with code 1"
-- `@agentreceipts/schema:test` — appears to exit similarly (vitest finds no test files)
+- `@agent-receipts/crypto:test` — **fails**: "No test files found, exiting with code 1"
+- `@agent-receipts/sdk:test` — **fails**: "No test files found, exiting with code 1"
+- `@agent-receipts/schema:test` — appears to exit similarly (vitest finds no test files)
 - **Root cause:** Test scripts (`vitest run`) are configured in `package.json` but zero test files exist in any package.
 - **Impact:** `pnpm test` fails for the entire monorepo.
 
@@ -320,13 +320,13 @@ Create placeholder test files so `pnpm test` passes:
 - Create `packages/crypto/src/__tests__/index.test.ts` with a basic sign/verify test
 - Create `packages/sdk/src/__tests__/index.test.ts` with a basic hash test
 
-### Step 2: Implement `@agentreceipts/schema` (`packages/schema/src/index.ts`)
+### Step 2: Implement `@agent-receipts/schema` (`packages/schema/src/index.ts`)
 - Define all Zod schemas: `ActionReceipt`, `SignablePayload`, `CreateReceiptInput`, `CompleteReceiptInput`, `VerifyResponse`, `ListReceiptsQuery`, `ErrorResponse`, `PaginationMeta`
 - Export inferred TypeScript types for each schema
 - Include enums: `ReceiptType`, `ReceiptStatus`, `Environment`, `ErrorCode`
 - Generate `receipt.schema.json` from Zod (optional, can be build step)
 
-### Step 3: Implement `@agentreceipts/crypto` (`packages/crypto/src/index.ts`)
+### Step 3: Implement `@agent-receipts/crypto` (`packages/crypto/src/index.ts`)
 - Implement `getSignablePayload(receipt)` — extract 12 signed fields in order
 - Implement `canonicalize(payload)` — `JSON.stringify` with sorted keys
 - Implement `signReceipt(payload, privateKey)` — sign canonical JSON with Ed25519 via `@noble/ed25519`

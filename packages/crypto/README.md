@@ -1,11 +1,11 @@
-# @agentreceipts/crypto
+# @agent-receipts/crypto
 
 Ed25519 signing and verification for the [Action Receipt Protocol](https://github.com/webaesbyamin/agent-receipts).
 
 ## Install
 
 ```bash
-npm install @agentreceipts/crypto
+npm install @agent-receipts/crypto
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ import {
   verifyReceipt,
   getSignablePayload,
   getPublicKeyFromPrivate,
-} from '@agentreceipts/crypto'
+} from '@agent-receipts/crypto'
 
 // Generate a new Ed25519 key pair
 const { privateKey, publicKey } = generateKeyPair()
@@ -47,7 +47,7 @@ const pub = getPublicKeyFromPrivate(privateKey)
 ## Key Generation CLI
 
 ```bash
-npx @agentreceipts/crypto generate-keys
+npx @agent-receipts/crypto generate-keys
 ```
 
 Outputs `RECEIPT_SIGNING_PRIVATE_KEY` and `RECEIPT_SIGNING_PUBLIC_KEY` for your `.env` file.

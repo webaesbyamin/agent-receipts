@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ReceiptStore } from '../storage/receipt-store.js'
-import type { ActionReceipt } from '@agentreceipts/schema'
+import type { ActionReceipt } from '@agent-receipts/schema'
 
 function makeReceipt(overrides: Partial<ActionReceipt> = {}): ActionReceipt {
   return {

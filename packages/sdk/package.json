@@ -1,5 +1,5 @@
 {
-  "name": "@agentreceipts/sdk",
+  "name": "@agent-receipts/sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for Agent Receipts — local-first action tracking",
   "license": "MIT",
@@ -45,9 +45,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentreceipts/schema": "workspace:*",
-    "@agentreceipts/crypto": "workspace:*",
-    "@agentreceipts/mcp-server": "workspace:*"
+    "@agent-receipts/schema": "workspace:*",
+    "@agent-receipts/crypto": "workspace:*",
+    "@agent-receipts/mcp-server": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

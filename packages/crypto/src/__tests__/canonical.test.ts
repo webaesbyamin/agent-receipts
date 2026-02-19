@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { canonicalize } from '../canonical'
-import type { SignablePayload } from '@agentreceipts/schema'
+import type { SignablePayload } from '@agent-receipts/schema'
 
 const basePayload: SignablePayload = {
   receipt_id: 'rcpt_test123',

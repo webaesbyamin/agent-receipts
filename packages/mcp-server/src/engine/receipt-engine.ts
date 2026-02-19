@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
-import { ActionReceipt, CreateReceiptInput, CompleteReceiptInput } from '@agentreceipts/schema'
-import { signReceipt, verifyReceipt, getSignablePayload } from '@agentreceipts/crypto'
+import { ActionReceipt, CreateReceiptInput, CompleteReceiptInput } from '@agent-receipts/schema'
+import { signReceipt, verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
 import { ReceiptStore } from '../storage/receipt-store.js'
 import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'

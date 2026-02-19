@@ -9,8 +9,8 @@ import {
   KeyManager,
   ConfigManager,
   ReceiptEngine,
-} from '@agentreceipts/mcp-server'
-import { generateKeyPair } from '@agentreceipts/crypto'
+} from '@agent-receipts/mcp-server'
+import { generateKeyPair } from '@agent-receipts/crypto'
 
 const exec = promisify(execFile)
 

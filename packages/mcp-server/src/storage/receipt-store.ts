@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomBytes } from 'node:crypto'
-import type { ActionReceipt } from '@agentreceipts/schema'
+import type { ActionReceipt } from '@agent-receipts/schema'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
 
 export class ReceiptStore {

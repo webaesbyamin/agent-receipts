@@ -1,17 +1,17 @@
-# @agentreceipts/schema
+# @agent-receipts/schema
 
 Zod schemas and TypeScript types for the [Action Receipt Protocol](https://github.com/webaesbyamin/agent-receipts).
 
 ## Install
 
 ```bash
-npm install @agentreceipts/schema
+npm install @agent-receipts/schema
 ```
 
 ## Usage
 
 ```typescript
-import { ActionReceipt, validate, CreateReceiptInput } from '@agentreceipts/schema'
+import { ActionReceipt, validate, CreateReceiptInput } from '@agent-receipts/schema'
 
 // Validate a receipt object
 const result = validate(ActionReceipt, someObject)

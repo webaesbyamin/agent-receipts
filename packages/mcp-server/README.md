@@ -1,4 +1,4 @@
-# @agentreceipts/mcp-server
+# @agent-receipts/mcp-server
 
 Local-first MCP server for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Cryptographically signed, verifiable proof for every AI agent action. No hosted server required.
 
@@ -15,7 +15,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -30,7 +30,7 @@ Add to `.mcp.json` in your project root:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -45,7 +45,7 @@ Add to `.cursor/mcp.json` in your project root:
   "mcpServers": {
     "agent-receipts": {
       "command": "npx",
-      "args": ["@agentreceipts/mcp-server"]
+      "args": ["@agent-receipts/mcp-server"]
     }
   }
 }
@@ -79,10 +79,10 @@ The MCP server exposes 8 tools:
 
 ## Programmatic Usage
 
-The engine and storage classes are exported for use by `@agentreceipts/sdk` and custom integrations:
+The engine and storage classes are exported for use by `@agent-receipts/sdk` and custom integrations:
 
 ```typescript
-import { ReceiptEngine, ReceiptStore, KeyManager, ConfigManager } from '@agentreceipts/mcp-server'
+import { ReceiptEngine, ReceiptStore, KeyManager, ConfigManager } from '@agent-receipts/mcp-server'
 
 const store = new ReceiptStore('/path/to/data')
 await store.init()

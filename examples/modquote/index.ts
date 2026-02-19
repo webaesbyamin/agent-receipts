@@ -1,4 +1,4 @@
-import { AgentReceipts } from '@agentreceipts/sdk'
+import { AgentReceipts } from '@agent-receipts/sdk'
 
 async function main() {
   const receipts = new AgentReceipts()

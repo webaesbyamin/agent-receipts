@@ -1,5 +1,5 @@
 {
-  "name": "@agentreceipts/web",
+  "name": "@agent-receipts/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentreceipts/schema": "workspace:*",
-    "@agentreceipts/crypto": "workspace:*",
+    "@agent-receipts/schema": "workspace:*",
+    "@agent-receipts/crypto": "workspace:*",
     "next": "^15.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

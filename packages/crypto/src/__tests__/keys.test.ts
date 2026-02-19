@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateKeyPair, getPublicKeyFromPrivate } from '../keys'
 import { signReceipt, verifyReceipt } from '../sign'
-import type { SignablePayload } from '@agentreceipts/schema'
+import type { SignablePayload } from '@agent-receipts/schema'
 
 describe('generateKeyPair', () => {
   it('produces valid hex strings', () => {

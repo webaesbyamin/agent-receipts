@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises'
 import { join } from 'node:path'
-import { generateKeyPair, getPublicKeyFromPrivate } from '@agentreceipts/crypto'
+import { generateKeyPair, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 
 export class KeyManager {
   private keysDir: string

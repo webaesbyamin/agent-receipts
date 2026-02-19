@@ -23,10 +23,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@agentreceipts/crypto':
+      '@agent-receipts/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
-      '@agentreceipts/schema':
+      '@agent-receipts/schema':
         specifier: workspace:*
         version: link:../../packages/schema
       '@supabase/ssr':
@@ -69,7 +69,7 @@ importers:
 
   examples/basic:
     dependencies:
-      '@agentreceipts/sdk':
+      '@agent-receipts/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
     devDependencies:
@@ -79,7 +79,7 @@ importers:
 
   examples/chained:
     dependencies:
-      '@agentreceipts/sdk':
+      '@agent-receipts/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
     devDependencies:
@@ -89,7 +89,7 @@ importers:
 
   examples/modquote:
     dependencies:
-      '@agentreceipts/sdk':
+      '@agent-receipts/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
     devDependencies:
@@ -99,10 +99,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@agentreceipts/crypto':
+      '@agent-receipts/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@agentreceipts/mcp-server':
+      '@agent-receipts/mcp-server':
         specifier: workspace:*
         version: link:../mcp-server
     devDependencies:
@@ -121,7 +121,7 @@ importers:
 
   packages/crypto:
     dependencies:
-      '@agentreceipts/schema':
+      '@agent-receipts/schema':
         specifier: workspace:*
         version: link:../schema
       '@noble/ed25519':
@@ -146,10 +146,10 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@agentreceipts/crypto':
+      '@agent-receipts/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@agentreceipts/schema':
+      '@agent-receipts/schema':
         specifier: workspace:*
         version: link:../schema
       '@modelcontextprotocol/sdk':
@@ -196,13 +196,13 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@agentreceipts/crypto':
+      '@agent-receipts/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@agentreceipts/mcp-server':
+      '@agent-receipts/mcp-server':
         specifier: workspace:*
         version: link:../mcp-server
-      '@agentreceipts/schema':
+      '@agent-receipts/schema':
         specifier: workspace:*
         version: link:../schema
     devDependencies:

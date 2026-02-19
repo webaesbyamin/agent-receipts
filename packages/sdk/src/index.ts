@@ -4,15 +4,15 @@ import {
   ConfigManager,
   ReceiptEngine,
   hashData,
-} from '@agentreceipts/mcp-server'
+} from '@agent-receipts/mcp-server'
 import type {
   TrackParams,
   CreateParams,
   CompleteParams,
   ReceiptFilter,
   PaginatedResult,
-} from '@agentreceipts/mcp-server'
-import type { ActionReceipt } from '@agentreceipts/schema'
+} from '@agent-receipts/mcp-server'
+import type { ActionReceipt } from '@agent-receipts/schema'
 
 export interface AgentReceiptsConfig {
   dataDir?: string

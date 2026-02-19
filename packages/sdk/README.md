@@ -1,17 +1,17 @@
-# @agentreceipts/sdk
+# @agent-receipts/sdk
 
 TypeScript SDK for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Track, verify, and manage signed receipts for AI agent actions. Everything runs locally.
 
 ## Install
 
 ```bash
-npm install @agentreceipts/sdk
+npm install @agent-receipts/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { AgentReceipts } from '@agentreceipts/sdk'
+import { AgentReceipts } from '@agent-receipts/sdk'
 
 const ar = new AgentReceipts()
 

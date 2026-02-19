@@ -1,4 +1,4 @@
-# @agentreceipts/sdk
+# @agent-receipts/sdk
 
 ## 0.1.0
 
@@ -9,6 +9,6 @@
 ### Patch Changes
 
 - Updated dependencies []:
-  - @agentreceipts/schema@0.2.0
-  - @agentreceipts/crypto@0.2.0
-  - @agentreceipts/mcp-server@0.2.0
+  - @agent-receipts/schema@0.2.0
+  - @agent-receipts/crypto@0.2.0
+  - @agent-receipts/mcp-server@0.2.0

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { signReceipt, verifyReceipt, getSignablePayload } from '../sign'
 import { generateKeyPair } from '../keys'
-import type { SignablePayload } from '@agentreceipts/schema'
+import type { SignablePayload } from '@agent-receipts/schema'
 
 const basePayload: SignablePayload = {
   receipt_id: 'rcpt_test123',

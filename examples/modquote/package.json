@@ -1,5 +1,5 @@
 {
-  "name": "@agentreceipts/example-modquote",
+  "name": "@agent-receipts/example-modquote",
   "version": "0.1.1",
   "private": true,
   "description": "ModQuote integration example",
@@ -7,7 +7,7 @@
     "start": "npx tsx index.ts"
   },
   "dependencies": {
-    "@agentreceipts/sdk": "workspace:*"
+    "@agent-receipts/sdk": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0"
