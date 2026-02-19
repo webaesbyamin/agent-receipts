@@ -2,6 +2,29 @@
   "name": "@agentreceipts/schema",
   "version": "0.1.0",
   "description": "Zod schemas and TypeScript types for the Action Receipt Protocol",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "bugs": {
+    "url": "https://github.com/webaesbyamin/agent-receipts/issues"
+  },
+  "keywords": [
+    "agent-receipts",
+    "action-receipt-protocol",
+    "zod",
+    "schema",
+    "validation",
+    "ai-agents",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -12,7 +35,10 @@
       "require": "./dist/index.js"
     }
   },
-  "files": ["dist", "receipt.schema.json"],
+  "files": [
+    "dist",
+    "receipt.schema.json"
+  ],
   "scripts": {
     "build": "tsup && node -e \"const{zodToJsonSchema}=require('zod-to-json-schema');const{ActionReceipt}=require('./dist');const fs=require('fs');fs.writeFileSync('receipt.schema.json',JSON.stringify(zodToJsonSchema(ActionReceipt,'ActionReceipt'),null,2));\"",
     "dev": "tsup --watch",

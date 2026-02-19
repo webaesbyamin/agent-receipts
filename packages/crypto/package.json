@@ -2,6 +2,29 @@
   "name": "@agentreceipts/crypto",
   "version": "0.1.0",
   "description": "Ed25519 signing and verification for the Action Receipt Protocol",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/crypto"
+  },
+  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "bugs": {
+    "url": "https://github.com/webaesbyamin/agent-receipts/issues"
+  },
+  "keywords": [
+    "agent-receipts",
+    "ed25519",
+    "signing",
+    "verification",
+    "cryptography",
+    "ai-agents",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -15,7 +38,10 @@
   "bin": {
     "generate-keys": "./bin/generate-keys.ts"
   },
-  "files": ["dist", "bin"],
+  "files": [
+    "dist",
+    "bin"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

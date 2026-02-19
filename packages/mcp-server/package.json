@@ -3,6 +3,31 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Local-first MCP server for Agent Receipts — storage, engine, and protocol",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "bugs": {
+    "url": "https://github.com/webaesbyamin/agent-receipts/issues"
+  },
+  "keywords": [
+    "agent-receipts",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "receipts",
+    "signing",
+    "verification",
+    "claude",
+    "cursor"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +41,9 @@
   "bin": {
     "agent-receipts-server": "./dist/server.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

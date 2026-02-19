@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.2/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "webaesbyamin/agent-receipts" }],
+  "commit": false,
+  "fixed": [],
+  "linked": [
+    ["@agentreceipts/schema", "@agentreceipts/crypto", "@agentreceipts/mcp-server", "@agentreceipts/sdk", "@agentreceipts/cli"]
+  ],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": ["@agentreceipts/web"]
+}

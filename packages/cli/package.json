@@ -3,10 +3,34 @@
   "version": "0.1.0",
   "type": "module",
   "description": "CLI for Agent Receipts — inspect, verify, and manage receipts",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "bugs": {
+    "url": "https://github.com/webaesbyamin/agent-receipts/issues"
+  },
+  "keywords": [
+    "agent-receipts",
+    "cli",
+    "ai-agents",
+    "receipts",
+    "verification",
+    "inspect"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "bin": {
     "agent-receipts": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
