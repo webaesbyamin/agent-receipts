@@ -28,6 +28,8 @@ Commands:
 List options:
   --agent <id>                Filter by agent ID
   --status <status>           Filter by status (pending|completed|failed|timeout)
+  --failed                    Show only receipts with failed constraints
+  --passed                    Show only receipts with passed constraints
   --limit <n>                 Limit results (default: 50)
   --json                      Output as JSON
 
@@ -145,6 +147,26 @@ async function cmdInspect(target: string) {
   if (receipt.output_hash) console.log(`  Output:   ${receipt.output_hash}`)
   if (receipt.output_summary) console.log(`  Summary:  ${receipt.output_summary}`)
   console.log(`  Signature: ${receipt.signature.slice(0, 30)}...`)
+
+  // Show constraint results if present
+  if (receipt.constraint_result && typeof receipt.constraint_result === 'object' && 'passed' in receipt.constraint_result) {
+    const cr = receipt.constraint_result as { passed: boolean; results: Array<{ type: string; passed: boolean; expected: unknown; actual: unknown; message?: string }> }
+    const passedCount = cr.results.filter((r) => r.passed).length
+    const totalCount = cr.results.length
+    console.log(`  Constraints: ${passedCount}/${totalCount} ${cr.passed ? 'PASSED' : 'FAILED'}`)
+    for (const r of cr.results) {
+      const icon = r.passed ? '\u2713' : '\u2717'
+      const expectedStr = formatExpected(r.type, r.expected)
+      const status = r.passed ? '' : '    FAILED'
+      console.log(`    ${icon} ${r.type.padEnd(18)} expected: ${expectedStr}   actual: ${r.actual}${status}`)
+    }
+  }
+}
+
+function formatExpected(type: string, expected: unknown): string {
+  if (type === 'max_latency_ms' || type === 'max_cost_usd') return `\u2264${expected}`
+  if (type === 'min_confidence') return `\u2265${expected}`
+  return String(expected)
 }
 
 async function cmdVerify(target: string, args: string[]) {
@@ -186,6 +208,8 @@ async function cmdList(args: string[]) {
   const { engine } = await getEngine()
   const filter: Record<string, string> = {}
   const isJson = args.includes('--json')
+  const filterFailed = args.includes('--failed')
+  const filterPassed = args.includes('--passed')
   let limit = 50
 
   for (let i = 0; i < args.length; i++) {
@@ -198,11 +222,25 @@ async function cmdList(args: string[]) {
 
   const result = await engine.list(filter, 1, limit)
 
+  // Post-filter by constraint result
+  let filtered = result.data
+  if (filterFailed) {
+    filtered = filtered.filter((r) => {
+      const cr = r.constraint_result as { passed: boolean } | null
+      return cr && !cr.passed
+    })
+  } else if (filterPassed) {
+    filtered = filtered.filter((r) => {
+      const cr = r.constraint_result as { passed: boolean } | null
+      return cr && cr.passed
+    })
+  }
+
   if (isJson) {
-    console.log(JSON.stringify(result, null, 2))
+    console.log(JSON.stringify({ ...result, data: filtered }, null, 2))
   } else {
-    console.log(`Receipts (${result.pagination.total} total):`)
-    for (const r of result.data) {
+    console.log(`Receipts (${filtered.length} total):`)
+    for (const r of filtered) {
       const status = r.status.padEnd(9)
       console.log(`  ${r.receipt_id}  ${status}  ${r.action}  ${r.timestamp}`)
     }
@@ -268,9 +306,18 @@ async function cmdStats() {
 
   const byStatus: Record<string, number> = {}
   const byAction: Record<string, number> = {}
+  let constraintsPassed = 0
+  let constraintsFailed = 0
   for (const r of receipts) {
     byStatus[r.status] = (byStatus[r.status] ?? 0) + 1
     byAction[r.action] = (byAction[r.action] ?? 0) + 1
+    if (r.constraint_result && typeof r.constraint_result === 'object' && 'passed' in r.constraint_result) {
+      if ((r.constraint_result as { passed: boolean }).passed) {
+        constraintsPassed++
+      } else {
+        constraintsFailed++
+      }
+    }
   }
 
   console.log(`Total receipts: ${receipts.length}`)
@@ -281,6 +328,11 @@ async function cmdStats() {
   console.log(`By action:`)
   for (const [a, c] of Object.entries(byAction)) {
     console.log(`  ${a}: ${c}`)
+  }
+  if (constraintsPassed + constraintsFailed > 0) {
+    console.log(`Constraints:`)
+    console.log(`  passed: ${constraintsPassed}`)
+    console.log(`  failed: ${constraintsFailed}`)
   }
 }
 

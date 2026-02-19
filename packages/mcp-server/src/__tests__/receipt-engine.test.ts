@@ -314,4 +314,113 @@ describe('ReceiptEngine', () => {
       expect(key).toMatch(/^[a-f0-9]{64}$/)
     })
   })
+
+  describe('constraints', () => {
+    it('create with constraints stores them', async () => {
+      const receipt = await engine.create({
+        action: 'test',
+        input_hash: 'sha256:x',
+        constraints: [{ type: 'max_latency_ms', value: 5000 }],
+      })
+      expect(receipt.constraints).not.toBeNull()
+      const stored = receipt.constraints as { definitions: Array<{ type: string; value: unknown }> }
+      expect(stored.definitions).toHaveLength(1)
+      expect(stored.definitions[0]!.type).toBe('max_latency_ms')
+    })
+
+    it('create without constraints → null', async () => {
+      const receipt = await engine.create({
+        action: 'test',
+        input_hash: 'sha256:x',
+      })
+      expect(receipt.constraints).toBeNull()
+      expect(receipt.constraint_result).toBeNull()
+    })
+
+    it('track with constraints: all pass', async () => {
+      const receipt = await engine.track({
+        action: 'test',
+        input: 'data',
+        latency_ms: 1000,
+        cost_usd: 0.001,
+        confidence: 0.95,
+        constraints: [
+          { type: 'max_latency_ms', value: 5000 },
+          { type: 'max_cost_usd', value: 0.01 },
+          { type: 'min_confidence', value: 0.8 },
+        ],
+      })
+      expect(receipt.constraint_result).not.toBeNull()
+      const cr = receipt.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
+      expect(cr.passed).toBe(true)
+      expect(cr.results).toHaveLength(3)
+      expect(cr.results.every((r) => r.passed)).toBe(true)
+    })
+
+    it('track with constraints: one fails', async () => {
+      const receipt = await engine.track({
+        action: 'test',
+        input: 'data',
+        latency_ms: 8000,
+        cost_usd: 0.001,
+        constraints: [
+          { type: 'max_latency_ms', value: 5000 },
+          { type: 'max_cost_usd', value: 0.01 },
+        ],
+      })
+      const cr = receipt.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
+      expect(cr.passed).toBe(false)
+      expect(cr.results[0]!.passed).toBe(false)
+      expect(cr.results[1]!.passed).toBe(true)
+    })
+
+    it('complete evaluates stored constraints', async () => {
+      const pending = await engine.create({
+        action: 'test',
+        input_hash: 'sha256:x',
+        constraints: [{ type: 'max_latency_ms', value: 5000 }],
+      })
+      expect(pending.constraint_result).toBeNull() // pending — not evaluated yet
+
+      const completed = await engine.complete(pending.receipt_id, {
+        status: 'completed',
+        latency_ms: 2000,
+      })
+      const cr = completed.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
+      expect(cr.passed).toBe(true)
+    })
+
+    it('receipt exists even if constraints fail', async () => {
+      const receipt = await engine.track({
+        action: 'test',
+        input: 'data',
+        latency_ms: 10000,
+        constraints: [{ type: 'max_latency_ms', value: 5000 }],
+      })
+      expect(receipt.receipt_id).toMatch(/^rcpt_/)
+      const cr = receipt.constraint_result as { passed: boolean }
+      expect(cr.passed).toBe(false)
+
+      // Verify it was persisted
+      const fetched = await engine.get(receipt.receipt_id)
+      expect(fetched).not.toBeNull()
+    })
+
+    it('constraint_result has correct structure', async () => {
+      const receipt = await engine.track({
+        action: 'test',
+        input: 'data',
+        latency_ms: 1000,
+        constraints: [{ type: 'max_latency_ms', value: 5000 }],
+      })
+      const cr = receipt.constraint_result as { passed: boolean; results: Array<{ type: string; passed: boolean; expected: unknown; actual: unknown }>; evaluated_at: string }
+      expect(typeof cr.passed).toBe('boolean')
+      expect(Array.isArray(cr.results)).toBe(true)
+      expect(cr.results[0]!.type).toBe('max_latency_ms')
+      expect(typeof cr.results[0]!.passed).toBe('boolean')
+      expect(cr.results[0]!.expected).toBe(5000)
+      expect(cr.results[0]!.actual).toBe(1000)
+      expect(cr.evaluated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    })
+  })
 })

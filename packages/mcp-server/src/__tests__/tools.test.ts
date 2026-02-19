@@ -109,4 +109,46 @@ describe('MCP Tools', () => {
     const key = engine.getPublicKey()
     expect(key).toMatch(/^[a-f0-9]{64}$/)
   })
+
+  it('create_receipt with constraints parameter', async () => {
+    const receipt = await engine.create({
+      action: 'constrained_create',
+      input_hash: 'sha256:abc',
+      status: 'completed',
+      latency_ms: 1000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    expect(receipt.constraints).not.toBeNull()
+    expect(receipt.constraint_result).not.toBeNull()
+    const cr = receipt.constraint_result as { passed: boolean }
+    expect(cr.passed).toBe(true)
+  })
+
+  it('track_action with constraints evaluates immediately', async () => {
+    const receipt = await engine.track({
+      action: 'constrained_track',
+      input: { data: 'test' },
+      latency_ms: 8000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    expect(receipt.constraint_result).not.toBeNull()
+    const cr = receipt.constraint_result as { passed: boolean }
+    expect(cr.passed).toBe(false)
+  })
+
+  it('track_action constraint results in response', async () => {
+    const receipt = await engine.track({
+      action: 'constrained_response',
+      input: 'data',
+      latency_ms: 1000,
+      cost_usd: 0.001,
+      constraints: [
+        { type: 'max_latency_ms', value: 5000 },
+        { type: 'max_cost_usd', value: 0.01 },
+      ],
+    })
+    const cr = receipt.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
+    expect(cr.passed).toBe(true)
+    expect(cr.results).toHaveLength(2)
+  })
 })

@@ -23,7 +23,7 @@ async function main() {
 
   console.log('Classification receipt:', classification.receipt_id)
 
-  // Step 2: Generate a moderation quote/estimate
+  // Step 2: Generate a moderation quote/estimate (with constraints)
   const quote = await receipts.track({
     action: 'generate_mod_quote',
     input: {
@@ -50,9 +50,21 @@ async function main() {
       pipeline_version: '1.0',
       region: 'us-east-1',
     },
+    constraints: [
+      { type: 'max_latency_ms', value: 1000, message: 'Quote generation must be fast' },
+      { type: 'max_cost_usd', value: 0.01 },
+      { type: 'required_fields', value: ['model', 'cost_usd', 'latency_ms'] },
+    ],
   })
 
   console.log('Quote receipt:', quote.receipt_id)
+  if (quote.constraint_result && typeof quote.constraint_result === 'object' && 'passed' in quote.constraint_result) {
+    const cr = quote.constraint_result as { passed: boolean; results: Array<{ type: string; passed: boolean }> }
+    console.log(`  Constraints: ${cr.passed ? 'ALL PASSED' : 'SOME FAILED'}`)
+    for (const r of cr.results) {
+      console.log(`    ${r.passed ? '\u2713' : '\u2717'} ${r.type}`)
+    }
+  }
 
   // Verify the entire chain
   for (const r of [classification, quote]) {

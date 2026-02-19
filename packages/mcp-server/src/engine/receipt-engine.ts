@@ -1,10 +1,12 @@
 import { nanoid } from 'nanoid'
 import { ActionReceipt, CreateReceiptInput, CompleteReceiptInput } from '@agent-receipts/schema'
+import type { ConstraintDefinition } from '@agent-receipts/schema'
 import { signReceipt, verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
 import { ReceiptStore } from '../storage/receipt-store.js'
 import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'
 import { hashData } from '../hash.js'
+import { evaluateConstraints } from './constraint-evaluator.js'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
 
 export interface TrackParams {
@@ -23,6 +25,7 @@ export interface TrackParams {
   parent_receipt_id?: string
   chain_id?: string
   output_summary?: string
+  constraints?: ConstraintDefinition[]
 }
 
 export interface CreateParams {
@@ -43,6 +46,7 @@ export interface CreateParams {
   parent_receipt_id?: string | null
   chain_id?: string
   status?: 'pending' | 'completed' | 'failed' | 'timeout'
+  constraints?: ConstraintDefinition[]
 }
 
 export interface CompleteParams {
@@ -73,6 +77,13 @@ export class ReceiptEngine {
     const chainId = params.chain_id ?? `chain_${nanoid(8)}`
     const now = new Date().toISOString()
 
+    const constraintDefs = params.constraints && params.constraints.length > 0
+      ? params.constraints
+      : null
+    const constraintsForStorage = constraintDefs
+      ? { definitions: constraintDefs }
+      : null
+
     const receiptData = {
       receipt_id: receiptId,
       parent_receipt_id: params.parent_receipt_id ?? null,
@@ -96,13 +107,21 @@ export class ReceiptEngine {
       error: null,
       environment: config.environment,
       tags: params.tags ?? null,
-      constraints: null,
-      constraint_result: null,
+      constraints: constraintsForStorage as Record<string, unknown> | null,
+      constraint_result: null as Record<string, unknown> | null,
       signature: '', // placeholder — will be replaced
       verify_url: `local://verify/${receiptId}`,
       callback_verified: null,
       confidence: params.confidence ?? null,
       metadata: params.metadata ?? {},
+    }
+
+    // Evaluate constraints if receipt is completed and constraints are present
+    if (receiptData.status === 'completed' && constraintDefs) {
+      receiptData.constraint_result = evaluateConstraints(
+        receiptData as unknown as ActionReceipt,
+        constraintDefs,
+      )
     }
 
     // Sign the receipt
@@ -145,6 +164,17 @@ export class ReceiptEngine {
       confidence: params.confidence ?? existing.confidence,
       callback_verified: params.callback_verified ?? existing.callback_verified,
       error: params.error ?? existing.error,
+      constraint_result: existing.constraint_result,
+    }
+
+    // Evaluate constraints if present on the receipt
+    const storedConstraints = existing.constraints as { definitions: ConstraintDefinition[] } | null
+    const constraints = storedConstraints?.definitions ?? null
+    if (Array.isArray(constraints) && constraints.length > 0) {
+      updated.constraint_result = evaluateConstraints(
+        updated as unknown as ActionReceipt,
+        constraints,
+      )
     }
 
     // Re-sign with updated data
@@ -179,6 +209,7 @@ export class ReceiptEngine {
       parent_receipt_id: params.parent_receipt_id ?? null,
       chain_id: params.chain_id,
       status: 'completed',
+      constraints: params.constraints,
     })
   }
 

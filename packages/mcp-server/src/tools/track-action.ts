@@ -22,11 +22,22 @@ export function registerTrackAction(server: McpServer, engine: ReceiptEngine): v
       metadata: z.record(z.unknown()).optional().describe('Arbitrary metadata'),
       parent_receipt_id: z.string().optional().describe('Parent receipt ID for chaining'),
       chain_id: z.string().optional().describe('Chain ID (auto-generated if not provided)'),
+      constraints: z.array(z.object({
+        type: z.string().min(1),
+        value: z.unknown(),
+        message: z.string().optional(),
+      })).optional().describe('Constraint definitions to evaluate'),
     },
     async (params) => {
       const receipt = await engine.track(params)
+      const response: Record<string, unknown> = { receipt }
+      if (receipt.constraint_result && typeof receipt.constraint_result === 'object' && 'passed' in receipt.constraint_result) {
+        const cr = receipt.constraint_result as { passed: boolean; results: unknown[] }
+        response.constraints_passed = cr.passed
+        response.constraint_summary = `${cr.results.filter((r: unknown) => (r as { passed: boolean }).passed).length}/${cr.results.length} passed`
+      }
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify(receipt, null, 2) }],
+        content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
       }
     },
   )

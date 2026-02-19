@@ -290,4 +290,91 @@ describe('CLI', () => {
     expect(Array.isArray(arr)).toBe(true)
     expect(arr[0].action).toBe('pretty_test')
   })
+
+  it('inspect shows constraint results when present', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({
+      action: 'constrained_inspect',
+      input: 'data',
+      latency_ms: 2000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+
+    const { stdout } = await runCLI(['inspect', receipt.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Constraints:')
+    expect(stdout).toContain('1/1 PASSED')
+    expect(stdout).toContain('max_latency_ms')
+  })
+
+  it('inspect shows no constraints section when absent', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({
+      action: 'no_constraints',
+      input: 'data',
+    })
+
+    const { stdout } = await runCLI(['inspect', receipt.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).not.toContain('Constraints:')
+  })
+
+  it('list --failed filters correctly', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({
+      action: 'pass_action',
+      input: 'data',
+      latency_ms: 1000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    await engine.track({
+      action: 'fail_action',
+      input: 'data',
+      latency_ms: 8000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+
+    const { stdout } = await runCLI(['list', '--failed'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('fail_action')
+    expect(stdout).not.toContain('pass_action')
+  })
+
+  it('list --passed filters correctly', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({
+      action: 'pass_action',
+      input: 'data',
+      latency_ms: 1000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    await engine.track({
+      action: 'fail_action',
+      input: 'data',
+      latency_ms: 8000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+
+    const { stdout } = await runCLI(['list', '--passed'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('pass_action')
+    expect(stdout).not.toContain('fail_action')
+  })
+
+  it('stats includes constraint counts', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({
+      action: 'pass_action',
+      input: 'data',
+      latency_ms: 1000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    await engine.track({
+      action: 'fail_action',
+      input: 'data',
+      latency_ms: 8000,
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+
+    const { stdout } = await runCLI(['stats'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Constraints:')
+    expect(stdout).toContain('passed: 1')
+    expect(stdout).toContain('failed: 1')
+  })
 })

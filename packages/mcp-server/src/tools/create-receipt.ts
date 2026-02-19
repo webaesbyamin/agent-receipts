@@ -24,6 +24,11 @@ export function registerCreateReceipt(server: McpServer, engine: ReceiptEngine):
       parent_receipt_id: z.string().nullable().optional().describe('Parent receipt ID for chains'),
       chain_id: z.string().optional().describe('Chain ID (auto-generated if not provided)'),
       status: z.enum(['pending', 'completed', 'failed', 'timeout']).optional().describe('Receipt status'),
+      constraints: z.array(z.object({
+        type: z.string().min(1),
+        value: z.unknown(),
+        message: z.string().optional(),
+      })).optional().describe('Constraint definitions to evaluate'),
     },
     async (params) => {
       const receipt = await engine.create(params)

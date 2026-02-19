@@ -115,4 +115,38 @@ describe('AgentReceipts SDK', () => {
     const result = await receipts.list({ chain_id: r1.chain_id })
     expect(result.data.length).toBe(2)
   })
+
+  it('track with constraints returns constraint results', async () => {
+    const receipt = await receipts.track({
+      action: 'constrained_action',
+      input: 'data',
+      latency_ms: 1000,
+      cost_usd: 0.001,
+      constraints: [
+        { type: 'max_latency_ms', value: 5000 },
+        { type: 'max_cost_usd', value: 0.01 },
+      ],
+    })
+    expect(receipt.constraint_result).not.toBeNull()
+    const cr = receipt.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
+    expect(cr.passed).toBe(true)
+    expect(cr.results).toHaveLength(2)
+  })
+
+  it('start with constraints stores them', async () => {
+    const pending = await receipts.start({
+      action: 'constrained_start',
+      input_hash: 'sha256:abc',
+      constraints: [{ type: 'max_latency_ms', value: 5000 }],
+    })
+    expect(pending.constraints).not.toBeNull()
+    expect(pending.constraint_result).toBeNull() // not evaluated until completed
+
+    const completed = await receipts.complete(pending.receipt_id, {
+      status: 'completed',
+      latency_ms: 2000,
+    })
+    const cr = completed.constraint_result as { passed: boolean }
+    expect(cr.passed).toBe(true)
+  })
 })
