@@ -1,0 +1,37 @@
+{
+  "name": "@agent-receipts/dashboard",
+  "version": "0.2.2",
+  "description": "Mission Control dashboard for Agent Receipts — local web UI for AI agent accountability",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/dashboard"
+  },
+  "keywords": [
+    "agent-receipts",
+    "dashboard",
+    "ai-agents",
+    "mcp",
+    "receipts",
+    "monitoring",
+    "local-first"
+  ],
+  "bin": {
+    "agent-receipts-dashboard": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "standalone/",
+    "README.md"
+  ],
+  "scripts": {
+    "build:standalone": "node scripts/build-standalone.js",
+    "prepublishOnly": "npm run build:standalone"
+  },
+  "devDependencies": {
+    "tsup": "^8.2.0",
+    "typescript": "^5.4.0"
+  }
+}
