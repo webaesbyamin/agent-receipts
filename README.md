@@ -93,18 +93,22 @@ npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 
 ## MCP Tools Reference
 
-The MCP server exposes 8 tools that AI agents can call directly:
+The MCP server exposes 12 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `track_action` | Track an agent action with automatic hashing | `action`, `input`, `output`, `status` |
-| `create_receipt` | Create a receipt with pre-computed hashes | `action`, `input_hash`, `output_hash` |
+| `track_action` | Track an agent action with automatic hashing | `action`, `input`, `output`, `constraints` |
+| `create_receipt` | Create a receipt with pre-computed hashes | `action`, `input_hash`, `output_hash`, `constraints` |
 | `complete_receipt` | Complete a pending receipt with results | `receipt_id`, `output`, `status` |
 | `verify_receipt` | Verify the cryptographic signature of a receipt | `receipt_id` |
 | `get_receipt` | Retrieve a receipt by ID | `receipt_id` |
 | `list_receipts` | List receipts with optional filtering | `agent_id`, `status`, `chain_id` |
 | `get_chain` | Get all receipts in a chain ordered by timestamp | `chain_id` |
 | `get_public_key` | Export the Ed25519 public key for verification | — |
+| `judge_receipt` | Start AI Judge evaluation of a receipt | `receipt_id`, `rubric` |
+| `complete_judgment` | Complete a pending judgment with results | `receipt_id`, `verdict`, `score`, `criteria` |
+| `get_judgments` | Get all judgments for a receipt | `receipt_id` |
+| `cleanup` | Delete expired receipts (TTL) | `dry_run` |
 
 ## SDK API Reference
 
@@ -175,6 +179,36 @@ const publicKey = await ar.getPublicKey()
 // 64-char hex string (Ed25519 public key)
 ```
 
+### `ar.track()` with Constraints
+
+```typescript
+const receipt = await ar.track({
+  action: 'generate_quote',
+  input: { product: 'Model 3' },
+  output: { price: 42000 },
+  latency_ms: 1200,
+  cost_usd: 0.005,
+  constraints: [
+    { type: 'max_latency_ms', value: 5000 },
+    { type: 'max_cost_usd', value: 0.01 },
+    { type: 'min_confidence', value: 0.8 },
+  ],
+})
+// receipt.constraint_result.passed → true/false
+```
+
+### `ar.getJudgments(receiptId)` — Get judgments
+
+```typescript
+const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
+```
+
+### `ar.cleanup()` — Delete expired receipts
+
+```typescript
+const { deleted, remaining } = await ar.cleanup()
+```
+
 ## CLI Reference
 
 | Command | Description |
@@ -192,6 +226,9 @@ const publicKey = await ar.getPublicKey()
 | `chain <chain_id>` | Show all receipts in a chain |
 | `chain <chain_id> --tree` | Show chain as visual tree |
 | `stats` | Show aggregate receipt statistics |
+| `judgments <id>` | List judgments for a receipt |
+| `cleanup` | Delete expired receipts |
+| `cleanup --dry-run` | Preview what would be deleted |
 | `export <id>` | Export a single receipt as JSON |
 | `export --all` | Export all receipts as compact JSON |
 | `export --all --pretty` | Export all receipts as formatted JSON |
@@ -284,6 +321,19 @@ All data is stored locally in the data directory:
 - **sdk** — High-level Node.js SDK wrapping the engine
 - **cli** — Command-line tool for inspecting, verifying, and managing receipts
 
+## Dashboard (Mission Control)
+
+Visualize every receipt, chain, agent, constraint, and judgment in your system.
+
+```bash
+cd apps/web && pnpm dev
+# → http://localhost:3274
+```
+
+Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, dark mode, global search (Cmd+K).
+
+11 pages: Overview, Receipts, Receipt Detail, Chains, Chain Detail, Agents, Agent Detail, Constraints, Judgments, Verify, Settings.
+
 ## Examples
 
 | Example | Description |
@@ -291,6 +341,9 @@ All data is stored locally in the data directory:
 | [`examples/basic`](./examples/basic) | Simple action tracking with verification |
 | [`examples/chained`](./examples/chained) | Multi-step pipeline with parent/child receipt linking |
 | [`examples/modquote`](./examples/modquote) | Content moderation pipeline with chained receipts |
+| [`examples/constraints`](./examples/constraints) | Constraint verification with pass/fail rules |
+| [`examples/judge`](./examples/judge) | AI Judge evaluation with rubrics |
+| [`examples/ttl`](./examples/ttl) | Receipt TTL and cleanup |
 
 ## Packages
 
@@ -304,15 +357,20 @@ All data is stored locally in the data directory:
 
 ## Roadmap
 
-- [x] Local-first receipt storage with SQLite/JSON
+- [x] Local-first receipt storage with JSON
 - [x] Ed25519 signing and verification
-- [x] MCP server with 8 tools
+- [x] MCP server with 12 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
+- [x] Constraint verification (6 built-in types)
+- [x] AI Judge with rubric-based evaluation
+- [x] Output schema validation (JSON Schema)
+- [x] Receipt TTL and cleanup
+- [x] Mission Control dashboard (11 pages, dark mode, search)
 - [ ] Receipt anchoring to blockchain/timestamping services
 - [ ] Multi-agent receipt sharing protocol
-- [ ] Web dashboard for receipt visualization
 - [ ] Receipt compression and archival
+- [ ] Hosted tier with cloud database
 
 ## Development
 
