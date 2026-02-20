@@ -85,6 +85,16 @@ export class AgentReceipts {
     const engine = await this.ensureInitialized()
     return engine.getPublicKey()
   }
+
+  async getJudgments(receiptId: string): Promise<ActionReceipt[]> {
+    const engine = await this.ensureInitialized()
+    return engine.getJudgments(receiptId)
+  }
+
+  async cleanup(): Promise<{ deleted: number; remaining: number }> {
+    const engine = await this.ensureInitialized()
+    return engine.cleanup()
+  }
 }
 
 export { hashData }

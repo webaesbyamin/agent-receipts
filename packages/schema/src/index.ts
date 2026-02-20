@@ -12,6 +12,14 @@ export {
   ConstraintDefinitions,
 } from './constraints'
 
+// Rubric schemas + types
+export {
+  RubricCriterion,
+  Rubric,
+  CriterionResult,
+  JudgmentResult,
+} from './rubric'
+
 // API schemas + types
 export {
   CreateReceiptInput,

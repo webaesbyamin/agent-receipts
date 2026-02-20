@@ -7,6 +7,7 @@ export { ConfigManager } from './storage/config-manager.js'
 export { ReceiptEngine } from './engine/receipt-engine.js'
 export type { TrackParams, CreateParams, CompleteParams } from './engine/receipt-engine.js'
 export { evaluateConstraints } from './engine/constraint-evaluator.js'
+export { validateJsonSchema } from './engine/json-schema-validator.js'
 
 // Hash utility
 export { hashData } from './hash.js'

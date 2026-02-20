@@ -35,7 +35,7 @@ describe('MCP Tools', () => {
     await rm(tmpDir, { recursive: true, force: true })
   })
 
-  it('registers 8 tools', () => {
+  it('registers 12 tools', () => {
     // McpServer doesn't expose a tool count directly, but we can verify
     // the tools were registered by testing the engine works
     expect(engine).toBeDefined()
@@ -150,5 +150,108 @@ describe('MCP Tools', () => {
     const cr = receipt.constraint_result as { passed: boolean; results: Array<{ passed: boolean }> }
     expect(cr.passed).toBe(true)
     expect(cr.results).toHaveLength(2)
+  })
+
+  it('judge_receipt flow: create pending judgment and complete it', async () => {
+    const parent = await engine.track({
+      action: 'judge_target',
+      input: { text: 'test' },
+      output: { summary: 'result' },
+    })
+    const { hashData } = await import('../hash.js')
+
+    // Create pending judgment receipt
+    const judgment = await engine.create({
+      receipt_type: 'judgment',
+      action: 'judge',
+      input_hash: hashData({ receipt_id: parent.receipt_id }),
+      parent_receipt_id: parent.receipt_id,
+      chain_id: parent.chain_id,
+      status: 'pending',
+      metadata: { rubric_version: '1.0' },
+    })
+    expect(judgment.receipt_type).toBe('judgment')
+    expect(judgment.status).toBe('pending')
+
+    // Complete judgment
+    const completed = await engine.complete(judgment.receipt_id, {
+      status: 'completed',
+      output_hash: hashData({ verdict: 'pass' }),
+      output_summary: 'PASS (0.91)',
+      confidence: 0.88,
+    })
+    expect(completed.status).toBe('completed')
+  })
+
+  it('get_judgments retrieves judgment receipts', async () => {
+    const parent = await engine.track({
+      action: 'judged_action',
+      input: 'data',
+    })
+
+    // Create and complete a judgment
+    const { hashData } = await import('../hash.js')
+    const pending = await engine.create({
+      receipt_type: 'judgment',
+      action: 'judge',
+      input_hash: hashData({ receipt_id: parent.receipt_id }),
+      parent_receipt_id: parent.receipt_id,
+      chain_id: parent.chain_id,
+      status: 'pending',
+    })
+    await engine.complete(pending.receipt_id, {
+      status: 'completed',
+      output_hash: hashData({ verdict: 'pass' }),
+    })
+
+    const judgments = await engine.getJudgments(parent.receipt_id)
+    expect(judgments.length).toBe(1)
+  })
+
+  it('cleanup tool deletes expired receipts', async () => {
+    await engine.track({
+      action: 'expired',
+      input: 'data',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    })
+    await engine.track({
+      action: 'fresh',
+      input: 'data',
+    })
+
+    const result = await engine.cleanup()
+    expect(result.deleted).toBe(1)
+    expect(result.remaining).toBe(1)
+  })
+
+  it('track_action with output_schema constraint', async () => {
+    const receipt = await engine.track({
+      action: 'schema_validated',
+      input: { query: 'test' },
+      output: { answer: 'hello', confidence: 0.95 },
+      constraints: [{
+        type: 'output_schema',
+        value: {
+          type: 'object',
+          required: ['answer'],
+          properties: {
+            answer: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+        },
+      }],
+    })
+    const cr = receipt.constraint_result as { passed: boolean }
+    expect(cr.passed).toBe(true)
+  })
+
+  it('track_action with expires_at parameter', async () => {
+    const receipt = await engine.track({
+      action: 'expiring',
+      input: 'data',
+      expires_at: '2099-12-31T23:59:59.000Z',
+    })
+    const metadata = receipt.metadata as Record<string, unknown>
+    expect(metadata.expires_at).toBe('2099-12-31T23:59:59.000Z')
   })
 })

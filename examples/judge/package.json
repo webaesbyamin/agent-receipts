@@ -1,0 +1,16 @@
+{
+  "name": "@agent-receipts/example-judge",
+  "version": "0.1.1",
+  "private": true,
+  "description": "AI Judge example — reading judgments via SDK",
+  "scripts": {
+    "start": "npx tsx index.ts"
+  },
+  "dependencies": {
+    "@agent-receipts/sdk": "workspace:*",
+    "@agent-receipts/mcp-server": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

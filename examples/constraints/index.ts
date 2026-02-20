@@ -61,6 +61,48 @@ async function main() {
     console.log(`Result: ${cr.passed ? 'PASSED' : 'FAILED'} (${cr.results.length} constraints)`)
   }
 
+  // Example 4: Output schema validation
+  console.log('\n--- Example 4: Output schema validation ---')
+  const schemaValidated = await receipts.track({
+    action: 'generate_quote',
+    input: { vehicle: 'Tesla Model 3', service: 'full-front-ppf' },
+    output: { total: 1450, currency: 'USD', line_items: [{ name: 'Full Front PPF', price: 1450 }] },
+    constraints: [
+      { type: 'max_latency_ms', value: 5000 },
+      {
+        type: 'output_schema',
+        value: {
+          type: 'object',
+          required: ['total', 'currency', 'line_items'],
+          properties: {
+            total: { type: 'number', minimum: 0 },
+            currency: { type: 'string', enum: ['USD', 'CAD', 'EUR'] },
+            line_items: {
+              type: 'array',
+              minItems: 1,
+              items: {
+                type: 'object',
+                required: ['name', 'price'],
+                properties: {
+                  name: { type: 'string' },
+                  price: { type: 'number', minimum: 0 },
+                },
+              },
+            },
+          },
+        },
+        message: 'Quote output must match the expected schema',
+      },
+    ],
+  })
+
+  const schemaResult = schemaValidated.constraint_result as { passed: boolean; results: Array<{ type: string; passed: boolean }> }
+  console.log(`Receipt: ${schemaValidated.receipt_id}`)
+  console.log(`Schema validation passed: ${schemaResult.passed}`)
+  for (const r of schemaResult.results) {
+    console.log(`  ${r.passed ? '\u2713' : '\u2717'} ${r.type}`)
+  }
+
   // Show totals
   const all = await receipts.list()
   console.log(`\nTotal receipts: ${all.pagination.total}`)

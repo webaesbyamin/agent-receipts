@@ -149,4 +149,43 @@ describe('AgentReceipts SDK', () => {
     const cr = completed.constraint_result as { passed: boolean }
     expect(cr.passed).toBe(true)
   })
+
+  it('getJudgments returns judgments', async () => {
+    const receipt = await receipts.track({
+      action: 'judge_target',
+      input: 'data',
+      output: 'result',
+    })
+    // No judgments yet
+    const judgments = await receipts.getJudgments(receipt.receipt_id)
+    expect(judgments).toEqual([])
+  })
+
+  it('cleanup returns deleted count', async () => {
+    // Create an expired receipt
+    await receipts.track({
+      action: 'expired',
+      input: 'data',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    })
+    // Create a fresh receipt
+    await receipts.track({
+      action: 'fresh',
+      input: 'data',
+    })
+
+    const result = await receipts.cleanup()
+    expect(result.deleted).toBe(1)
+    expect(result.remaining).toBe(1)
+  })
+
+  it('track with expires_at stores expiration', async () => {
+    const receipt = await receipts.track({
+      action: 'expiring',
+      input: 'data',
+      expires_at: '2099-12-31T23:59:59.000Z',
+    })
+    const metadata = receipt.metadata as Record<string, unknown>
+    expect(metadata.expires_at).toBe('2099-12-31T23:59:59.000Z')
+  })
 })

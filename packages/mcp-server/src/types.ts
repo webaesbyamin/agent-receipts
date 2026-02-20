@@ -17,6 +17,7 @@ export interface ReceiptFilter {
   environment?: Environment
   receipt_type?: ReceiptType
   chain_id?: string
+  parent_receipt_id?: string
   tag?: string
   from?: string
   to?: string

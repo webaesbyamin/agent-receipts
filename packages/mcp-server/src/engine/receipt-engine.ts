@@ -26,6 +26,8 @@ export interface TrackParams {
   chain_id?: string
   output_summary?: string
   constraints?: ConstraintDefinition[]
+  expires_at?: string
+  ttl_ms?: number
 }
 
 export interface CreateParams {
@@ -47,6 +49,9 @@ export interface CreateParams {
   chain_id?: string
   status?: 'pending' | 'completed' | 'failed' | 'timeout'
   constraints?: ConstraintDefinition[]
+  expires_at?: string
+  ttl_ms?: number
+  _rawOutput?: unknown
 }
 
 export interface CompleteParams {
@@ -62,6 +67,7 @@ export interface CompleteParams {
   confidence?: number | null
   callback_verified?: boolean | null
   error?: Record<string, unknown> | null
+  metadata?: Record<string, unknown>
 }
 
 export class ReceiptEngine {
@@ -83,6 +89,17 @@ export class ReceiptEngine {
     const constraintsForStorage = constraintDefs
       ? { definitions: constraintDefs }
       : null
+
+    // Calculate expires_at from ttl_ms if provided
+    let expiresAt = params.expires_at
+    if (!expiresAt && params.ttl_ms) {
+      expiresAt = new Date(Date.now() + params.ttl_ms).toISOString()
+    }
+
+    const metadata: Record<string, unknown> = { ...(params.metadata ?? {}) }
+    if (expiresAt) {
+      metadata.expires_at = expiresAt
+    }
 
     const receiptData = {
       receipt_id: receiptId,
@@ -113,7 +130,7 @@ export class ReceiptEngine {
       verify_url: `local://verify/${receiptId}`,
       callback_verified: null,
       confidence: params.confidence ?? null,
-      metadata: params.metadata ?? {},
+      metadata,
     }
 
     // Evaluate constraints if receipt is completed and constraints are present
@@ -121,6 +138,7 @@ export class ReceiptEngine {
       receiptData.constraint_result = evaluateConstraints(
         receiptData as unknown as ActionReceipt,
         constraintDefs,
+        { rawOutput: params._rawOutput },
       )
     }
 
@@ -164,6 +182,7 @@ export class ReceiptEngine {
       confidence: params.confidence ?? existing.confidence,
       callback_verified: params.callback_verified ?? existing.callback_verified,
       error: params.error ?? existing.error,
+      metadata: params.metadata ? { ...existing.metadata, ...params.metadata } : existing.metadata,
       constraint_result: existing.constraint_result,
     }
 
@@ -210,6 +229,9 @@ export class ReceiptEngine {
       chain_id: params.chain_id,
       status: 'completed',
       constraints: params.constraints,
+      expires_at: params.expires_at,
+      ttl_ms: params.ttl_ms,
+      _rawOutput: params.output,
     })
   }
 
@@ -240,6 +262,19 @@ export class ReceiptEngine {
 
   async getChain(chainId: string): Promise<ActionReceipt[]> {
     return this.store.getChain(chainId)
+  }
+
+  async getJudgments(receiptId: string): Promise<ActionReceipt[]> {
+    const result = await this.store.list({
+      parent_receipt_id: receiptId,
+      receipt_type: 'judgment',
+    })
+    return result.data
+  }
+
+  async cleanup(): Promise<{ deleted: number; remaining: number }> {
+    const result = await this.store.cleanup()
+    return { deleted: result.deleted, remaining: result.total - result.deleted }
   }
 
   getPublicKey(): string {

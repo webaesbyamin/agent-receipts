@@ -8,6 +8,10 @@ import { registerGetReceipt } from './get-receipt.js'
 import { registerListReceipts } from './list-receipts.js'
 import { registerGetChain } from './get-chain.js'
 import { registerGetPublicKey } from './get-public-key.js'
+import { registerJudgeReceipt } from './judge-receipt.js'
+import { registerCompleteJudgment } from './complete-judgment.js'
+import { registerGetJudgments } from './get-judgments.js'
+import { registerCleanup } from './cleanup.js'
 
 export function registerAllTools(server: McpServer, engine: ReceiptEngine): void {
   registerCreateReceipt(server, engine)
@@ -18,4 +22,8 @@ export function registerAllTools(server: McpServer, engine: ReceiptEngine): void
   registerListReceipts(server, engine)
   registerGetChain(server, engine)
   registerGetPublicKey(server, engine)
+  registerJudgeReceipt(server, engine)
+  registerCompleteJudgment(server, engine)
+  registerGetJudgments(server, engine)
+  registerCleanup(server, engine)
 }

@@ -1,3 +1,4 @@
 export { ReceiptEngine } from './receipt-engine.js'
 export type { TrackParams, CreateParams, CompleteParams } from './receipt-engine.js'
 export { evaluateConstraints } from './constraint-evaluator.js'
+export { validateJsonSchema } from './json-schema-validator.js'

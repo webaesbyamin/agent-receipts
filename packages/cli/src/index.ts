@@ -22,6 +22,8 @@ Commands:
   verify <id|file> [--key <hex>]    Verify a receipt's signature
   list [options]                    List receipts
   chain <chain_id> [--tree]         Show all receipts in a chain
+  judgments <receipt_id> [--json]    Show judgments for a receipt
+  cleanup [--dry-run]               Delete expired receipts
   stats                             Show aggregate receipt statistics
   export <id> | --all [--pretty]    Export receipt(s) as JSON to stdout
 
@@ -140,6 +142,25 @@ async function cmdInspect(target: string) {
   console.log(`  Agent:    ${receipt.agent_id}`)
   console.log(`  Time:     ${receipt.timestamp}`)
   if (receipt.completed_at) console.log(`  Completed: ${receipt.completed_at}`)
+
+  // Show expires_at if present
+  const expiresAt = (receipt.metadata as Record<string, unknown>)?.expires_at as string | undefined
+  if (expiresAt) {
+    const expiresDate = new Date(expiresAt)
+    const now = new Date()
+    const diffMs = expiresDate.getTime() - now.getTime()
+    if (diffMs <= 0) {
+      const agoMs = -diffMs
+      const agoDays = Math.floor(agoMs / (1000 * 60 * 60 * 24))
+      const agoStr = agoDays > 0 ? `${agoDays} day${agoDays !== 1 ? 's' : ''} ago` : 'just now'
+      console.log(`  Expires:  ${expiresAt} (EXPIRED — ${agoStr})`)
+    } else {
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      const remainStr = days > 0 ? `${days} day${days !== 1 ? 's' : ''} remaining` : 'less than a day remaining'
+      console.log(`  Expires:  ${expiresAt} (${remainStr})`)
+    }
+  }
+
   if (receipt.model) console.log(`  Model:    ${receipt.model}`)
   if (receipt.latency_ms != null) console.log(`  Latency:  ${receipt.latency_ms}ms`)
   if (receipt.cost_usd != null) console.log(`  Cost:     $${receipt.cost_usd}`)
@@ -336,6 +357,101 @@ async function cmdStats() {
   }
 }
 
+async function cmdJudgments(receiptId: string, args: string[]) {
+  const { engine } = await getEngine()
+  const isJson = args.includes('--json')
+  const judgments = await engine.getJudgments(receiptId)
+
+  if (isJson) {
+    console.log(JSON.stringify({
+      receipt_id: receiptId,
+      count: judgments.length,
+      judgments: judgments.map(j => ({
+        judgment_id: j.receipt_id,
+        verdict: (j.metadata as Record<string, unknown>)?.judgment
+          ? ((j.metadata as Record<string, unknown>).judgment as Record<string, unknown>).verdict
+          : null,
+        score: (j.metadata as Record<string, unknown>)?.judgment
+          ? ((j.metadata as Record<string, unknown>).judgment as Record<string, unknown>).score
+          : null,
+        status: j.status,
+        output_summary: j.output_summary,
+        confidence: j.confidence,
+        timestamp: j.timestamp,
+      })),
+    }, null, 2))
+    return
+  }
+
+  if (judgments.length === 0) {
+    console.log(`No judgments found for ${receiptId}`)
+    return
+  }
+
+  console.log(`Judgments for ${receiptId} (${judgments.length} found)`)
+  for (const j of judgments) {
+    const judgment = (j.metadata as Record<string, unknown>)?.judgment as Record<string, unknown> | undefined
+    const verdict = judgment?.verdict as string ?? 'unknown'
+    const score = judgment?.score as number ?? 0
+    const criteriaResults = judgment?.criteria_results as Array<{ criterion: string; score: number; passed: boolean; reasoning: string }> | undefined
+
+    console.log('')
+    console.log(`  Judgment: ${j.receipt_id}`)
+    console.log(`  Verdict:  ${verdict.toUpperCase()} (${score.toFixed(2)})`)
+    console.log(`  Judge:    ${j.agent_id}`)
+    console.log(`  Date:     ${j.completed_at ?? j.timestamp}`)
+
+    if (criteriaResults && criteriaResults.length > 0) {
+      console.log('')
+      console.log('  Criteria:')
+      for (const cr of criteriaResults) {
+        const icon = cr.passed ? '\u2713' : '\u2717'
+        console.log(`    ${icon} ${cr.criterion.padEnd(15)} ${cr.score.toFixed(2)}  ${cr.reasoning}`)
+      }
+    }
+
+    const overallReasoning = judgment?.overall_reasoning as string | undefined
+    if (overallReasoning) {
+      console.log('')
+      console.log(`  Overall: ${overallReasoning}`)
+    }
+  }
+}
+
+async function cmdCleanup(args: string[]) {
+  const isDryRun = args.includes('--dry-run')
+  const { engine } = await getEngine()
+
+  if (isDryRun) {
+    const all = await engine.list(undefined, 1, 100000)
+    const now = new Date().toISOString()
+    const expired = all.data.filter(r => {
+      const ea = (r.metadata as Record<string, unknown>)?.expires_at as string | undefined
+      return ea && ea < now
+    })
+
+    console.log('Scanning receipts...')
+    if (expired.length === 0) {
+      console.log('\nNo expired receipts found.')
+      return
+    }
+    console.log(`\nExpired: ${expired.length} receipt${expired.length !== 1 ? 's' : ''}`)
+    for (const r of expired) {
+      const ea = (r.metadata as Record<string, unknown>)?.expires_at as string
+      console.log(`  ${r.receipt_id}  ${r.action.padEnd(20)} expired ${ea}`)
+    }
+    console.log(`\n(dry run — no receipts deleted)`)
+    return
+  }
+
+  const result = await engine.cleanup()
+  if (result.deleted === 0) {
+    console.log('No expired receipts found.')
+  } else {
+    console.log(`Deleted ${result.deleted} expired receipt${result.deleted !== 1 ? 's' : ''}. ${result.remaining} remaining.`)
+  }
+}
+
 async function cmdExport(target: string, args: string[]) {
   const { engine } = await getEngine()
   const isPretty = args.includes('--pretty')
@@ -390,6 +506,13 @@ async function main() {
     case 'chain':
       if (!args[1]) { console.error('Usage: agent-receipts chain <chain_id>'); process.exit(1) }
       await cmdChain(args[1], args.slice(2))
+      break
+    case 'judgments':
+      if (!args[1]) { console.error('Usage: agent-receipts judgments <receipt_id>'); process.exit(1) }
+      await cmdJudgments(args[1], args.slice(2))
+      break
+    case 'cleanup':
+      await cmdCleanup(args.slice(1))
       break
     case 'stats':
       await cmdStats()

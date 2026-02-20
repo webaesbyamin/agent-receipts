@@ -27,6 +27,8 @@ export function registerTrackAction(server: McpServer, engine: ReceiptEngine): v
         value: z.unknown(),
         message: z.string().optional(),
       })).optional().describe('Constraint definitions to evaluate'),
+      expires_at: z.string().datetime().optional().describe('ISO datetime when this receipt expires'),
+      ttl_ms: z.number().positive().optional().describe('Time-to-live in milliseconds from now'),
     },
     async (params) => {
       const receipt = await engine.track(params)

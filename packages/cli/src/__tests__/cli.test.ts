@@ -377,4 +377,132 @@ describe('CLI', () => {
     expect(stdout).toContain('passed: 1')
     expect(stdout).toContain('failed: 1')
   })
+
+  // === Phase 5 tests ===
+
+  it('judgments shows "no judgments" when none exist', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({ action: 'no_judges', input: 'data' })
+
+    const { stdout } = await runCLI(['judgments', receipt.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('No judgments found')
+  })
+
+  it('judgments command shows judgment details', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const { hashData } = await import('@agent-receipts/mcp-server')
+
+    const parent = await engine.track({
+      action: 'judged_action',
+      input: 'data',
+      output: 'result',
+    })
+
+    // Create and complete a judgment receipt
+    const pending = await engine.create({
+      receipt_type: 'judgment',
+      action: 'judge',
+      input_hash: hashData({ receipt_id: parent.receipt_id }),
+      parent_receipt_id: parent.receipt_id,
+      chain_id: parent.chain_id,
+      status: 'pending',
+      metadata: { rubric_version: '1.0' },
+    })
+
+    await engine.complete(pending.receipt_id, {
+      status: 'completed',
+      output_hash: hashData({ verdict: 'pass' }),
+      output_summary: 'PASS (0.91)',
+      confidence: 0.88,
+      metadata: {
+        rubric_version: '1.0',
+        judgment: {
+          verdict: 'pass',
+          score: 0.91,
+          criteria_results: [
+            { criterion: 'accuracy', score: 0.95, passed: true, reasoning: 'Correct output' },
+          ],
+          overall_reasoning: 'Good quality output.',
+          rubric_version: '1.0',
+        },
+      },
+    })
+
+    const { stdout } = await runCLI(['judgments', parent.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('1 found')
+    expect(stdout).toContain('PASS')
+    expect(stdout).toContain('accuracy')
+  })
+
+  it('judgments --json outputs JSON', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({ action: 'json_judge', input: 'data' })
+
+    const { stdout } = await runCLI(['judgments', receipt.receipt_id, '--json'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    const result = JSON.parse(stdout)
+    expect(result.receipt_id).toBe(receipt.receipt_id)
+    expect(result.count).toBe(0)
+    expect(result.judgments).toEqual([])
+  })
+
+  it('cleanup deletes expired receipts', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({
+      action: 'expired',
+      input: 'data',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    })
+    await engine.track({
+      action: 'fresh',
+      input: 'data',
+    })
+
+    const { stdout } = await runCLI(['cleanup'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Deleted 1')
+    expect(stdout).toContain('1 remaining')
+  })
+
+  it('cleanup --dry-run shows without deleting', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({
+      action: 'expired_action',
+      input: 'data',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    })
+
+    const { stdout } = await runCLI(['cleanup', '--dry-run'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Expired: 1')
+    expect(stdout).toContain('dry run')
+
+    // Verify receipt still exists
+    const list = await engine.list()
+    expect(list.data.length).toBe(1)
+  })
+
+  it('inspect shows expires_at when present', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({
+      action: 'expiring_receipt',
+      input: 'data',
+      expires_at: '2099-12-31T23:59:59.000Z',
+    })
+
+    const { stdout } = await runCLI(['inspect', receipt.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Expires:')
+    expect(stdout).toContain('2099-12-31')
+    expect(stdout).toContain('remaining')
+  })
+
+  it('inspect shows EXPIRED for past dates', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    const receipt = await engine.track({
+      action: 'already_expired',
+      input: 'data',
+      expires_at: '2020-01-01T00:00:00.000Z',
+    })
+
+    const { stdout } = await runCLI(['inspect', receipt.receipt_id], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('Expires:')
+    expect(stdout).toContain('EXPIRED')
+  })
 })

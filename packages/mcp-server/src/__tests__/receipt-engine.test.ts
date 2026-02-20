@@ -406,6 +406,93 @@ describe('ReceiptEngine', () => {
       expect(fetched).not.toBeNull()
     })
 
+    it('track with output_schema constraint validates raw output', async () => {
+      const receipt = await engine.track({
+        action: 'schema_test',
+        input: 'data',
+        output: { name: 'test', count: 5 },
+        constraints: [{
+          type: 'output_schema',
+          value: {
+            type: 'object',
+            required: ['name', 'count'],
+            properties: {
+              name: { type: 'string' },
+              count: { type: 'number', minimum: 0 },
+            },
+          },
+        }],
+      })
+      const cr = receipt.constraint_result as { passed: boolean }
+      expect(cr.passed).toBe(true)
+    })
+
+    it('track with output_schema: invalid output fails constraint', async () => {
+      const receipt = await engine.track({
+        action: 'schema_fail_test',
+        input: 'data',
+        output: { name: 123 }, // name should be string, missing count
+        constraints: [{
+          type: 'output_schema',
+          value: {
+            type: 'object',
+            required: ['name', 'count'],
+            properties: {
+              name: { type: 'string' },
+              count: { type: 'number' },
+            },
+          },
+        }],
+      })
+      const cr = receipt.constraint_result as { passed: boolean }
+      expect(cr.passed).toBe(false)
+    })
+
+    it('track with expires_at stores in metadata', async () => {
+      const receipt = await engine.track({
+        action: 'ttl_test',
+        input: 'data',
+        expires_at: '2099-12-31T23:59:59.000Z',
+      })
+      const metadata = receipt.metadata as Record<string, unknown>
+      expect(metadata.expires_at).toBe('2099-12-31T23:59:59.000Z')
+    })
+
+    it('track with ttl_ms calculates expires_at', async () => {
+      const before = Date.now()
+      const receipt = await engine.track({
+        action: 'ttl_calc_test',
+        input: 'data',
+        ttl_ms: 300000, // 5 minutes
+      })
+      const metadata = receipt.metadata as Record<string, unknown>
+      const expiresMs = new Date(metadata.expires_at as string).getTime()
+      expect(expiresMs).toBeGreaterThanOrEqual(before + 300000)
+      expect(expiresMs).toBeLessThanOrEqual(Date.now() + 300000)
+    })
+
+    it('getJudgments returns judgment receipts for a receipt', async () => {
+      const parent = await engine.track({ action: 'judge_target', input: 'data' })
+
+      // Create and complete a judgment
+      const judgment = await engine.create({
+        receipt_type: 'judgment',
+        action: 'judge',
+        input_hash: 'sha256:test',
+        parent_receipt_id: parent.receipt_id,
+        chain_id: parent.chain_id,
+        status: 'pending',
+      })
+      await engine.complete(judgment.receipt_id, {
+        status: 'completed',
+        output_hash: 'sha256:result',
+      })
+
+      const judgments = await engine.getJudgments(parent.receipt_id)
+      expect(judgments.length).toBe(1)
+      expect(judgments[0]!.receipt_type).toBe('judgment')
+    })
+
     it('constraint_result has correct structure', async () => {
       const receipt = await engine.track({
         action: 'test',

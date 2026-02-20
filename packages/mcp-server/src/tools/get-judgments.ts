@@ -1,0 +1,39 @@
+import { z } from 'zod'
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { ReceiptEngine } from '../engine/receipt-engine.js'
+
+export function registerGetJudgments(server: McpServer, engine: ReceiptEngine): void {
+  server.tool(
+    'get_judgments',
+    'Get all judgment receipts for a given receipt.',
+    {
+      receipt_id: z.string().describe('The receipt ID to get judgments for'),
+    },
+    async (params) => {
+      const judgments = await engine.getJudgments(params.receipt_id)
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            receipt_id: params.receipt_id,
+            count: judgments.length,
+            judgments: judgments.map(j => ({
+              judgment_id: j.receipt_id,
+              verdict: (j.metadata as Record<string, unknown>)?.judgment
+                ? ((j.metadata as Record<string, unknown>).judgment as Record<string, unknown>).verdict
+                : null,
+              score: (j.metadata as Record<string, unknown>)?.judgment
+                ? ((j.metadata as Record<string, unknown>).judgment as Record<string, unknown>).score
+                : null,
+              status: j.status,
+              output_summary: j.output_summary,
+              confidence: j.confidence,
+              timestamp: j.timestamp,
+              completed_at: j.completed_at,
+            })),
+          }, null, 2),
+        }],
+      }
+    },
+  )
+}

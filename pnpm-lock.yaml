@@ -97,7 +97,30 @@ importers:
         specifier: ^4.19.0
         version: 4.21.0
 
+  examples/judge:
+    dependencies:
+      '@agent-receipts/mcp-server':
+        specifier: workspace:*
+        version: link:../../packages/mcp-server
+      '@agent-receipts/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
+
   examples/modquote:
+    dependencies:
+      '@agent-receipts/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
+
+  examples/ttl:
     dependencies:
       '@agent-receipts/sdk':
         specifier: workspace:*

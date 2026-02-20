@@ -68,6 +68,7 @@ export class ReceiptStore {
         if (filter.environment && r.environment !== filter.environment) return false
         if (filter.receipt_type && r.receipt_type !== filter.receipt_type) return false
         if (filter.chain_id && r.chain_id !== filter.chain_id) return false
+        if (filter.parent_receipt_id && r.parent_receipt_id !== filter.parent_receipt_id) return false
         if (filter.tag && (!r.tags || !r.tags.includes(filter.tag))) return false
         if (filter.from && r.timestamp < filter.from) return false
         if (filter.to && r.timestamp > filter.to) return false
@@ -123,5 +124,21 @@ export class ReceiptStore {
     } catch {
       return false
     }
+  }
+
+  async cleanup(): Promise<{ deleted: number; total: number }> {
+    const now = new Date().toISOString()
+    const allReceipts = await this.list(undefined, 1, 100000)
+    let deleted = 0
+
+    for (const receipt of allReceipts.data) {
+      const expiresAt = (receipt.metadata as Record<string, unknown>)?.expires_at as string | undefined
+      if (expiresAt && expiresAt < now) {
+        await this.delete(receipt.receipt_id)
+        deleted++
+      }
+    }
+
+    return { deleted, total: allReceipts.data.length }
   }
 }

@@ -1,4 +1,9 @@
 import type { ActionReceipt, ConstraintDefinition, ConstraintResult, SingleConstraintResult } from '@agent-receipts/schema'
+import { validateJsonSchema } from './json-schema-validator.js'
+
+export interface ConstraintContext {
+  rawOutput?: unknown
+}
 
 const RECEIPT_FIELD_NAMES = new Set([
   'receipt_id', 'parent_receipt_id', 'chain_id', 'receipt_type',
@@ -128,7 +133,36 @@ function evaluateStatusMustBe(receipt: ActionReceipt, constraint: ConstraintDefi
   }
 }
 
-export function evaluateConstraints(receipt: ActionReceipt, constraints: ConstraintDefinition[]): ConstraintResult {
+function evaluateOutputSchema(constraint: ConstraintDefinition, rawOutput?: unknown): SingleConstraintResult {
+  if (rawOutput === undefined) {
+    return {
+      type: 'output_schema',
+      passed: false,
+      expected: constraint.value,
+      actual: null,
+      message: constraint.message ?? 'output_schema requires raw output data — only available during track() or create()',
+    }
+  }
+
+  const schema = constraint.value as Record<string, unknown>
+  const errors = validateJsonSchema(rawOutput, schema)
+
+  return {
+    type: 'output_schema',
+    passed: errors.length === 0,
+    expected: schema,
+    actual: errors.length > 0 ? errors : rawOutput,
+    message: errors.length > 0
+      ? constraint.message ?? `Schema validation failed: ${errors.join(', ')}`
+      : undefined,
+  }
+}
+
+export function evaluateConstraints(
+  receipt: ActionReceipt,
+  constraints: ConstraintDefinition[],
+  context?: ConstraintContext,
+): ConstraintResult {
   if (constraints.length === 0) {
     return {
       passed: true,
@@ -156,6 +190,9 @@ export function evaluateConstraints(receipt: ActionReceipt, constraints: Constra
         break
       case 'status_must_be':
         result = evaluateStatusMustBe(receipt, constraint)
+        break
+      case 'output_schema':
+        result = evaluateOutputSchema(constraint, context?.rawOutput)
         break
       default:
         result = {
