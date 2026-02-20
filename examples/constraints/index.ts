@@ -64,34 +64,33 @@ async function main() {
   // Example 4: Output schema validation
   console.log('\n--- Example 4: Output schema validation ---')
   const schemaValidated = await receipts.track({
-    action: 'generate_quote',
-    input: { vehicle: 'Tesla Model 3', service: 'full-front-ppf' },
-    output: { total: 1450, currency: 'USD', line_items: [{ name: 'Full Front PPF', price: 1450 }] },
+    action: 'extract_entities',
+    input: { text: 'Acme Corp reported $2.1M revenue in Q4 2024.' },
+    output: { entities: [{ name: 'Acme Corp', type: 'organization' }, { name: '$2.1M', type: 'monetary' }], count: 2 },
     constraints: [
       { type: 'max_latency_ms', value: 5000 },
       {
         type: 'output_schema',
         value: {
           type: 'object',
-          required: ['total', 'currency', 'line_items'],
+          required: ['entities', 'count'],
           properties: {
-            total: { type: 'number', minimum: 0 },
-            currency: { type: 'string', enum: ['USD', 'CAD', 'EUR'] },
-            line_items: {
+            count: { type: 'number', minimum: 0 },
+            entities: {
               type: 'array',
               minItems: 1,
               items: {
                 type: 'object',
-                required: ['name', 'price'],
+                required: ['name', 'type'],
                 properties: {
                   name: { type: 'string' },
-                  price: { type: 'number', minimum: 0 },
+                  type: { type: 'string', enum: ['person', 'organization', 'monetary', 'date', 'location'] },
                 },
               },
             },
           },
         },
-        message: 'Quote output must match the expected schema',
+        message: 'Entity extraction output must match the expected schema',
       },
     ],
   })

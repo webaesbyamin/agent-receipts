@@ -53,18 +53,22 @@ Add to `.cursor/mcp.json` in your project root:
 
 ## Tools
 
-The MCP server exposes 8 tools:
+The MCP server exposes 12 tools:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `track_action` | Track an agent action with automatic hashing | `action`, `input`, `output`, `status` |
-| `create_receipt` | Create a receipt with pre-computed hashes | `action`, `input_hash`, `output_hash` |
+| `track_action` | Track an agent action with automatic hashing | `action`, `input`, `output`, `constraints` |
+| `create_receipt` | Create a receipt with pre-computed hashes | `action`, `input_hash`, `output_hash`, `constraints` |
 | `complete_receipt` | Complete a pending receipt with results | `receipt_id`, `output`, `status` |
 | `verify_receipt` | Verify the cryptographic signature of a receipt | `receipt_id` |
 | `get_receipt` | Retrieve a receipt by ID | `receipt_id` |
 | `list_receipts` | List receipts with optional filtering | `agent_id`, `status`, `chain_id` |
 | `get_chain` | Get all receipts in a chain ordered by timestamp | `chain_id` |
 | `get_public_key` | Export the Ed25519 public key for verification | — |
+| `judge_receipt` | Start AI Judge evaluation of a receipt | `receipt_id`, `rubric` |
+| `complete_judgment` | Complete a pending judgment with results | `receipt_id`, `verdict`, `score`, `criteria` |
+| `get_judgments` | Get all judgments for a receipt | `receipt_id` |
+| `cleanup` | Delete expired receipts (TTL) | `dry_run` |
 
 ## Configuration
 

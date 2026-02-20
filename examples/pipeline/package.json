@@ -1,8 +1,8 @@
 {
-  "name": "@agent-receipts/example-modquote",
+  "name": "@agent-receipts/example-pipeline",
   "version": "0.1.1",
   "private": true,
-  "description": "ModQuote integration example",
+  "description": "Document analysis pipeline with chained receipts and constraints",
   "scripts": {
     "start": "npx tsx index.ts"
   },

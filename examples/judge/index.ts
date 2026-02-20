@@ -17,10 +17,10 @@ async function main() {
   // Step 1: Create a receipt to be judged
   console.log('--- Step 1: Create receipt to judge ---')
   const receipt = await ar.track({
-    action: 'generate_quote',
-    input: { vehicle: 'Tesla Model 3', service: 'full-front-ppf' },
-    output: { total: 1450, currency: 'USD', line_items: [{ name: 'Full Front PPF', price: 1450 }] },
-    output_summary: 'Generated PPF quote for Tesla Model 3: $1,450',
+    action: 'generate_summary',
+    input: { document_id: 'doc-2024-q4', max_length: 500, style: 'executive' },
+    output: { summary: 'Revenue grew 12% YoY to $142M...', word_count: 487, key_points: 5 },
+    output_summary: 'Generated 487-word executive summary with 5 key points',
     model: 'claude-sonnet',
     latency_ms: 2340,
     cost_usd: 0.008,
@@ -43,11 +43,11 @@ async function main() {
     verdict: 'pass',
     score: 0.91,
     criteria_results: [
-      { criterion: 'accuracy', score: 0.95, passed: true, reasoning: 'Pricing is correct for the model and service' },
-      { criterion: 'completeness', score: 0.88, passed: true, reasoning: 'Includes line items and total' },
-      { criterion: 'safety', score: 0.90, passed: true, reasoning: 'No harmful content' },
+      { criterion: 'accuracy', score: 0.95, passed: true, reasoning: 'Key financial figures match the source document' },
+      { criterion: 'completeness', score: 0.88, passed: true, reasoning: 'Covers all major sections and key points' },
+      { criterion: 'clarity', score: 0.90, passed: true, reasoning: 'Written in clear executive language' },
     ],
-    overall_reasoning: 'The quote was accurate, well-structured, and addressed the customer need.',
+    overall_reasoning: 'The summary was accurate, well-structured, and captured the essential information.',
     rubric_version: '1.0',
   }
 

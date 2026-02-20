@@ -6,7 +6,6 @@
 
 - Node.js 20+
 - pnpm 9+
-- A Supabase project (for database)
 
 ### Setup
 
@@ -17,12 +16,6 @@ cd agent-receipts
 
 # Install dependencies
 pnpm install
-
-# Copy environment variables
-cp .env.example .env.local
-
-# Fill in your Supabase credentials and generate signing keys
-# See .env.example for details
 
 # Build all packages
 pnpm build
@@ -51,32 +44,45 @@ test/short-description     # Test additions/changes
 Follow this format:
 
 ```
-feat: description of change — Phase N
+feat: description of change
 fix: description of bug fix
 refactor: description of refactoring
 docs: description of documentation change
 test: description of test change
+chore: version bumps, dependency updates
 ```
 
 ## Pull Request Process
 
 1. Create a feature branch from `main`
-2. Make your changes following the implementation rules in the blueprint
+2. Make your changes
 3. Ensure all checks pass:
    - `pnpm build` — zero errors
    - `pnpm test` — zero failures
-   - `pnpm typecheck` — zero TypeScript errors
+   - `pnpm -r run typecheck` — zero TypeScript errors
 4. Push your branch and open a PR
 5. Describe the change and link to any relevant issues
 
 ## Implementation Rules
 
 - TypeScript strict mode — no `any` types, no `@ts-ignore`
-- Zod validation on all API inputs
+- Zod validation on all inputs
 - Append-only receipts — never update or delete after completion
 - Raw data never leaves the client — only SHA-256 hashes
-- API keys are hashed with SHA-256, never stored raw
 - All errors use the standard format: `{ error: { code, message, status } }`
+
+## Project Structure
+
+```
+packages/schema      — Zod schemas and TypeScript types
+packages/crypto      — Ed25519 signing, verification, key management
+packages/mcp-server  — MCP server, receipt engine, storage
+packages/sdk         — High-level Node.js SDK
+packages/cli         — Command-line tool
+apps/web             — Mission Control dashboard (Next.js)
+examples/            — Usage examples
+spec/                — Protocol specification
+```
 
 ## License
 

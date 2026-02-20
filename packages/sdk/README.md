@@ -99,6 +99,36 @@ const publicKey = await ar.getPublicKey()
 // 64-char hex string (Ed25519 public key)
 ```
 
+### `ar.track()` with Constraints
+
+```typescript
+const receipt = await ar.track({
+  action: 'generate_summary',
+  input: { document_id: 'doc-q4-2024' },
+  output: { summary: 'Revenue grew 12% YoY...' },
+  latency_ms: 1200,
+  cost_usd: 0.005,
+  constraints: [
+    { type: 'max_latency_ms', value: 5000 },
+    { type: 'max_cost_usd', value: 0.01 },
+    { type: 'min_confidence', value: 0.8 },
+  ],
+})
+// receipt.constraint_result.passed → true/false
+```
+
+### `ar.getJudgments(receiptId)` — Get judgments
+
+```typescript
+const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
+```
+
+### `ar.cleanup()` — Delete expired receipts
+
+```typescript
+const { deleted, remaining } = await ar.cleanup()
+```
+
 ## Examples
 
 See the [examples](https://github.com/webaesbyamin/agent-receipts/tree/main/examples) directory for complete usage patterns including chained receipts and multi-step pipelines.

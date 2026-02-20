@@ -18,9 +18,9 @@ async function main() {
   // Example 2: Create a receipt with an explicit expiration date
   console.log('\n--- Example 2: Explicit expires_at ---')
   const explicitReceipt = await ar.track({
-    action: 'session_quote',
-    input: { customer: 'John Doe', vehicle: 'BMW M3' },
-    output: { total: 2200, currency: 'USD' },
+    action: 'draft_email',
+    input: { to: 'team@example.com', subject: 'Q4 report summary' },
+    output: { draft_id: 'draft-001', word_count: 320 },
     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
   })
   const expMeta = explicitReceipt.metadata as Record<string, unknown>

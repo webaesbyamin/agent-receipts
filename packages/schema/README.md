@@ -40,13 +40,18 @@ const input = validate(CreateReceiptInput, {
 | `ListReceiptsQuery` | Query parameters for listing receipts |
 | `PaginationMeta` | Pagination metadata |
 | `ErrorResponse` | Structured error response |
+| `ConstraintDefinition` | Constraint rule definition (`type`, `value`, `message?`) |
+| `SingleConstraintResult` | Individual constraint evaluation result |
+| `ConstraintResult` | Aggregate constraint evaluation (`passed`, `results[]`, `evaluated_at`) |
+| `JudgmentRubric` | AI Judge rubric with criteria, weights, and thresholds |
+| `JudgmentResult` | AI Judge evaluation result with verdict and criteria scores |
 
 ## Enums
 
 | Enum | Values |
 |------|--------|
 | `ReceiptStatus` | `pending`, `completed`, `failed`, `timeout` |
-| `ReceiptType` | `action` |
+| `ReceiptType` | `action`, `judgment` |
 | `Environment` | `development`, `staging`, `production` |
 | `ErrorCode` | `VALIDATION_ERROR`, `NOT_FOUND`, `VERIFICATION_FAILED`, `INTERNAL_ERROR` |
 

@@ -183,9 +183,9 @@ const publicKey = await ar.getPublicKey()
 
 ```typescript
 const receipt = await ar.track({
-  action: 'generate_quote',
-  input: { product: 'Model 3' },
-  output: { price: 42000 },
+  action: 'generate_summary',
+  input: { document_id: 'doc-q4-2024' },
+  output: { summary: 'Revenue grew 12% YoY...' },
   latency_ms: 1200,
   cost_usd: 0.005,
   constraints: [
@@ -340,7 +340,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 |---------|-------------|
 | [`examples/basic`](./examples/basic) | Simple action tracking with verification |
 | [`examples/chained`](./examples/chained) | Multi-step pipeline with parent/child receipt linking |
-| [`examples/modquote`](./examples/modquote) | Content moderation pipeline with chained receipts |
+| [`examples/pipeline`](./examples/pipeline) | Document analysis pipeline with chained receipts |
 | [`examples/constraints`](./examples/constraints) | Constraint verification with pass/fail rules |
 | [`examples/judge`](./examples/judge) | AI Judge evaluation with rubrics |
 | [`examples/ttl`](./examples/ttl) | Receipt TTL and cleanup |

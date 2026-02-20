@@ -47,6 +47,9 @@ npx @agent-receipts/cli verify <receipt-id>
 | `chain <chain_id>` | Show all receipts in a chain |
 | `chain <chain_id> --tree` | Show chain as visual tree |
 | `stats` | Show aggregate receipt statistics |
+| `judgments <id>` | List judgments for a receipt |
+| `cleanup` | Delete expired receipts |
+| `cleanup --dry-run` | Preview what would be deleted |
 | `export <id>` | Export a single receipt as JSON |
 | `export --all` | Export all receipts as compact JSON |
 | `export --all --pretty` | Export all receipts as formatted JSON |
