@@ -8,6 +8,8 @@ import { ConfigManager } from '../storage/config-manager.js'
 import { hashData } from '../hash.js'
 import { evaluateConstraints } from './constraint-evaluator.js'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
+import { generateInvoice } from './invoice.js'
+import type { InvoiceOptions, Invoice } from './invoice.js'
 
 export interface TrackParams {
   action: string
@@ -279,5 +281,9 @@ export class ReceiptEngine {
 
   getPublicKey(): string {
     return this.keyManager.getPublicKey()
+  }
+
+  async generateInvoice(options: InvoiceOptions): Promise<Invoice> {
+    return generateInvoice(this.store, this.keyManager, options)
   }
 }

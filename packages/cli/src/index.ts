@@ -6,7 +6,12 @@ import {
   KeyManager,
   ConfigManager,
   ReceiptEngine,
+  formatInvoiceJSON,
+  formatInvoiceCSV,
+  formatInvoiceMarkdown,
+  formatInvoiceHTML,
 } from '@agent-receipts/mcp-server'
+import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 
 const HELP = `
@@ -26,6 +31,7 @@ Commands:
   cleanup [--dry-run]               Delete expired receipts
   stats                             Show aggregate receipt statistics
   export <id> | --all [--pretty]    Export receipt(s) as JSON to stdout
+  invoice [options]                 Generate an invoice from receipts
 
 List options:
   --agent <id>                Filter by agent ID
@@ -34,6 +40,18 @@ List options:
   --passed                    Show only receipts with passed constraints
   --limit <n>                 Limit results (default: 50)
   --json                      Output as JSON
+
+Invoice options:
+  --from <date>               Start date (required, ISO 8601)
+  --to <date>                 End date (required, ISO 8601)
+  --client <name>             Client/bill-to name
+  --provider <name>           Provider/from name
+  --format <fmt>              Output format: html, json, csv, md (default: html)
+  --output <path>             Output file path (default: invoice-{number}.html)
+  --group-by <key>            Group by: action, agent, day, none (default: none)
+  --agent <id>                Filter by agent ID (can repeat)
+  --notes <text>              Notes to include on the invoice
+  --payment-terms <text>      Payment terms (e.g. "Net 30")
 
 General:
   --help, -h                  Show this help
@@ -471,6 +489,74 @@ async function cmdExport(target: string, args: string[]) {
   }
 }
 
+async function cmdInvoice(args: string[]) {
+  let from: string | undefined
+  let to: string | undefined
+  let clientName: string | undefined
+  let providerName: string | undefined
+  let format = 'html'
+  let outputPath: string | undefined
+  let groupBy: 'action' | 'agent' | 'day' | 'none' = 'none'
+  const agentIds: string[] = []
+  let notes: string | undefined
+  let paymentTerms: string | undefined
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    const next = args[i + 1]
+    if (arg === '--from' && next) { from = next; i++ }
+    else if (arg === '--to' && next) { to = next; i++ }
+    else if (arg === '--client' && next) { clientName = next; i++ }
+    else if (arg === '--provider' && next) { providerName = next; i++ }
+    else if (arg === '--format' && next) { format = next; i++ }
+    else if (arg === '--output' && next) { outputPath = next; i++ }
+    else if (arg === '--group-by' && next) { groupBy = next as typeof groupBy; i++ }
+    else if (arg === '--agent' && next) { agentIds.push(next); i++ }
+    else if (arg === '--notes' && next) { notes = next; i++ }
+    else if (arg === '--payment-terms' && next) { paymentTerms = next; i++ }
+  }
+
+  if (!from || !to) {
+    console.error('Usage: agent-receipts invoice --from <date> --to <date> [options]')
+    process.exit(1)
+  }
+
+  const { engine } = await getEngine()
+  const options: InvoiceOptions = {
+    from,
+    to,
+    group_by: groupBy,
+    agent_ids: agentIds.length > 0 ? agentIds : undefined,
+    notes,
+    payment_terms: paymentTerms,
+  }
+
+  if (clientName) options.client = { name: clientName }
+  if (providerName) options.provider = { name: providerName }
+
+  const invoice = await engine.generateInvoice(options)
+
+  if (format === 'html') {
+    const html = formatInvoiceHTML(invoice)
+    const outFile = outputPath ?? `invoice-${invoice.invoice_number}.html`
+    await writeFile(outFile, html, 'utf-8')
+    console.log(`Invoice ${invoice.invoice_number} generated`)
+    console.log(`  Period: ${invoice.period.from} to ${invoice.period.to}`)
+    console.log(`  Receipts: ${invoice.summary.total_receipts}`)
+    console.log(`  Total: $${invoice.summary.total_cost_usd.toFixed(4)}`)
+    console.log(`  File: ${outFile}`)
+  } else if (format === 'json') {
+    console.log(formatInvoiceJSON(invoice))
+  } else if (format === 'csv') {
+    console.log(formatInvoiceCSV(invoice))
+  } else if (format === 'md') {
+    console.log(formatInvoiceMarkdown(invoice))
+  } else {
+    console.error(`Unknown format: ${format}. Use html, json, csv, or md.`)
+    process.exit(1)
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
@@ -520,6 +606,9 @@ async function main() {
     case 'export':
       if (!args[1]) { console.error('Usage: agent-receipts export <id|--all>'); process.exit(1) }
       await cmdExport(args[1], args.slice(2))
+      break
+    case 'invoice':
+      await cmdInvoice(args.slice(1))
       break
     default:
       console.error(`Unknown command: ${command}`)

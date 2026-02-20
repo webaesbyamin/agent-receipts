@@ -188,4 +188,30 @@ describe('AgentReceipts SDK', () => {
     const metadata = receipt.metadata as Record<string, unknown>
     expect(metadata.expires_at).toBe('2099-12-31T23:59:59.000Z')
   })
+
+  // === Phase 7: Invoice tests ===
+
+  it('generateInvoice returns invoice with receipts', async () => {
+    await receipts.track({ action: 'inv_action', input: 'data', cost_usd: 0.01 })
+    await receipts.track({ action: 'inv_action2', input: 'data2', cost_usd: 0.02 })
+
+    const invoice = await receipts.generateInvoice({
+      from: '2000-01-01',
+      to: '2099-12-31',
+    })
+    expect(invoice.invoice_number).toMatch(/^AR-\d{8}-[A-Z0-9]{4}$/)
+    expect(invoice.summary.total_receipts).toBe(2)
+    expect(invoice.summary.total_cost_usd).toBeCloseTo(0.03, 4)
+    expect(invoice.public_key).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('generateInvoice filters by date range', async () => {
+    await receipts.track({ action: 'dated', input: 'data' })
+
+    const empty = await receipts.generateInvoice({
+      from: '2090-01-01',
+      to: '2090-12-31',
+    })
+    expect(empty.summary.total_receipts).toBe(0)
+  })
 })

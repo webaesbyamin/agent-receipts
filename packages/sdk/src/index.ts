@@ -4,6 +4,10 @@ import {
   ConfigManager,
   ReceiptEngine,
   hashData,
+  formatInvoiceJSON,
+  formatInvoiceCSV,
+  formatInvoiceMarkdown,
+  formatInvoiceHTML,
 } from '@agent-receipts/mcp-server'
 import type {
   TrackParams,
@@ -11,6 +15,8 @@ import type {
   CompleteParams,
   ReceiptFilter,
   PaginatedResult,
+  InvoiceOptions,
+  Invoice,
 } from '@agent-receipts/mcp-server'
 import type { ActionReceipt } from '@agent-receipts/schema'
 
@@ -95,7 +101,12 @@ export class AgentReceipts {
     const engine = await this.ensureInitialized()
     return engine.cleanup()
   }
+
+  async generateInvoice(options: InvoiceOptions): Promise<Invoice> {
+    const engine = await this.ensureInitialized()
+    return engine.generateInvoice(options)
+  }
 }
 
-export { hashData }
-export type { TrackParams, CreateParams, CompleteParams, ReceiptFilter, PaginatedResult }
+export { hashData, formatInvoiceJSON, formatInvoiceCSV, formatInvoiceMarkdown, formatInvoiceHTML }
+export type { TrackParams, CreateParams, CompleteParams, ReceiptFilter, PaginatedResult, InvoiceOptions, Invoice }

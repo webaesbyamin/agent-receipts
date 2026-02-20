@@ -12,6 +12,7 @@ import { registerJudgeReceipt } from './judge-receipt.js'
 import { registerCompleteJudgment } from './complete-judgment.js'
 import { registerGetJudgments } from './get-judgments.js'
 import { registerCleanup } from './cleanup.js'
+import { registerGenerateInvoice } from './generate-invoice.js'
 
 export function registerAllTools(server: McpServer, engine: ReceiptEngine): void {
   registerCreateReceipt(server, engine)
@@ -26,4 +27,5 @@ export function registerAllTools(server: McpServer, engine: ReceiptEngine): void
   registerCompleteJudgment(server, engine)
   registerGetJudgments(server, engine)
   registerCleanup(server, engine)
+  registerGenerateInvoice(server, engine)
 }

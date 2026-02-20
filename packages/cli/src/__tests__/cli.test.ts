@@ -505,4 +505,106 @@ describe('CLI', () => {
     expect(stdout).toContain('Expires:')
     expect(stdout).toContain('EXPIRED')
   })
+
+  // === Phase 7: Invoice tests ===
+
+  it('invoice requires --from and --to', async () => {
+    await setupEngine(tmpDir)
+    try {
+      await runCLI(['invoice'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+      expect.unreachable('Should have thrown')
+    } catch (err: unknown) {
+      const error = err as { stderr: string }
+      expect(error.stderr).toContain('Usage:')
+    }
+  })
+
+  it('invoice --format json outputs JSON to stdout', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'inv_test', input: 'data', cost_usd: 0.01 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'json'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    const parsed = JSON.parse(stdout)
+    expect(parsed.invoice_number).toMatch(/^AR-/)
+    expect(parsed.summary.total_receipts).toBe(1)
+  })
+
+  it('invoice --format csv outputs CSV to stdout', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'csv_test', input: 'data', cost_usd: 0.005 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'csv'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    expect(stdout).toContain('receipt_id')
+    expect(stdout).toContain('csv_test')
+    expect(stdout).toContain('# Invoice:')
+  })
+
+  it('invoice --format md outputs Markdown to stdout', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'md_test', input: 'data', cost_usd: 0.002 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'md'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    expect(stdout).toContain('# Invoice AR-')
+    expect(stdout).toContain('md_test')
+    expect(stdout).toContain('## Summary')
+  })
+
+  it('invoice --format html writes file and prints summary', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'html_test', input: 'data', cost_usd: 0.001 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'html', '--output', join(tmpDir, 'test.html')],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    expect(stdout).toContain('Invoice AR-')
+    expect(stdout).toContain('Receipts: 1')
+    expect(stdout).toContain('File:')
+  })
+
+  it('invoice with --group-by and --agent filters', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'alpha', input: '1', cost_usd: 0.01 })
+    await engine.track({ action: 'beta', input: '2', cost_usd: 0.02 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'json', '--group-by', 'action'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    const parsed = JSON.parse(stdout)
+    expect(parsed.groups.length).toBe(2)
+  })
+
+  it('invoice with --client and --provider', async () => {
+    const { engine } = await setupEngine(tmpDir)
+    await engine.track({ action: 'test', input: 'data', cost_usd: 0.001 })
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2000-01-01', '--to', '2099-12-31', '--format', 'json', '--client', 'Acme Corp', '--provider', 'AI Agency'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    const parsed = JSON.parse(stdout)
+    expect(parsed.client.name).toBe('Acme Corp')
+    expect(parsed.provider.name).toBe('AI Agency')
+  })
+
+  it('invoice with no matching receipts returns empty', async () => {
+    await setupEngine(tmpDir)
+
+    const { stdout } = await runCLI(
+      ['invoice', '--from', '2090-01-01', '--to', '2090-12-31', '--format', 'json'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    const parsed = JSON.parse(stdout)
+    expect(parsed.summary.total_receipts).toBe(0)
+  })
 })

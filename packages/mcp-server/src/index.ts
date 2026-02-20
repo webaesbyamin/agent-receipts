@@ -9,6 +9,11 @@ export type { TrackParams, CreateParams, CompleteParams } from './engine/receipt
 export { evaluateConstraints } from './engine/constraint-evaluator.js'
 export { validateJsonSchema } from './engine/json-schema-validator.js'
 
+// Invoice
+export { generateInvoice } from './engine/invoice.js'
+export type { InvoiceOptions, InvoiceLineItem, InvoiceGroup, InvoiceSummary, Invoice } from './engine/invoice.js'
+export { formatInvoiceJSON, formatInvoiceCSV, formatInvoiceMarkdown, formatInvoiceHTML } from './engine/invoice-formatters.js'
+
 // Hash utility
 export { hashData } from './hash.js'
 

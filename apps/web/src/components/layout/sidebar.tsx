@@ -10,6 +10,7 @@ import {
   Bot,
   CheckSquare,
   Scale,
+  FileText,
   ShieldCheck,
   Settings,
   ChevronLeft,
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/constraints', label: 'Constraints', icon: CheckSquare },
   { href: '/judgments', label: 'Judgments', icon: Scale },
+  { href: '/invoices', label: 'Invoices', icon: FileText },
   { href: '/verify', label: 'Verify', icon: ShieldCheck },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

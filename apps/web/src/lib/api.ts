@@ -160,3 +160,32 @@ export async function updateConfig(config: Record<string, unknown>): Promise<Rec
 export async function fetchSearch(q: string): Promise<SearchResult> {
   return fetchApi<SearchResult>(`/api/search${buildQueryString({ q })}`)
 }
+
+export interface InvoiceGenerateOptions {
+  from: string
+  to: string
+  client?: { name: string; email?: string; address?: string }
+  provider?: { name: string; email?: string; address?: string }
+  group_by?: 'action' | 'agent' | 'day' | 'none'
+  agent_ids?: string[]
+  actions?: string[]
+  constraints_passed_only?: boolean
+  notes?: string
+  payment_terms?: string
+  format?: 'html' | 'json' | 'csv' | 'md'
+  include_receipts?: boolean
+}
+
+export interface InvoiceResponse {
+  invoice: Record<string, unknown>
+  formatted: string
+  format: string
+}
+
+export async function generateInvoice(options: InvoiceGenerateOptions): Promise<InvoiceResponse> {
+  return fetchApi<InvoiceResponse>('/api/invoices', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options),
+  })
+}
