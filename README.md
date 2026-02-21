@@ -93,7 +93,7 @@ npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 
 ## MCP Tools Reference
 
-The MCP server exposes 12 tools that AI agents can call directly:
+The MCP server exposes 13 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -109,6 +109,7 @@ The MCP server exposes 12 tools that AI agents can call directly:
 | `complete_judgment` | Complete a pending judgment with results | `receipt_id`, `verdict`, `score`, `criteria` |
 | `get_judgments` | Get all judgments for a receipt | `receipt_id` |
 | `cleanup` | Delete expired receipts (TTL) | `dry_run` |
+| `generate_invoice` | Generate an invoice from receipts in a date range | `from`, `to`, `format`, `agent_id` |
 
 ## SDK API Reference
 
@@ -209,6 +210,17 @@ const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
 const { deleted, remaining } = await ar.cleanup()
 ```
 
+### `ar.generateInvoice(params)` — Generate invoice from receipts
+
+```typescript
+const invoice = await ar.generateInvoice({
+  from: '2026-01-01',
+  to: '2026-01-31',
+  agent_id: 'my-agent',       // optional filter
+  group_by: 'agent',          // optional: agent | action | day
+})
+```
+
 ## CLI Reference
 
 | Command | Description |
@@ -232,6 +244,8 @@ const { deleted, remaining } = await ar.cleanup()
 | `export <id>` | Export a single receipt as JSON |
 | `export --all` | Export all receipts as compact JSON |
 | `export --all --pretty` | Export all receipts as formatted JSON |
+| `invoice --from <date> --to <date>` | Generate invoice from receipts in date range |
+| `invoice --format <fmt>` | Output as json, csv, md, or html |
 
 ## Receipt Format
 
@@ -362,7 +376,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 - [x] Local-first receipt storage with JSON
 - [x] Ed25519 signing and verification
-- [x] MCP server with 12 tools
+- [x] MCP server with 13 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
 - [x] Constraint verification (6 built-in types)

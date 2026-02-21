@@ -35,10 +35,10 @@ describe('AI Judge', () => {
 
   async function createCompletedReceipt() {
     return engine.track({
-      action: 'generate_quote',
-      input: { vehicle: 'Tesla Model 3' },
-      output: { total: 1450, currency: 'USD' },
-      output_summary: 'Generated PPF quote: $1,450',
+      action: 'generate_report',
+      input: { query: 'Q4 revenue analysis' },
+      output: { total: 142000, currency: 'USD' },
+      output_summary: 'Generated Q4 revenue report: $142,000',
       latency_ms: 2340,
       cost_usd: 0.008,
       confidence: 0.92,
