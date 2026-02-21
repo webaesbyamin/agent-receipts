@@ -607,4 +607,37 @@ describe('CLI', () => {
     const parsed = JSON.parse(stdout)
     expect(parsed.summary.total_receipts).toBe(0)
   })
+
+  // === Seed tests ===
+
+  it('seed --demo generates receipts', async () => {
+    await setupEngine(tmpDir)
+
+    const { stdout } = await runCLI(
+      ['seed', '--demo'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    expect(stdout).toContain('Seeded')
+    expect(stdout).toContain('receipts')
+    expect(stdout).toContain('Chains:')
+    expect(stdout).toContain('Judgments:')
+  }, 30000)
+
+  it('seed --count 10 respects custom count', async () => {
+    await setupEngine(tmpDir)
+
+    const { stdout } = await runCLI(
+      ['seed', '--demo', '--count', '10'],
+      { AGENT_RECEIPTS_DATA_DIR: tmpDir },
+    )
+    expect(stdout).toContain('Seeded')
+    expect(stdout).toContain('receipts')
+  }, 30000)
+
+  // === Watch test ===
+
+  it('watch appears in help output', async () => {
+    const { stdout } = await runCLI(['--help'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
+    expect(stdout).toContain('watch')
+  })
 })

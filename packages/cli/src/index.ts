@@ -10,6 +10,7 @@ import {
   formatInvoiceCSV,
   formatInvoiceMarkdown,
   formatInvoiceHTML,
+  seedDemoData,
 } from '@agent-receipts/mcp-server'
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
@@ -32,6 +33,8 @@ Commands:
   stats                             Show aggregate receipt statistics
   export <id> | --all [--pretty]    Export receipt(s) as JSON to stdout
   invoice [options]                 Generate an invoice from receipts
+  seed [--demo] [--clean] [--count <n>]  Seed demo data for testing
+  watch [options]                   Watch for new receipts in real-time
 
 List options:
   --agent <id>                Filter by agent ID
@@ -557,6 +560,133 @@ async function cmdInvoice(args: string[]) {
   }
 }
 
+async function cmdSeed(args: string[]) {
+  const isDemo = args.includes('--demo')
+  const isClean = args.includes('--clean')
+  let count: number | undefined
+
+  const countIdx = args.indexOf('--count')
+  if (countIdx !== -1 && args[countIdx + 1]) {
+    count = parseInt(args[countIdx + 1]!, 10)
+    if (isNaN(count) || count < 1) {
+      console.error('Invalid count: must be a positive integer')
+      process.exit(1)
+    }
+  }
+
+  if (!isDemo && !count) {
+    console.error('Usage: agent-receipts seed --demo [--clean] [--count <n>]')
+    process.exit(1)
+  }
+
+  const dir = process.env['AGENT_RECEIPTS_DATA_DIR'] ?? ConfigManager.getDefaultDataDir()
+  const store = new ReceiptStore(dir)
+  await store.init()
+  const keyManager = new KeyManager(dir)
+  await keyManager.init()
+
+  if (isClean) {
+    if (process.stdin.isTTY) {
+      const answer = await new Promise<string>((resolve) => {
+        const rl = createInterface({ input: process.stdin, output: process.stdout })
+        rl.question('Delete all existing receipts? (y/N) ', (ans) => {
+          rl.close()
+          resolve(ans)
+        })
+      })
+      if (answer.toLowerCase() !== 'y') {
+        console.log('Aborted.')
+        return
+      }
+    }
+  }
+
+  console.log('Seeding demo data...')
+  const result = await seedDemoData(store, keyManager, { count, clean: isClean })
+
+  console.log(`\nSeeded ${result.total} receipts:`)
+  console.log(`  Chains: ${result.chains}`)
+  console.log(`  Judgments: ${result.judgments}`)
+  console.log(`  Expired: ${result.expired}`)
+  console.log(`  Constraints: ${result.constraints.passed} passed, ${result.constraints.failed} failed`)
+  console.log(`  Agents:`)
+  for (const [agent, c] of Object.entries(result.agents)) {
+    console.log(`    ${agent}: ${c}`)
+  }
+}
+
+async function cmdWatch(args: string[]) {
+  const { engine } = await getEngine()
+  let agentFilter: string | undefined
+  let actionFilter: string | undefined
+  let statusFilter: string | undefined
+  let interval = 1000
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    const next = args[i + 1]
+    if (arg === '--agent' && next) { agentFilter = next; i++ }
+    if (arg === '--action' && next) { actionFilter = next; i++ }
+    if (arg === '--status' && next) { statusFilter = next; i++ }
+    if (arg === '--interval' && next) { interval = parseInt(next, 10); i++ }
+  }
+
+  const isTTY = process.stdout.isTTY ?? false
+  const green = isTTY ? '\x1b[32m' : ''
+  const red = isTTY ? '\x1b[31m' : ''
+  const yellow = isTTY ? '\x1b[33m' : ''
+  const blue = isTTY ? '\x1b[34m' : ''
+  const reset = isTTY ? '\x1b[0m' : ''
+
+  const statusColor = (s: string) => {
+    if (s === 'completed') return `${green}${s}${reset}`
+    if (s === 'failed') return `${red}${s}${reset}`
+    if (s === 'pending') return `${yellow}${s}${reset}`
+    return `${blue}${s}${reset}`
+  }
+
+  const seen = new Set<string>()
+  let count = 0
+  let fromTime = new Date().toISOString()
+
+  console.log(`${blue}Watching for new receipts...${reset} (Ctrl+C to stop)`)
+  console.log(`${'RECEIPT_ID'.padEnd(18)}  ${'STATUS'.padEnd(12)}  ${'ACTION'.padEnd(22)}  TIMESTAMP`)
+  console.log('-'.repeat(80))
+
+  let running = true
+  const onSigint = () => {
+    running = false
+    console.log(`\n${blue}---${reset}`)
+    console.log(`Watched ${count} new receipt${count !== 1 ? 's' : ''}.`)
+    process.exit(0)
+  }
+  process.on('SIGINT', onSigint)
+
+  while (running) {
+    const filter: Record<string, string> = {}
+    if (agentFilter) filter['agent_id'] = agentFilter
+    if (actionFilter) filter['action'] = actionFilter
+    if (statusFilter) filter['status'] = statusFilter
+    filter['from'] = fromTime
+
+    const result = await engine.list(filter, 1, 100, 'timestamp:asc')
+
+    for (const r of result.data) {
+      if (seen.has(r.receipt_id)) continue
+      seen.add(r.receipt_id)
+      count++
+      const ts = r.timestamp.replace('T', ' ').replace(/\.\d+Z$/, 'Z')
+      console.log(`${r.receipt_id.padEnd(18)}  ${statusColor(r.status).padEnd(12 + (isTTY ? 9 : 0))}  ${r.action.padEnd(22)}  ${ts}`)
+    }
+
+    if (result.data.length > 0) {
+      fromTime = result.data[result.data.length - 1]!.timestamp
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, interval))
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
@@ -609,6 +739,12 @@ async function main() {
       break
     case 'invoice':
       await cmdInvoice(args.slice(1))
+      break
+    case 'seed':
+      await cmdSeed(args.slice(1))
+      break
+    case 'watch':
+      await cmdWatch(args.slice(1))
       break
     default:
       console.error(`Unknown command: ${command}`)
