@@ -320,15 +320,17 @@ All data is stored locally in the data directory:
 - **mcp-server** — MCP protocol server with receipt engine, storage, and key management
 - **sdk** — High-level Node.js SDK wrapping the engine
 - **cli** — Command-line tool for inspecting, verifying, and managing receipts
+- **dashboard** — Mission Control web UI for visualizing and managing receipts
 
 ## Dashboard (Mission Control)
 
 Visualize every receipt, chain, agent, constraint, and judgment in your system.
 
 ```bash
-cd apps/web && pnpm dev
-# → http://localhost:3274
+npx @agent-receipts/dashboard
 ```
+
+Opens Mission Control at http://localhost:3274 — visualize, verify, and manage all receipts.
 
 Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, dark mode, global search (Cmd+K).
 
@@ -354,6 +356,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 | `@agent-receipts/mcp-server` | MCP protocol server with receipt engine and storage |
 | `@agent-receipts/sdk` | High-level Node.js SDK for tracking and verifying receipts |
 | `@agent-receipts/cli` | Command-line tool for managing receipts |
+| `@agent-receipts/dashboard` | Mission Control web UI — `npx @agent-receipts/dashboard` |
 
 ## Roadmap
 
@@ -367,6 +370,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 - [x] Output schema validation (JSON Schema)
 - [x] Receipt TTL and cleanup
 - [x] Mission Control dashboard (11 pages, dark mode, search)
+- [x] Dashboard npm package — `npx @agent-receipts/dashboard`
 - [ ] Receipt anchoring to blockchain/timestamping services
 - [ ] Multi-agent receipt sharing protocol
 - [ ] Receipt compression and archival
