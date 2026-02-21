@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/mcp-server",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "type": "module",
   "description": "Local-first MCP server for Agent Receipts — storage, engine, and protocol",
   "license": "MIT",
@@ -39,7 +39,8 @@
     }
   },
   "bin": {
-    "agent-receipts-server": "./dist/server.js"
+    "agent-receipts-server": "./dist/server.js",
+    "mcp-server": "./dist/server.js"
   },
   "files": [
     "dist"

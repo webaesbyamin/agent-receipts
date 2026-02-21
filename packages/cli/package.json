@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/cli",
-  "version": "0.2.2",
+  "version": "0.2.5",
   "type": "module",
   "description": "CLI for Agent Receipts — inspect, verify, and manage receipts",
   "license": "MIT",
@@ -26,7 +26,8 @@
     "node": ">=20.0.0"
   },
   "bin": {
-    "agent-receipts": "./dist/index.js"
+    "agent-receipts": "./dist/index.js",
+    "cli": "./dist/index.js"
   },
   "files": [
     "dist"
