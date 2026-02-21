@@ -93,7 +93,7 @@ npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 
 ## MCP Tools Reference
 
-The MCP server exposes 13 tools that AI agents can call directly:
+The MCP server exposes 14 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -110,6 +110,7 @@ The MCP server exposes 13 tools that AI agents can call directly:
 | `get_judgments` | Get all judgments for a receipt | `receipt_id` |
 | `cleanup` | Delete expired receipts (TTL) | `dry_run` |
 | `generate_invoice` | Generate an invoice from receipts in a date range | `from`, `to`, `format`, `agent_id` |
+| `get_started` | Show a getting-started guide with usage examples | — |
 
 ## SDK API Reference
 
@@ -246,6 +247,11 @@ const invoice = await ar.generateInvoice({
 | `export --all --pretty` | Export all receipts as formatted JSON |
 | `invoice --from <date> --to <date>` | Generate invoice from receipts in date range |
 | `invoice --format <fmt>` | Output as json, csv, md, or html |
+| `seed --demo` | Seed demo data for testing |
+| `seed --demo --count <n>` | Seed a custom number of demo receipts |
+| `seed --demo --clean` | Delete all receipts before seeding |
+| `watch` | Watch for new receipts in real-time |
+| `watch --agent <id>` | Watch filtered by agent, action, or status |
 
 ## Receipt Format
 
@@ -376,7 +382,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 - [x] Local-first receipt storage with JSON
 - [x] Ed25519 signing and verification
-- [x] MCP server with 13 tools
+- [x] MCP server with 14 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
 - [x] Constraint verification (6 built-in types)
