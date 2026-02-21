@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/crypto",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Ed25519 signing and verification for the Action Receipt Protocol",
   "license": "MIT",
   "author": "Amin <amin@webaes.co> (https://webaes.co)",
