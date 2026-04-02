@@ -1,5 +1,7 @@
 // Storage
-export { ReceiptStore } from './storage/receipt-store.js'
+export { SqliteReceiptStore as ReceiptStore } from './storage/sqlite-receipt-store.js'
+export { SqliteReceiptStore } from './storage/sqlite-receipt-store.js'
+export { ReceiptStore as JsonReceiptStore } from './storage/receipt-store.js'
 export { KeyManager } from './storage/key-manager.js'
 export { ConfigManager } from './storage/config-manager.js'
 

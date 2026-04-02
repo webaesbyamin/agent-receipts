@@ -39,7 +39,7 @@ export class ConfigManager {
     if (envOrgId) this.config.orgId = envOrgId
 
     const envEnvironment = process.env['AGENT_RECEIPTS_ENVIRONMENT']
-    if (envEnvironment === 'production' || envEnvironment === 'staging' || envEnvironment === 'test') {
+    if (envEnvironment === 'development' || envEnvironment === 'production' || envEnvironment === 'staging' || envEnvironment === 'test') {
       this.config.environment = envEnvironment
     }
   }

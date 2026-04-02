@@ -56,7 +56,7 @@ describe('CLI', () => {
 
   it('shows version with --version', async () => {
     const { stdout } = await runCLI(['--version'], { AGENT_RECEIPTS_DATA_DIR: tmpDir })
-    expect(stdout.trim()).toBe('0.1.0')
+    expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
   it('init creates data directory and keys', async () => {

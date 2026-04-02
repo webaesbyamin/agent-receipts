@@ -206,6 +206,7 @@ function ReceiptExplorerContent() {
             className="px-3 py-1.5 text-sm border border-border rounded-md bg-bg-primary text-text-primary"
           >
             <option value="">All Environments</option>
+            <option value="development">Development</option>
             <option value="production">Production</option>
             <option value="staging">Staging</option>
             <option value="test">Test</option>

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     const store = await getStore()
     const now = new Date().toISOString()
-    const allResult = await store.list(undefined, 1, 100000)
+    const allResult = await store.list(undefined, 1, 10000) // TODO: replace with server-side aggregation in v0.3.0
 
     const expiredReceipts = allResult.data.filter(r => {
       const expiresAt = (r.metadata as Record<string, unknown> | null)?.expires_at as string | undefined

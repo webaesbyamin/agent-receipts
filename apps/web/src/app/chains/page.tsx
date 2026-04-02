@@ -38,7 +38,7 @@ function ChainsContent() {
     async function load() {
       setLoading(true)
       try {
-        const result: PaginatedResponse<Record<string, unknown>> = await fetchReceipts({ limit: 100000 })
+        const result: PaginatedResponse<Record<string, unknown>> = await fetchReceipts({ limit: 10000 }) // TODO: replace with server-side aggregation in v0.3.0
         const chainMap = new Map<string, { receipts: Record<string, unknown>[] }>()
 
         for (const r of result.data) {

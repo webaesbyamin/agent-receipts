@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/cli",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "type": "module",
   "description": "CLI for Agent Receipts — inspect, verify, and manage receipts",
   "license": "MIT",

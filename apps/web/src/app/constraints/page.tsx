@@ -41,7 +41,7 @@ export default function ConstraintsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const result: PaginatedResponse<Record<string, unknown>> = await fetchReceipts({ limit: 100000 })
+        const result: PaginatedResponse<Record<string, unknown>> = await fetchReceipts({ limit: 10000 }) // TODO: replace with server-side aggregation in v0.3.0
         const receipts = result.data
 
         const typeCounts = new Map<string, { used: number; passed: number; failed: number }>()

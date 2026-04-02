@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const store = await getStore()
-    const allResult = await store.list(undefined, 1, 100000, 'timestamp:desc')
+    const allResult = await store.list(undefined, 1, 10000, 'timestamp:desc') // TODO: replace with server-side aggregation in v0.3.0
     const receipts = allResult.data
 
     const matchingReceipts = receipts

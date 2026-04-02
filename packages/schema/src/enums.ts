@@ -6,7 +6,7 @@ export type ReceiptStatus = z.infer<typeof ReceiptStatus>
 export const ReceiptType = z.enum(['action', 'verification', 'judgment', 'arbitration'])
 export type ReceiptType = z.infer<typeof ReceiptType>
 
-export const Environment = z.enum(['production', 'staging', 'test'])
+export const Environment = z.enum(['development', 'production', 'staging', 'test'])
 export type Environment = z.infer<typeof Environment>
 
 export const ErrorCode = z.enum([

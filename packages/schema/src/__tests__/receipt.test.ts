@@ -8,6 +8,7 @@ import {
   ListReceiptsQuery,
   PaginationMeta,
   ErrorResponse,
+  Environment,
 } from '../index'
 
 const validReceipt = {
@@ -67,6 +68,15 @@ describe('ActionReceipt', () => {
   it('invalid environment fails', () => {
     const result = ActionReceipt.safeParse({ ...validReceipt, environment: 'dev' })
     expect(result.success).toBe(false)
+  })
+
+  it('development is a valid environment', () => {
+    const result = ActionReceipt.safeParse({ ...validReceipt, environment: 'development' })
+    expect(result.success).toBe(true)
+  })
+
+  it('Environment enum has 4 values', () => {
+    expect(Environment.options).toEqual(['development', 'production', 'staging', 'test'])
   })
 
   it('nullable fields accept null', () => {

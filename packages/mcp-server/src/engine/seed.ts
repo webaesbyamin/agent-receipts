@@ -1,4 +1,4 @@
-import { ReceiptStore } from '../storage/receipt-store.js'
+import { SqliteReceiptStore as ReceiptStore } from '../storage/sqlite-receipt-store.js'
 import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'
 import { ReceiptEngine } from './receipt-engine.js'

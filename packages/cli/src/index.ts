@@ -1,6 +1,10 @@
 import { readFile, writeFile, mkdir, chmod, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const { version: CLI_VERSION } = require('../package.json')
 import {
   ReceiptStore,
   KeyManager,
@@ -697,7 +701,7 @@ async function main() {
   }
 
   if (command === '--version' || command === '-v') {
-    console.log('0.1.0')
+    console.log(CLI_VERSION)
     return
   }
 

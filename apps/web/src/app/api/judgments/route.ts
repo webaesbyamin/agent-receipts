@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') ?? 'timestamp:desc'
 
     const store = await getStore()
-    const allResult = await store.list({ receipt_type: 'judgment' }, 1, 100000, sort)
+    const allResult = await store.list({ receipt_type: 'judgment' }, 1, 10000, sort) // TODO: replace with server-side aggregation in v0.3.0
     let data = allResult.data
 
     // Filter by receipt_id (parent receipt)

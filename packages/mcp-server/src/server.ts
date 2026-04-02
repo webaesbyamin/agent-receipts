@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ReceiptStore } from './storage/receipt-store.js'
+import { SqliteReceiptStore as ReceiptStore } from './storage/sqlite-receipt-store.js'
 import { KeyManager } from './storage/key-manager.js'
 import { ConfigManager } from './storage/config-manager.js'
 import { ReceiptEngine } from './engine/receipt-engine.js'
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   // Create MCP server
   const server = new McpServer({
     name: 'agent-receipts',
-    version: '0.1.0',
+    version: '0.2.7',
   })
 
   // Register all tools

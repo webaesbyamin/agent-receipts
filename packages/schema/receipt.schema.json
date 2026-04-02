@@ -150,6 +150,7 @@
         "environment": {
           "type": "string",
           "enum": [
+            "development",
             "production",
             "staging",
             "test"

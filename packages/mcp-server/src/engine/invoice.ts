@@ -1,5 +1,5 @@
 import type { ActionReceipt } from '@agent-receipts/schema'
-import type { ReceiptStore } from '../storage/receipt-store.js'
+import type { SqliteReceiptStore as ReceiptStore } from '../storage/sqlite-receipt-store.js'
 import type { KeyManager } from '../storage/key-manager.js'
 
 export interface InvoiceOptions {

@@ -36,7 +36,7 @@ function JudgmentsContent() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const all = await fetchJudgments({ limit: 100000 })
+        const all = await fetchJudgments({ limit: 10000 }) // TODO: replace with server-side aggregation in v0.3.0
         const judgments = all.data
         let passed = 0, totalScore = 0, scoreCount = 0
         const judgesSet = new Set<string>()

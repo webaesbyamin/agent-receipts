@@ -10,7 +10,7 @@ export function registerListReceipts(server: McpServer, engine: ReceiptEngine): 
       agent_id: z.string().optional().describe('Filter by agent ID'),
       action: z.string().optional().describe('Filter by action name'),
       status: z.enum(['pending', 'completed', 'failed', 'timeout']).optional().describe('Filter by status'),
-      environment: z.enum(['production', 'staging', 'test']).optional().describe('Filter by environment'),
+      environment: z.enum(['development', 'production', 'staging', 'test']).optional().describe('Filter by environment'),
       receipt_type: z.enum(['action', 'verification', 'judgment', 'arbitration']).optional().describe('Filter by type'),
       chain_id: z.string().optional().describe('Filter by chain ID'),
       tag: z.string().optional().describe('Filter by tag'),

@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/dashboard",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Mission Control dashboard for Agent Receipts — local web UI for AI agent accountability",
   "license": "MIT",
   "author": "Amin <amin@webaes.com>",

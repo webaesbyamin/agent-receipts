@@ -52,7 +52,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         setReceipts(receiptsRes)
 
         // Compute action breakdown from all receipts
-        const allReceipts = await fetchReceipts({ agent_id: id, limit: 100000 })
+        const allReceipts = await fetchReceipts({ agent_id: id, limit: 10000 }) // TODO: replace with server-side aggregation in v0.3.0
         const actionMap = new Map<string, { count: number; passed: number; evaluated: number; costs: number[]; latencies: number[] }>()
         for (const r of allReceipts.data) {
           const action = r.action as string

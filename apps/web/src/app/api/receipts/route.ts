@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     if (to) filter.to = to
 
     const store = await getStore()
-    let result = await store.list(filter, 1, 100000, sort)
+    let result = await store.list(filter, 1, 10000, sort) // TODO: replace with server-side aggregation in v0.3.0
     let data = result.data
 
     // Post-filter: search

@@ -63,6 +63,13 @@ describe('ConfigManager', () => {
     expect(cm.getConfig().environment).toBe('test')
   })
 
+  it('respects env var AGENT_RECEIPTS_ENVIRONMENT=development', async () => {
+    process.env['AGENT_RECEIPTS_ENVIRONMENT'] = 'development'
+    const cm = new ConfigManager(tmpDir)
+    await cm.init()
+    expect(cm.getConfig().environment).toBe('development')
+  })
+
   it('ignores invalid environment values', async () => {
     process.env['AGENT_RECEIPTS_ENVIRONMENT'] = 'invalid'
     const cm = new ConfigManager(tmpDir)

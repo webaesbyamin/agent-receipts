@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
   const handleExportAll = useCallback(async () => {
     try {
-      const res = await fetch('/api/receipts?limit=100000')
+      const res = await fetch('/api/receipts?limit=10000') // TODO: replace with server-side aggregation in v0.3.0
       const data = await res.json()
       const json = JSON.stringify(data.data, null, 2)
       const blob = new Blob([json], { type: 'application/json' })
@@ -153,6 +153,7 @@ export default function SettingsPage() {
               disabled={saving}
               className="px-3 py-1.5 text-sm border border-border rounded-md bg-bg-primary text-text-primary"
             >
+              <option value="development">Development</option>
               <option value="production">Production</option>
               <option value="staging">Staging</option>
               <option value="test">Test</option>

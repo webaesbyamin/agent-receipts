@@ -41,11 +41,11 @@ export async function PUT(request: NextRequest) {
     const updates: Record<string, unknown> = {}
     if (body.agentId) updates.agentId = body.agentId
     if (body.orgId) updates.orgId = body.orgId
-    if (body.environment && ['production', 'staging', 'test'].includes(body.environment)) {
+    if (body.environment && ['development', 'production', 'staging', 'test'].includes(body.environment)) {
       updates.environment = body.environment
     }
 
-    await cm.update(updates as { agentId?: string; orgId?: string; environment?: 'production' | 'staging' | 'test' })
+    await cm.update(updates as { agentId?: string; orgId?: string; environment?: 'development' | 'production' | 'staging' | 'test' })
 
     const config = cm.getConfig()
     return NextResponse.json(config)
