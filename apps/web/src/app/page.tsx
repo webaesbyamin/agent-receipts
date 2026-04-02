@@ -19,6 +19,18 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 
+function ChartTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) {
+  if (active && payload && payload.length) {
+    const { name, value } = payload[0]!
+    return (
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 shadow-lg">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{name}: {value}</p>
+      </div>
+    )
+  }
+  return null
+}
+
 export default function OverviewPage() {
   const { data: stats, error: statsError, isLoading: statsLoading, mutate: statsRetry } = useStats()
   const { data: recentData, error: recentError } = useReceipts({ limit: 10, sort: 'timestamp:desc' })
@@ -84,7 +96,7 @@ export default function OverviewPage() {
                   <Cell fill="var(--success)" />
                   <Cell fill="var(--danger)" />
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 12 }} formatter={(value: number, name: string) => [value, name]} />
+                <Tooltip content={<ChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
