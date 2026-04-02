@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/mcp-server",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "type": "module",
   "description": "Local-first MCP server for Agent Receipts — storage, engine, and protocol",
   "license": "MIT",
