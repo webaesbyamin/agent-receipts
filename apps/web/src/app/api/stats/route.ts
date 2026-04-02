@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getStore, getKeyManager } from '@/lib/sdk-server'
+import { getStore, getKeyManager } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 

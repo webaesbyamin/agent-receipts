@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStore } from '@/lib/sdk-server'
+import { getStore, isDemoMode } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { message: 'This is a demo. Connect your own Agent Receipts instance to enable writes.' },
+        { status: 200 }
+      )
+    }
+
     const body = await request.json()
     const dryRun = body.dry_run === true
 

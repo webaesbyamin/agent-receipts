@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStore } from '@/lib/sdk-server'
+import { getStore } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 

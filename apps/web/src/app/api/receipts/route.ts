@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStore } from '@/lib/sdk-server'
+import { getStore } from '@/lib/storage'
 import type { ReceiptFilter } from '@agent-receipts/mcp-server'
 
 export const dynamic = 'force-dynamic'

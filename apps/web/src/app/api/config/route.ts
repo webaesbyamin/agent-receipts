@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getConfigManager, getKeyManager, getDataDir, getStore } from '@/lib/sdk-server'
+import { getConfigManager, getKeyManager, getDataDir, getStore, isDemoMode } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +35,13 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    if (isDemoMode()) {
+      return NextResponse.json(
+        { message: 'This is a demo. Connect your own Agent Receipts instance to enable writes.' },
+        { status: 200 }
+      )
+    }
+
     const body = await request.json()
     const cm = await getConfigManager()
 

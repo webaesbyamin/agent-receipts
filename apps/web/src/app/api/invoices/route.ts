@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server'
-import { getStore, getKeyManager } from '@/lib/sdk-server'
-import {
-  generateInvoice,
-  formatInvoiceJSON,
-  formatInvoiceCSV,
-  formatInvoiceMarkdown,
-  formatInvoiceHTML,
-} from '@agent-receipts/mcp-server'
-import type { InvoiceOptions } from '@agent-receipts/mcp-server'
+import { getStore, getKeyManager, isDemoMode } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
   try {
+    if (isDemoMode()) {
+      return Response.json(
+        { message: 'This is a demo. Connect your own Agent Receipts instance to enable writes.' },
+        { status: 200 }
+      )
+    }
+
+    const {
+      generateInvoice,
+      formatInvoiceJSON,
+      formatInvoiceCSV,
+      formatInvoiceMarkdown,
+      formatInvoiceHTML,
+    } = await import('@agent-receipts/mcp-server')
+
     const body = await request.json()
     const { from, to, client, provider, group_by, agent_ids, actions, constraints_passed_only, notes, payment_terms, format, include_receipts } = body
 
@@ -23,7 +30,7 @@ export async function POST(request: Request) {
     const store = await getStore()
     const keyManager = await getKeyManager()
 
-    const options: InvoiceOptions = {
+    const options = {
       from,
       to,
       client,
@@ -36,7 +43,7 @@ export async function POST(request: Request) {
       payment_terms,
     }
 
-    const invoice = await generateInvoice(store, keyManager, options)
+    const invoice = await generateInvoice(store as any, keyManager as any, options)
 
     const fmt = format ?? 'json'
     let formatted: string

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStore, getKeyManager } from '@/lib/sdk-server'
+import { getStore, getKeyManager } from '@/lib/storage'
 import { verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
 
 export const dynamic = 'force-dynamic'

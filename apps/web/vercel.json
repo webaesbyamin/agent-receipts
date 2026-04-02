@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm build --filter=@agent-receipts/web",
+  "installCommand": "cd ../.. && pnpm install"
+}
