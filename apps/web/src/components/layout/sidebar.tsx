@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: '/invoices', label: 'Invoices', icon: FileText },
   { href: '/verify', label: 'Verify', icon: ShieldCheck },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/how-it-works', label: 'How It Works', icon: BookOpen },
 ]
 
 export function Sidebar() {

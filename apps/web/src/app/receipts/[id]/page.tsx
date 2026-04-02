@@ -15,7 +15,9 @@ import { LoadingPage } from '@/components/shared/loading'
 import { formatDuration, formatCurrency, formatDate, formatNumber, truncateId } from '@/lib/formatters'
 import { VERDICT_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/cn'
-import { ArrowLeft, Check, X, ShieldCheck, ShieldX } from 'lucide-react'
+import { ArrowLeft, Check, X, ShieldCheck, ShieldX, Info } from 'lucide-react'
+
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 function DetailRow({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
   return (
@@ -75,13 +77,20 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           {cr && Array.isArray(cr.results) && (
             <ConstraintBadge passed={cr.results.filter(x => x.passed).length} total={cr.results.length} />
           )}
-          <span className={cn(
-            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-            data.verified ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'
-          )}>
-            {data.verified ? <ShieldCheck className="w-3 h-3" /> : <ShieldX className="w-3 h-3" />}
-            {data.verified ? 'Verified' : 'Unverified'}
-          </span>
+          {isDemoMode ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+              <Info className="w-3 h-3" />
+              Demo Signature
+            </span>
+          ) : (
+            <span className={cn(
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+              data.verified ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'
+            )}>
+              {data.verified ? <ShieldCheck className="w-3 h-3" /> : <ShieldX className="w-3 h-3" />}
+              {data.verified ? 'Verified' : 'Unverified'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -321,11 +330,26 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           <HashDisplay hash={receipt.signature as string} length={32} />
         </DetailRow>
         <DetailRow label="Status">
-          <span className={cn('inline-flex items-center gap-1', data.verified ? 'text-success' : 'text-danger')}>
-            {data.verified ? <ShieldCheck className="w-4 h-4" /> : <ShieldX className="w-4 h-4" />}
-            {data.verified ? 'Signature verified' : 'Signature invalid or unverifiable'}
-          </span>
+          {isDemoMode ? (
+            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+              <Info className="w-4 h-4" />
+              Demo signature (placeholder)
+            </span>
+          ) : (
+            <span className={cn('inline-flex items-center gap-1', data.verified ? 'text-success' : 'text-danger')}>
+              {data.verified ? <ShieldCheck className="w-4 h-4" /> : <ShieldX className="w-4 h-4" />}
+              {data.verified ? 'Signature verified' : 'Signature invalid or unverifiable'}
+            </span>
+          )}
         </DetailRow>
+        {isDemoMode && (
+          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              <strong>Demo mode:</strong> Signatures in this demo are placeholders. In production, every receipt is signed with Ed25519 cryptography using your private key. Anyone with your public key can verify authenticity — no central authority required.{' '}
+              <a href="/how-it-works#cryptographic-proof" className="underline font-medium">Learn how it works &rarr;</a>
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* Raw JSON */}
