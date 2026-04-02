@@ -3,6 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["DEMO_MODE", "NEXT_PUBLIC_DEMO_MODE"],
       "outputs": ["dist/**", ".next/**"]
     },
     "test": {

@@ -50,7 +50,15 @@ export interface AppConfigManager {
 let _realStore: AppStore | null = null
 let _realKeyManager: AppKeyManager | null = null
 let _realConfigManager: AppConfigManager | null = null
-let _demoStore: AppStore & { getPublicKey(): string; getConfig(): Record<string, unknown>; update(p: Record<string, unknown>): Promise<void> } | null = null
+let _demoStore: AppStore & { getPublicKey(): string; getConfig(): Record<string, unknown> } | null = null
+
+async function getDemoStore() {
+  if (!_demoStore) {
+    const { demoStore } = await import('./demo-store')
+    _demoStore = demoStore
+  }
+  return _demoStore!
+}
 
 async function getRealStore(): Promise<AppStore> {
   if (!_realStore) {
@@ -76,15 +84,6 @@ async function getRealConfigManager(): Promise<AppConfigManager> {
   return _realConfigManager
 }
 
-function getDemoStore() {
-  if (!_demoStore) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { demoStore } = require('./demo-store')
-    _demoStore = demoStore
-  }
-  return _demoStore!
-}
-
 export async function getStore(): Promise<AppStore> {
   if (isDemoMode()) return getDemoStore()
   return getRealStore()
@@ -92,7 +91,7 @@ export async function getStore(): Promise<AppStore> {
 
 export async function getKeyManager(): Promise<AppKeyManager> {
   if (isDemoMode()) {
-    const store = getDemoStore()
+    const store = await getDemoStore()
     return { getPublicKey: () => store.getPublicKey() }
   }
   return getRealKeyManager()
@@ -100,7 +99,7 @@ export async function getKeyManager(): Promise<AppKeyManager> {
 
 export async function getConfigManager(): Promise<AppConfigManager> {
   if (isDemoMode()) {
-    const store = getDemoStore()
+    const store = await getDemoStore()
     return {
       getConfig: () => store.getConfig() as { agentId: string; orgId: string; environment: string },
       update: async () => {},
@@ -111,5 +110,6 @@ export async function getConfigManager(): Promise<AppConfigManager> {
 
 export function getDataDir(): string {
   if (isDemoMode()) return '/demo'
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return process.env.AGENT_RECEIPTS_DATA_DIR ?? require('os').homedir() + '/.agent-receipts'
 }
