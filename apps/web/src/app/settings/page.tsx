@@ -271,7 +271,7 @@ export default function SettingsPage() {
               <span className="text-xs text-text-muted">Copy Key</span>
             </div>
             <p className="text-xs text-text-muted">
-              Host at: <code className="bg-bg-tertiary px-1 rounded">yourdomain.com/.well-known/receipt-public-key.json</code>
+              Host at: <code className="bg-bg-tertiary px-1 rounded">{process.env.NEXT_PUBLIC_APP_URL || 'yourdomain.com'}/.well-known/receipt-public-key.json</code>
             </p>
           </div>
         </div>

@@ -366,7 +366,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 2377
               }
             ]
@@ -375,7 +375,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 2377,
                 actual: 1243
@@ -603,7 +603,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 3483
               }
             ]
@@ -612,7 +612,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 3483,
                 actual: 3402
@@ -1105,7 +1105,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4201
               }
             ]
@@ -1114,7 +1114,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 4201,
                 actual: 5357
@@ -1191,7 +1191,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1596
               }
             ]
@@ -1200,7 +1200,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 1596,
                 actual: 1109
@@ -1243,7 +1243,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4691
               }
             ]
@@ -1252,7 +1252,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 4691,
                 actual: 3424
@@ -1565,7 +1565,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:000f4eb4544f3dec',
     output_hash: 'sha256:0020683130289d41',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: pass (score: 0.92) — Met accuracy and completeness criteria',
     model: 'gpt-4o-mini',
     tokens_in: 3603,
     tokens_out: 792,
@@ -1583,8 +1583,10 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_040_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_040',
     callback_verified: null,
-    confidence: 0.69,
+    confidence: 0.82,
     metadata: {
+            verdict: 'pass',
+            score: 0.92,
             judgment: {
               verdict: 'pass',
               score: 0.92,
@@ -1927,7 +1929,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:000ec913fbc53fb9',
     output_hash: 'sha256:00095b91a656a620',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: pass (score: 0.97) — Met accuracy and completeness criteria',
     model: 'claude-haiku-4-5-20251001',
     tokens_in: 2978,
     tokens_out: 1611,
@@ -1945,8 +1947,10 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_050_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_050',
     callback_verified: null,
-    confidence: 0.9,
+    confidence: 0.91,
     metadata: {
+            verdict: 'pass',
+            score: 0.97,
             judgment: {
               verdict: 'pass',
               score: 0.97,
@@ -2126,7 +2130,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1085
               }
             ]
@@ -2135,7 +2139,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 1085,
                 actual: 1381
@@ -2355,7 +2359,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:0020532474620558',
     output_hash: 'sha256:000e8af07b24d9dd',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: partial (score: 0.62) — Partially met accuracy and completeness criteria',
     model: 'gpt-4o-mini',
     tokens_in: 717,
     tokens_out: 176,
@@ -2371,7 +2375,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 3146
               }
             ]
@@ -2380,7 +2384,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 3146,
                 actual: 2888
@@ -2391,16 +2395,18 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_060_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_060',
     callback_verified: true,
-    confidence: 0.89,
+    confidence: 0.78,
     metadata: {
+            verdict: 'partial',
+            score: 0.62,
             judgment: {
-              verdict: 'pass',
-              score: 0.74,
+              verdict: 'partial',
+              score: 0.62,
               criteria_results: [
                 {
                   criterion: 'accuracy',
-                  score: 0.97,
-                  passed: true
+                  score: 0.58,
+                  passed: false
                 },
                 {
                   criterion: 'completeness',
@@ -2413,7 +2419,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
                   passed: true
                 }
               ],
-              overall_reasoning: 'The action receipt rcpt_demo_058 meets quality standards with a score of 0.74.',
+              overall_reasoning: 'The action receipt rcpt_demo_058 partially meets quality standards with a score of 0.62.',
               rubric_version: '1.0'
             },
             rubric_hash: 'sha256:demo_rubric_hash'
@@ -2703,7 +2709,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 3851
               }
             ]
@@ -2712,7 +2718,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 3851,
                 actual: 4485
@@ -2752,7 +2758,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1257
               }
             ]
@@ -2761,7 +2767,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 1257,
                 actual: 739
@@ -2822,7 +2828,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:001f7fd308bb469d',
     output_hash: 'sha256:0004f2211d2145d0',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: pass (score: 0.88) — Met accuracy and completeness criteria',
     model: 'claude-haiku-4-5-20251001',
     tokens_in: 3321,
     tokens_out: 1089,
@@ -2840,8 +2846,10 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_070_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_070',
     callback_verified: true,
-    confidence: 0.91,
+    confidence: 0.87,
     metadata: {
+            verdict: 'pass',
+            score: 0.88,
             judgment: {
               verdict: 'pass',
               score: 0.88,
@@ -2949,7 +2957,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4643
               }
             ]
@@ -2958,7 +2966,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 4643,
                 actual: 3807
@@ -3229,7 +3237,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 3153
               }
             ]
@@ -3238,7 +3246,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 3153,
                 actual: 2612
@@ -3265,7 +3273,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:00141bb552e21f69',
     output_hash: 'sha256:0007a8cffcf89ee4',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: partial (score: 0.55) — Partially met accuracy and completeness criteria',
     model: 'gpt-4o-mini',
     tokens_in: 2731,
     tokens_out: 201,
@@ -3283,21 +3291,23 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_080_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_080',
     callback_verified: true,
-    confidence: 0.83,
+    confidence: 0.76,
     metadata: {
+            verdict: 'partial',
+            score: 0.55,
             judgment: {
-              verdict: 'pass',
-              score: 0.72,
+              verdict: 'partial',
+              score: 0.55,
               criteria_results: [
                 {
                   criterion: 'accuracy',
-                  score: 0.66,
-                  passed: true
+                  score: 0.48,
+                  passed: false
                 },
                 {
                   criterion: 'completeness',
-                  score: 0.97,
-                  passed: true
+                  score: 0.61,
+                  passed: false
                 },
                 {
                   criterion: 'safety',
@@ -3305,7 +3315,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
                   passed: true
                 }
               ],
-              overall_reasoning: 'The action receipt rcpt_demo_078 meets quality standards with a score of 0.72.',
+              overall_reasoning: 'The action receipt rcpt_demo_078 partially meets quality standards with a score of 0.55.',
               rubric_version: '1.0'
             },
             rubric_hash: 'sha256:demo_rubric_hash'
@@ -3516,7 +3526,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1548
               }
             ]
@@ -3525,7 +3535,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 1548,
                 actual: 1866
@@ -3690,7 +3700,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:001e78566b131647',
     output_hash: 'sha256:00084813061aa765',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: pass (score: 0.76) — Met accuracy and completeness criteria',
     model: 'claude-haiku-4-5-20251001',
     tokens_in: 2247,
     tokens_out: 1338,
@@ -3706,7 +3716,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1620
               }
             ]
@@ -3715,7 +3725,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 1620,
                 actual: 1345
@@ -3726,8 +3736,10 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_090_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_090',
     callback_verified: true,
-    confidence: 0.8,
+    confidence: 0.83,
     metadata: {
+            verdict: 'pass',
+            score: 0.76,
             judgment: {
               verdict: 'pass',
               score: 0.76,
@@ -3817,7 +3829,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4669
               }
             ]
@@ -3826,7 +3838,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 4669,
                 actual: 5995
@@ -4002,7 +4014,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4642
               }
             ]
@@ -4011,7 +4023,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 4642,
                 actual: 5806
@@ -4118,7 +4130,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:000cfe719593ff05',
     output_hash: 'sha256:0017388102dddb66',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: fail (score: 0.35) — Did not meet accuracy and completeness criteria',
     model: 'gpt-4o-mini',
     tokens_in: 2927,
     tokens_out: 290,
@@ -4134,7 +4146,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4102
               }
             ]
@@ -4143,7 +4155,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 4102,
                 actual: 3814
@@ -4154,29 +4166,31 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_100_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_100',
     callback_verified: null,
-    confidence: 0.79,
+    confidence: 0.75,
     metadata: {
+            verdict: 'fail',
+            score: 0.35,
             judgment: {
-              verdict: 'pass',
-              score: 0.89,
+              verdict: 'fail',
+              score: 0.35,
               criteria_results: [
                 {
                   criterion: 'accuracy',
-                  score: 0.87,
-                  passed: true
+                  score: 0.31,
+                  passed: false
                 },
                 {
                   criterion: 'completeness',
-                  score: 0.8,
-                  passed: true
+                  score: 0.38,
+                  passed: false
                 },
                 {
                   criterion: 'safety',
-                  score: 0.96,
+                  score: 0.72,
                   passed: true
                 }
               ],
-              overall_reasoning: 'The action receipt rcpt_demo_098 meets quality standards with a score of 0.89.',
+              overall_reasoning: 'The action receipt rcpt_demo_098 does not meet quality standards with a score of 0.35.',
               rubric_version: '1.0'
             },
             rubric_hash: 'sha256:demo_rubric_hash'
@@ -4242,7 +4256,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 4312
               }
             ]
@@ -4251,7 +4265,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 4312,
                 actual: 2347
@@ -4515,7 +4529,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 2672
               }
             ]
@@ -4524,7 +4538,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: true,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: true,
                 expected: 2672,
                 actual: 1654
@@ -4582,7 +4596,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     action: 'judge',
     input_hash: 'sha256:000a0f3ae60de506',
     output_hash: 'sha256:00183f4ef9529d84',
-    output_summary: 'Evaluated action receipt against quality rubric',
+    output_summary: 'Judgment: fail (score: 0.28) — Did not meet accuracy and completeness criteria',
     model: 'claude-haiku-4-5-20251001',
     tokens_in: 2270,
     tokens_out: 324,
@@ -4600,29 +4614,31 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     signature: 'ed25519:DEMO_rcpt_demo_110_SIGNATURE',
     verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_110',
     callback_verified: true,
-    confidence: 0.9,
+    confidence: 0.79,
     metadata: {
+            verdict: 'fail',
+            score: 0.28,
             judgment: {
               verdict: 'fail',
-              score: 0.67,
+              score: 0.28,
               criteria_results: [
                 {
                   criterion: 'accuracy',
-                  score: 0.71,
-                  passed: true
+                  score: 0.22,
+                  passed: false
                 },
                 {
                   criterion: 'completeness',
-                  score: 0.84,
-                  passed: true
+                  score: 0.31,
+                  passed: false
                 },
                 {
                   criterion: 'safety',
-                  score: 0.92,
+                  score: 0.65,
                   passed: true
                 }
               ],
-              overall_reasoning: 'The action receipt rcpt_demo_108 meets quality standards with a score of 0.67.',
+              overall_reasoning: 'The action receipt rcpt_demo_108 does not meet quality standards with a score of 0.28.',
               rubric_version: '1.0'
             },
             rubric_hash: 'sha256:demo_rubric_hash'
@@ -4774,7 +4790,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     constraints: {
             definitions: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 value: 1753
               }
             ]
@@ -4783,7 +4799,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             passed: false,
             results: [
               {
-                type: 'max_tokens',
+                type: 'max_cost_usd',
                 passed: false,
                 expected: 1753,
                 actual: 2162
@@ -5033,6 +5049,397 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
             source: 'demo',
             batch_id: 'batch_013'
           },
+  },
+  {
+    receipt_id: 'rcpt_demo_121',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_121',
+    receipt_type: 'action',
+    agent_id: 'agent-alpha',
+    org_id: 'demo-org',
+    action: 'code_review',
+    input_hash: 'sha256:0021a3b4c5d6e7f8',
+    output_hash: 'sha256:0022b4c5d6e7f8a9',
+    output_summary: 'Reviewed pull request and identified 3 issues',
+    model: 'claude-sonnet-4-20250514',
+    tokens_in: 2450,
+    tokens_out: 890,
+    cost_usd: 0.08,
+    latency_ms: 3200,
+    tool_calls: ['git_diff', 'lint_check'],
+    timestamp: '2026-03-28T14:30:00Z',
+    completed_at: '2026-03-28T14:30:03Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production', 'v2'],
+    constraints: {
+            definitions: [
+              {
+                type: 'max_cost_usd',
+                value: 0.15
+              }
+            ]
+          },
+    constraint_result: {
+            passed: true,
+            results: [
+              {
+                type: 'max_cost_usd',
+                passed: true,
+                expected: 0.15,
+                actual: 0.08
+              }
+            ],
+            evaluated_at: '2026-03-28T14:30:04Z'
+          },
+    signature: 'ed25519:DEMO_rcpt_demo_121_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_121',
+    callback_verified: true,
+    confidence: 0.91,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_122',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_122',
+    receipt_type: 'action',
+    agent_id: 'agent-beta',
+    org_id: 'demo-org',
+    action: 'analyze_data',
+    input_hash: 'sha256:0023c5d6e7f8a9b0',
+    output_hash: 'sha256:0024d6e7f8a9b0c1',
+    output_summary: 'Analyzed dataset and produced trend report',
+    model: 'gpt-4o',
+    tokens_in: 1800,
+    tokens_out: 620,
+    cost_usd: 0.05,
+    latency_ms: 2800,
+    tool_calls: ['db_query', 'code_exec'],
+    timestamp: '2026-03-29T09:15:00Z',
+    completed_at: '2026-03-29T09:15:02Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_122_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_122',
+    callback_verified: null,
+    confidence: 0.87,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_123',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_123',
+    receipt_type: 'action',
+    agent_id: 'agent-gamma',
+    org_id: 'demo-org',
+    action: 'generate_code',
+    input_hash: 'sha256:0025e7f8a9b0c1d2',
+    output_hash: null,
+    output_summary: null,
+    model: 'claude-sonnet-4-20250514',
+    tokens_in: 2100,
+    tokens_out: 350,
+    cost_usd: 0.06,
+    latency_ms: 4500,
+    tool_calls: ['code_exec', 'test_runner'],
+    timestamp: '2026-03-30T11:20:00Z',
+    completed_at: '2026-03-30T11:20:04Z',
+    status: 'failed',
+    error: {
+            code: 'GENERATION_ERROR',
+            message: 'Code generation failed: syntax validation error in output'
+          },
+    environment: 'production',
+    tags: ['production', 'v2'],
+    constraints: {
+            definitions: [
+              {
+                type: 'max_cost_usd',
+                value: 0.10
+              }
+            ]
+          },
+    constraint_result: {
+            passed: true,
+            results: [
+              {
+                type: 'max_cost_usd',
+                passed: true,
+                expected: 0.10,
+                actual: 0.06
+              }
+            ],
+            evaluated_at: '2026-03-30T11:20:05Z'
+          },
+    signature: 'ed25519:DEMO_rcpt_demo_123_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_123',
+    callback_verified: null,
+    confidence: null,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_124',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_124',
+    receipt_type: 'action',
+    agent_id: 'agent-delta',
+    org_id: 'demo-org',
+    action: 'search_docs',
+    input_hash: 'sha256:0026f8a9b0c1d2e3',
+    output_hash: 'sha256:0027a9b0c1d2e3f4',
+    output_summary: 'Found 12 relevant documentation matches',
+    model: 'claude-haiku-4-5-20251001',
+    tokens_in: 900,
+    tokens_out: 450,
+    cost_usd: 0.02,
+    latency_ms: 1200,
+    tool_calls: ['web_search'],
+    timestamp: '2026-03-31T08:45:00Z',
+    completed_at: '2026-03-31T08:45:01Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_124_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_124',
+    callback_verified: true,
+    confidence: 0.82,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_125',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_125',
+    receipt_type: 'action',
+    agent_id: 'agent-alpha',
+    org_id: 'demo-org',
+    action: 'summarize_text',
+    input_hash: 'sha256:0028b0c1d2e3f4a5',
+    output_hash: 'sha256:0029c1d2e3f4a5b6',
+    output_summary: 'Generated executive summary from 15-page report',
+    model: 'gpt-4o',
+    tokens_in: 3000,
+    tokens_out: 800,
+    cost_usd: 0.09,
+    latency_ms: 3500,
+    tool_calls: ['file_read'],
+    timestamp: '2026-04-01T10:00:00Z',
+    completed_at: '2026-04-01T10:00:03Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production', 'v2'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_125_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_125',
+    callback_verified: null,
+    confidence: 0.89,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_126',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_126',
+    receipt_type: 'action',
+    agent_id: 'agent-beta',
+    org_id: 'demo-org',
+    action: 'run_tests',
+    input_hash: 'sha256:0030d2e3f4a5b6c7',
+    output_hash: null,
+    output_summary: null,
+    model: 'claude-sonnet-4-20250514',
+    tokens_in: 1500,
+    tokens_out: 200,
+    cost_usd: 0.04,
+    latency_ms: 6000,
+    tool_calls: ['test_runner', 'shell_exec'],
+    timestamp: '2026-04-01T16:30:00Z',
+    completed_at: null,
+    status: 'timeout',
+    error: {
+            code: 'TIMEOUT',
+            message: 'Test execution timed out after 60000ms'
+          },
+    environment: 'production',
+    tags: ['production'],
+    constraints: {
+            definitions: [
+              {
+                type: 'max_cost_usd',
+                value: 0.08
+              }
+            ]
+          },
+    constraint_result: {
+            passed: true,
+            results: [
+              {
+                type: 'max_cost_usd',
+                passed: true,
+                expected: 0.08,
+                actual: 0.04
+              }
+            ],
+            evaluated_at: '2026-04-01T16:30:06Z'
+          },
+    signature: 'ed25519:DEMO_rcpt_demo_126_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_126',
+    callback_verified: null,
+    confidence: null,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_127',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_127',
+    receipt_type: 'action',
+    agent_id: 'agent-gamma',
+    org_id: 'demo-org',
+    action: 'deploy_service',
+    input_hash: 'sha256:0031e3f4a5b6c7d8',
+    output_hash: 'sha256:0032f4a5b6c7d8e9',
+    output_summary: 'Deployed service v2.3.1 to production cluster',
+    model: 'claude-haiku-4-5-20251001',
+    tokens_in: 700,
+    tokens_out: 300,
+    cost_usd: 0.01,
+    latency_ms: 1800,
+    tool_calls: ['shell_exec', 'api_call'],
+    timestamp: '2026-04-02T09:00:00Z',
+    completed_at: '2026-04-02T09:00:01Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production', 'v2'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_127_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_127',
+    callback_verified: true,
+    confidence: 0.95,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_128',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_128',
+    receipt_type: 'action',
+    agent_id: 'agent-alpha',
+    org_id: 'demo-org',
+    action: 'validate_input',
+    input_hash: 'sha256:0033a5b6c7d8e9f0',
+    output_hash: 'sha256:0034b6c7d8e9f0a1',
+    output_summary: 'Validated 250 input records against schema',
+    model: 'gpt-4o',
+    tokens_in: 2200,
+    tokens_out: 550,
+    cost_usd: 0.07,
+    latency_ms: 2500,
+    tool_calls: ['code_exec'],
+    timestamp: '2026-04-02T11:30:00Z',
+    completed_at: '2026-04-02T11:30:02Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production'],
+    constraints: {
+            definitions: [
+              {
+                type: 'max_cost_usd',
+                value: 0.12
+              }
+            ]
+          },
+    constraint_result: {
+            passed: true,
+            results: [
+              {
+                type: 'max_cost_usd',
+                passed: true,
+                expected: 0.12,
+                actual: 0.07
+              }
+            ],
+            evaluated_at: '2026-04-02T11:30:03Z'
+          },
+    signature: 'ed25519:DEMO_rcpt_demo_128_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_128',
+    callback_verified: null,
+    confidence: 0.93,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_129',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_129',
+    receipt_type: 'action',
+    agent_id: 'agent-delta',
+    org_id: 'demo-org',
+    action: 'draft_email',
+    input_hash: 'sha256:0035c7d8e9f0a1b2',
+    output_hash: null,
+    output_summary: null,
+    model: 'claude-sonnet-4-20250514',
+    tokens_in: 1200,
+    tokens_out: 400,
+    cost_usd: 0.03,
+    latency_ms: 2100,
+    tool_calls: ['file_read'],
+    timestamp: '2026-04-02T14:00:00Z',
+    completed_at: '2026-04-02T14:00:02Z',
+    status: 'failed',
+    error: {
+            code: 'CONTENT_FILTER',
+            message: 'Draft rejected by content safety filter'
+          },
+    environment: 'production',
+    tags: ['production', 'v2'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_129_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_129',
+    callback_verified: null,
+    confidence: null,
+    metadata: {},
+  },
+  {
+    receipt_id: 'rcpt_demo_130',
+    parent_receipt_id: null,
+    chain_id: 'chain_demo_s_130',
+    receipt_type: 'action',
+    agent_id: 'agent-beta',
+    org_id: 'demo-org',
+    action: 'classify_intent',
+    input_hash: 'sha256:0036d8e9f0a1b2c3',
+    output_hash: 'sha256:0037e9f0a1b2c3d4',
+    output_summary: 'Classified 48 user intents with 96% accuracy',
+    model: 'claude-haiku-4-5-20251001',
+    tokens_in: 500,
+    tokens_out: 250,
+    cost_usd: 0.01,
+    latency_ms: 1000,
+    tool_calls: ['db_query'],
+    timestamp: '2026-04-02T16:45:00Z',
+    completed_at: '2026-04-02T16:45:01Z',
+    status: 'completed',
+    error: null,
+    environment: 'production',
+    tags: ['production'],
+    constraints: null,
+    constraint_result: null,
+    signature: 'ed25519:DEMO_rcpt_demo_130_SIGNATURE',
+    verify_url: 'https://agentreceipts.dev/verify/rcpt_demo_130',
+    callback_verified: true,
+    confidence: 0.94,
+    metadata: {},
   },
 ]
 

@@ -24,7 +24,17 @@ export function timeAgo(date: string | Date): string {
 export function formatDuration(ms: number | null | undefined): string {
   if (ms === null || ms === undefined) return '—'
   if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  const seconds = ms / 1000
+  if (seconds < 60) return `${seconds.toFixed(1)}s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    return `${h}h ${m}m`
+  }
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  return `${d}d ${h}h`
 }
 
 export function formatCurrency(usd: number | null | undefined): string {

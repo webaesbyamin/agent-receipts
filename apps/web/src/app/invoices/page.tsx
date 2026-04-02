@@ -305,6 +305,44 @@ export default function InvoicesPage() {
           </div>
         </div>
       )}
+
+      {/* Demo sample invoice */}
+      {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && !result && (
+        <div className="mt-8">
+          <h3 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">Sample Invoice Output</h3>
+          <div className="bg-bg-secondary rounded-lg p-6 border border-border font-mono text-sm">
+            <pre className="whitespace-pre-wrap text-text-secondary">{`# Agent Services Invoice
+
+Invoice #: AR-20260401-X7K2
+Period: Mar 1, 2026 - Mar 31, 2026
+Generated: Apr 2, 2026
+
+Provider: Acme AI Agency
+Client: TechCorp Inc.
+
+## Summary
+
+| Metric          | Value   |
+|-----------------|---------|
+| Total Receipts  | 120     |
+| Total Cost      | $3.93   |
+| Avg Latency     | 5.5s    |
+| Constraint Pass | 58.3%   |
+
+## By Action
+
+| Action          | Count | Cost    |
+|-----------------|-------|---------|
+| code_review     | 18    | $0.72   |
+| generate_code   | 15    | $0.61   |
+| analyze_data    | 14    | $0.55   |
+| run_tests       | 12    | $0.44   |
+| ...             | ...   | ...     |
+
+Verification: agentreceipts.dev/verify`}</pre>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

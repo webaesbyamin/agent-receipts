@@ -22,7 +22,7 @@ import {
 export default function OverviewPage() {
   const { data: stats, error: statsError, isLoading: statsLoading, mutate: statsRetry } = useStats()
   const { data: recentData, error: recentError } = useReceipts({ limit: 10, sort: 'timestamp:desc' })
-  const { data: failuresData } = useReceipts({ limit: 5, constraint_passed: false, sort: 'timestamp:desc' })
+  const { data: failuresData } = useReceipts({ limit: 5, status: 'failed', sort: 'timestamp:desc' })
   const { data: agentsData } = useAgents()
 
   if (statsError) {
@@ -40,7 +40,7 @@ export default function OverviewPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard label="Total Receipts" value={formatNumber(stats.total_receipts)} icon={Receipt} />
           <StatCard label="Today" value={formatNumber(stats.receipts_today)} icon={Clock} />
-          <StatCard label="Active Agents" value={formatNumber(stats.active_agents)} icon={Bot} />
+          <StatCard label="Active Agents (7D)" value={formatNumber(stats.active_agents)} icon={Bot} />
           <StatCard label="Pass Rate" value={stats.constraints_evaluated > 0 ? formatPercent(stats.constraint_pass_rate) : '—'} icon={CheckSquare} />
           <StatCard label="Avg Latency" value={formatDuration(stats.avg_latency_ms)} icon={Zap} />
           <StatCard label="Avg Cost" value={formatCurrency(stats.avg_cost_usd)} icon={DollarSign} />
@@ -84,7 +84,7 @@ export default function OverviewPage() {
                   <Cell fill="var(--success)" />
                   <Cell fill="var(--danger)" />
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 8, fontSize: 12 }} formatter={(value: number, name: string) => [value, name]} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -152,7 +152,7 @@ export default function OverviewPage() {
         <div className="card">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-medium text-text-primary">Recent Failures</h3>
-            <Link href="/receipts?constraint_passed=false" className="text-xs text-primary hover:underline">View all</Link>
+            <Link href="/receipts?status=failed" className="text-xs text-primary hover:underline">View all</Link>
           </div>
           {!failuresData ? (
             <LoadingTable rows={3} />

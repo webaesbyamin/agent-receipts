@@ -82,9 +82,38 @@ export default function VerifyPage() {
     } catch {}
   }, [])
 
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
+  const loadDemoReceipt = useCallback(async () => {
+    try {
+      const res = await fetch('/api/receipts?limit=1')
+      const data = await res.json()
+      if (data.data?.[0]) {
+        setJsonInput(JSON.stringify(data.data[0], null, 2))
+      }
+      const configRes = await fetch('/api/config')
+      const config = await configRes.json()
+      if (config.public_key) setPublicKey(config.public_key)
+    } catch {}
+  }, [])
+
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-lg font-semibold text-text-primary">Verify a Receipt</h1>
+
+      {isDemoMode && (
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+          <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+            <strong>Demo:</strong> In production, receipts are signed with Ed25519 cryptography. Try loading a demo receipt to see the verification flow.
+          </p>
+          <button
+            onClick={loadDemoReceipt}
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded font-medium transition-colors"
+          >
+            Load demo receipt &rarr;
+          </button>
+        </div>
+      )}
 
       {/* Receipt JSON input */}
       <div>
@@ -162,6 +191,9 @@ export default function VerifyPage() {
                   ? 'This receipt was signed by the holder of the provided public key and has not been tampered with.'
                   : result.error ?? 'The signature could not be verified.'}
               </p>
+              {!result.verified && isDemoMode && (
+                <p className="text-xs text-text-muted mt-1">Demo signatures are placeholders. Real receipts use cryptographic Ed25519 signatures.</p>
+              )}
             </div>
           </div>
 

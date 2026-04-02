@@ -16,8 +16,8 @@ export async function GET() {
     const receiptsToday = receipts.filter(r => r.timestamp >= todayStart).length
     const receiptsThisWeek = receipts.filter(r => r.timestamp >= weekStart).length
 
-    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
-    const recentAgents = new Set(receipts.filter(r => r.timestamp >= last24h).map(r => r.agent_id))
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const recentAgents = new Set(receipts.filter(r => r.timestamp >= last7d).map(r => r.agent_id))
 
     // Constraint stats
     let constraintsEvaluated = 0
