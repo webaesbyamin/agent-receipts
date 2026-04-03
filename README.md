@@ -9,6 +9,23 @@
 
 Agent Receipts is a local-first, open-source system for creating verifiable, immutable receipts of autonomous agent actions. Every action is Ed25519-signed, content-hashed, and chain-linked — no hosted API required. Works as an MCP server, Node.js SDK, or CLI.
 
+## Real World Example
+
+I built ModQuote — a multi-tenant SaaS for automotive shops. During development, I used Claude Code extensively for auditing and fixing the codebase.
+
+The problem: when something went wrong, I had no way to prove what input Claude received, what it changed, or whether the output matched what was expected.
+
+With Agent Receipts, every Claude Code session now generates signed receipts:
+
+- **Input hash** proves exactly what code Claude saw
+- **Output hash** proves exactly what it produced
+- **Constraints** catch when latency spikes or costs exceed budget
+- **Chains** show the full sequence of a multi-step audit session
+
+When a fix didn't work as expected, I could pull the receipt, verify the signature, and see the exact input/output hashes — no guessing, no "Claude must have misunderstood."
+
+That's the difference between logs and receipts. Logs tell you something happened. Receipts prove it.
+
 ## Quick Start: MCP Server
 
 Add the Agent Receipts MCP server to your AI tool's config and every action gets a cryptographic receipt automatically.
