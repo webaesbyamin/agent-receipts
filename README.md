@@ -2,6 +2,11 @@
 
 **Cryptographically signed proof that an AI agent did what it said it did.**
 
+[![npm version](https://img.shields.io/npm/v/@agent-receipts/sdk.svg)](https://www.npmjs.com/package/@agent-receipts/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
+> **[Live Demo](https://agent-receipts-web.vercel.app/)** — see it working with sample data, no install required.
+
 Agent Receipts is a local-first, open-source system for creating verifiable, immutable receipts of autonomous agent actions. Every action is Ed25519-signed, content-hashed, and chain-linked — no hosted API required. Works as an MCP server, Node.js SDK, or CLI.
 
 ## Quick Start: MCP Server
@@ -171,7 +176,7 @@ const receipt = await ar.get('rcpt_8f3k2j4n')
 ```typescript
 const result = await ar.list({ agent_id: 'my-agent', status: 'completed' })
 // result.data: ActionReceipt[]
-// result.pagination: { page, pageSize, total }
+// result.pagination: { page, limit, total, total_pages, has_next, has_prev }
 ```
 
 ### `ar.getPublicKey()` — Get the signing public key
@@ -268,7 +273,7 @@ const invoice = await ar.generateInvoice({
   "input_hash": "sha256:abc123...",
   "output_hash": "sha256:def456...",
   "output_summary": "Generated Q4 report",
-  "model": "claude-sonnet-4-6",
+  "model": "claude-sonnet-4-20250514",
   "timestamp": "2026-02-07T14:32:01.442Z",
   "completed_at": "2026-02-07T14:32:02.100Z",
   "latency_ms": 658,
@@ -298,11 +303,10 @@ Verification re-computes the Ed25519 signature over the receipt's deterministic 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
 | `AGENT_RECEIPTS_DATA_DIR` | Data directory path | `~/.agent-receipts` |
-| `AGENT_RECEIPTS_AGENT_ID` | Default agent ID | `default-agent` |
-| `AGENT_RECEIPTS_ORG_ID` | Organization ID | `default-org` |
-| `AGENT_RECEIPTS_ENVIRONMENT` | Environment label | `production` |
+| `AGENT_RECEIPTS_AGENT_ID` | Default agent ID | `local-agent` |
+| `AGENT_RECEIPTS_ORG_ID` | Organization ID | `local-org` |
+| `AGENT_RECEIPTS_ENVIRONMENT` | Environment label (`development`, `production`, `staging`, `test`) | `production` |
 | `RECEIPT_SIGNING_PRIVATE_KEY` | Ed25519 private key (hex) | Auto-generated |
-| `RECEIPT_SIGNING_PUBLIC_KEY` | Ed25519 public key (hex) | Derived from private |
 
 ## Storage
 
@@ -314,9 +318,12 @@ All data is stored locally in the data directory:
 │   ├── private.key          # Ed25519 private key (mode 0600)
 │   └── public.key           # Ed25519 public key
 ├── receipts/
-│   └── *.json               # Individual receipt files
+│   └── *.json               # Legacy JSON files (auto-migrated)
+├── receipts.db              # SQLite database (primary storage)
 └── config.json              # Agent and org configuration
 ```
+
+As of v0.2.7, receipts are stored in SQLite with indexed queries for fast filtering and pagination. Existing JSON receipt files are automatically migrated on first startup.
 
 ## Architecture
 
@@ -352,9 +359,9 @@ npx @agent-receipts/dashboard
 
 Opens Mission Control at http://localhost:3274 — visualize, verify, and manage all receipts.
 
-Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, dark mode, global search (Cmd+K).
+Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, invoice generation, dark mode, global search.
 
-11 pages: Overview, Receipts, Receipt Detail, Chains, Chain Detail, Agents, Agent Detail, Constraints, Judgments, Verify, Settings.
+13 pages: Overview, Receipts, Receipt Detail, Chains, Chain Detail, Agents, Agent Detail, Constraints, Judgments, Invoices, Verify, Settings, How It Works.
 
 ## Examples
 
@@ -380,7 +387,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 ## Roadmap
 
-- [x] Local-first receipt storage with JSON
+- [x] Local-first receipt storage (SQLite with indexed queries)
 - [x] Ed25519 signing and verification
 - [x] MCP server with 14 tools
 - [x] Node.js SDK
@@ -389,8 +396,10 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 - [x] AI Judge with rubric-based evaluation
 - [x] Output schema validation (JSON Schema)
 - [x] Receipt TTL and cleanup
-- [x] Mission Control dashboard (11 pages, dark mode, search)
+- [x] Invoice generation (JSON, CSV, Markdown, HTML)
+- [x] Mission Control dashboard (13 pages, dark mode, search)
 - [x] Dashboard npm package — `npx @agent-receipts/dashboard`
+- [x] Live demo at [agent-receipts-web.vercel.app](https://agent-receipts-web.vercel.app/)
 - [ ] Receipt anchoring to blockchain/timestamping services
 - [ ] Multi-agent receipt sharing protocol
 - [ ] Receipt compression and archival
