@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getStore, getKeyManager } from '@/lib/storage'
+import { getStore, getKeyManager, isDemoMode } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +9,10 @@ export async function GET() {
     const allResult = await store.list(undefined, 1, 10000, 'timestamp:desc') // TODO: replace with server-side aggregation in v0.3.0
     const receipts = allResult.data
 
-    const now = new Date()
+    // In demo mode, anchor "now" to the most recent receipt so stats never go stale
+    const now = isDemoMode() && receipts.length > 0
+      ? new Date(receipts[0]!.timestamp)
+      : new Date()
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
