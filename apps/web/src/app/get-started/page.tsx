@@ -107,7 +107,7 @@ export default function GetStartedPage() {
         </div>
 
         <p className="text-xs text-gray-400 dark:text-gray-600 mt-8">
-          @agent-receipts/mcp-server · v0.2.8 · MIT License
+          @agent-receipts/mcp-server · MIT License
         </p>
 
       </div>
