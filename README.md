@@ -2,6 +2,7 @@
 
 **Cryptographically signed proof that an AI agent did what it said it did.**
 
+[![agent-receipts MCP server](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts/badges/score.svg)](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts)
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/sdk.svg)](https://www.npmjs.com/package/@agent-receipts/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
