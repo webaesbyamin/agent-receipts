@@ -1,13 +1,4 @@
 {
-  "$schema": "https://glama.ai/schema/glama.json",
-  "name": "Agent Receipts",
-  "description": "Cryptographic accountability for AI agents. Ed25519-signed receipts for every MCP tool call — constraints, chains, AI judgment, invoicing, local dashboard.",
-  "license": "MIT",
-  "homepage": "https://agent-receipts-web.vercel.app",
-  "repository": "https://github.com/webaesbyamin/agent-receipts",
-  "npm": "@agent-receipts/mcp-server",
-  "command": {
-    "type": "npx",
-    "package": "@agent-receipts/mcp-server"
-  }
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": ["webaesbyamin"]
 }
