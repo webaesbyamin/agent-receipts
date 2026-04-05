@@ -44,6 +44,9 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 
+# MCP Registry auth tokens
+.mcpregistry_*
+
 # Misc
 *.tgz
 .cache/
