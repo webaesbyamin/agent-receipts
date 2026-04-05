@@ -4,7 +4,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install the published MCP server package
-RUN npm install -g @agent-receipts/mcp-server@0.2.8
+RUN npm install -g @agent-receipts/mcp-server@0.2.10
 
 # Create data directory for receipts
 RUN mkdir -p /root/.agent-receipts
