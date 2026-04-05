@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/sdk",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "TypeScript SDK for Agent Receipts — local-first action tracking",
   "license": "MIT",
   "author": "Amin <amin@webaes.co> (https://webaes.co)",

@@ -1,6 +1,7 @@
 {
   "name": "@agent-receipts/mcp-server",
-  "version": "0.2.10",
+  "version": "0.2.11",
+  "mcpName": "io.github.webaesbyamin/agent-receipts",
   "type": "module",
   "description": "Local-first MCP server for Agent Receipts — storage, engine, and protocol",
   "license": "MIT",
