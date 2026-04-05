@@ -5,9 +5,9 @@ import type { ReceiptEngine } from '../engine/receipt-engine.js'
 export function registerCleanup(server: McpServer, engine: ReceiptEngine): void {
   server.tool(
     'cleanup',
-    'Delete expired receipts based on their expires_at metadata.',
+    'Delete receipts that have passed their expiration time based on the expires_at field in metadata. Expired receipts are receipts where metadata.expires_at is set and is earlier than the current time. Supports dry_run mode to preview deletions without committing. Returns count of deleted receipts and remaining total. Use periodically to manage storage and enforce TTL policies set during receipt creation.',
     {
-      dry_run: z.boolean().default(false).describe('If true, show what would be deleted without actually deleting'),
+      dry_run: z.boolean().default(false).describe('If true, returns what would be deleted without actually deleting. Defaults to false.'),
     },
     async (params) => {
       if (params.dry_run) {

@@ -5,9 +5,9 @@ import type { ReceiptEngine } from '../engine/receipt-engine.js'
 export function registerGetJudgments(server: McpServer, engine: ReceiptEngine): void {
   server.tool(
     'get_judgments',
-    'Get all judgment receipts for a given receipt.',
+    'Retrieve all judgment receipts associated with a given receipt ID. Judgment receipts are linked via parent_receipt_id. Returns an array of judgment receipt objects ordered by timestamp, including verdict, score, criteria results, and confidence. Use to review the evaluation history of a receipt, compare multiple judgments, or audit AI quality assessments. Returns empty array if no judgments exist.',
     {
-      receipt_id: z.string().describe('The receipt ID to get judgments for'),
+      receipt_id: z.string().describe('The original receipt ID to get judgments for (not the judgment receipt ID)'),
     },
     async (params) => {
       const judgments = await engine.getJudgments(params.receipt_id)

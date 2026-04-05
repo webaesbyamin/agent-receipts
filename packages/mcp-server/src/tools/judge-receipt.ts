@@ -20,12 +20,12 @@ const RubricInput = z.object({
 export function registerJudgeReceipt(server: McpServer, engine: ReceiptEngine): void {
   server.tool(
     'judge_receipt',
-    'Evaluate a receipt against a rubric. Creates a pending judgment receipt and returns evaluation instructions for the host model.',
+    'Start an AI judgment evaluation for a receipt by creating a pending judgment receipt and returning a structured evaluation prompt. The host model (you) evaluates the receipt\'s output against the provided rubric criteria and then calls complete_judgment with the results. Use to assess output quality beyond simple pass/fail constraints — supports weighted criteria, partial verdicts, and confidence scores. Judgment receipts are themselves Ed25519-signed for auditability.',
     {
-      receipt_id: z.string().describe('The receipt ID to evaluate'),
-      rubric: RubricInput.describe('Evaluation rubric with criteria and thresholds'),
+      receipt_id: z.string().describe('The receipt ID to evaluate — the original action receipt'),
+      rubric: RubricInput.describe('Evaluation rubric with criteria array. Each criterion needs: name (string), description (string), weight (0.0-1.0), and optional passing_threshold (0.0-1.0, default 0.7). Also set: passing_threshold (overall, default 0.7) and require_all (boolean, default false)'),
       output_summary_for_review: z.string().optional().describe(
-        'Additional context about what the agent produced for evaluation.'
+        'The actual output content to evaluate — provide if output_summary on the receipt is insufficient for evaluation'
       ),
     },
     async (params) => {

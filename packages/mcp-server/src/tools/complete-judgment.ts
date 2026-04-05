@@ -6,18 +6,18 @@ import { hashData } from '../hash.js'
 export function registerCompleteJudgment(server: McpServer, engine: ReceiptEngine): void {
   server.tool(
     'complete_judgment',
-    'Complete a pending judgment receipt with the evaluation results from judge_receipt.',
+    'Submit evaluation results to finalize a pending judgment receipt created by judge_receipt. Records the verdict, overall score, per-criterion scores and reasoning, and confidence. The judgment receipt is re-signed with Ed25519 and linked to the original receipt via parent_receipt_id. Returns the judgment receipt ID, verdict, score, and chain ID. Use immediately after evaluating the prompt returned by judge_receipt.',
     {
-      judgment_receipt_id: z.string().describe('The pending judgment receipt ID from judge_receipt'),
-      verdict: z.enum(['pass', 'fail', 'partial']).describe('Overall verdict'),
-      score: z.number().min(0).max(1).describe('Overall quality score'),
+      judgment_receipt_id: z.string().describe('The pending judgment receipt ID returned by judge_receipt'),
+      verdict: z.enum(['pass', 'fail', 'partial']).describe('Overall evaluation result: "pass" (meets threshold), "fail" (below threshold), or "partial" (mixed results)'),
+      score: z.number().min(0).max(1).describe('Overall quality score from 0.0 to 1.0'),
       criteria_results: z.array(z.object({
         criterion: z.string(),
         score: z.number().min(0).max(1),
         reasoning: z.string(),
-      })).describe('Per-criterion scores and reasoning'),
-      overall_reasoning: z.string().describe('Overall evaluation reasoning'),
-      confidence: z.number().min(0).max(1).describe('Your confidence in this evaluation'),
+      })).describe('Array of per-criterion results. Each item needs: criterion (name string), score (0.0-1.0), reasoning (explanation string)'),
+      overall_reasoning: z.string().describe('Overall explanation of the evaluation verdict'),
+      confidence: z.number().min(0).max(1).describe('Your confidence in this evaluation, 0.0 to 1.0'),
     },
     async (params) => {
       const receipt = await engine.get(params.judgment_receipt_id)

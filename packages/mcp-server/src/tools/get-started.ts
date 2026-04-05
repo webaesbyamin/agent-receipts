@@ -141,7 +141,7 @@ Retrieve a chain with \`get_chain({ chain_id: "chain_abc" })\`.
 export function registerGetStarted(server: McpServer, _engine: ReceiptEngine): void {
   server.tool(
     'get_started',
-    'Show a getting-started guide for Agent Receipts with usage examples for all tools.',
+    'Display a getting-started guide with usage examples for all Agent Receipts tools. Shows how to record agent actions, verify receipts, use receipt chains, evaluate with constraints, and generate invoices. Call this tool first when setting up Agent Receipts or when you need a reference for available tools and their typical usage patterns.',
     {},
     async () => {
       return {

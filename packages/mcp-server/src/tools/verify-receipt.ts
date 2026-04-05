@@ -5,9 +5,9 @@ import type { ReceiptEngine } from '../engine/receipt-engine.js'
 export function registerVerifyReceipt(server: McpServer, engine: ReceiptEngine): void {
   server.tool(
     'verify_receipt',
-    'Verify the cryptographic signature of a receipt.',
+    'Cryptographically verify an Ed25519 signature on a stored receipt to confirm it has not been tampered with since signing. Extracts the 12-field signable payload, canonicalizes it, and verifies against the stored public key. Returns verified: true if the signature is valid. Use to audit receipts before using them as evidence or before completing payments based on agent work.',
     {
-      receipt_id: z.string().describe('The receipt ID to verify'),
+      receipt_id: z.string().describe('The receipt ID to verify — must exist in local storage'),
     },
     async (params) => {
       const result = await engine.verify(params.receipt_id)
