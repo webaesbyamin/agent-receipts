@@ -1,14 +1,22 @@
 # Agent Receipts
 
-**Cryptographically signed proof that an AI agent did what it said it did.**
+**Logs tell you something happened. Receipts prove it.**
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://agent-receipts-web.vercel.app/)
 [![agent-receipts MCP server](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts/badges/score.svg)](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts)
-[![npm version](https://img.shields.io/npm/v/@agent-receipts/sdk.svg)](https://www.npmjs.com/package/@agent-receipts/sdk)
+[![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-> **[Live Demo](https://agent-receipts-web.vercel.app/)** — see it working with sample data, no install required.
-
-Agent Receipts is a local-first, open-source system for creating verifiable, immutable receipts of autonomous agent actions. Every action is Ed25519-signed, content-hashed, and chain-linked — no hosted API required. Works as an MCP server, Node.js SDK, or CLI.
+```json
+{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agent-receipts/mcp-server"]
+    }
+  }
+}
+```
 
 ## Real World Example
 
