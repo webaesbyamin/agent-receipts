@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.webaesbyamin/agent-receipts",
-  "description": "Cryptographic accountability for AI agents. Ed25519-signed receipts for every MCP tool call — constraints, chains, AI judgment, invoicing, local dashboard.",
+  "description": "Ed25519-signed receipts for every AI agent action. Local-first, verifiable, no server required.",
   "repository": {
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "source": "github"
