@@ -6,6 +6,9 @@
 [![agent-receipts MCP server](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts/badges/score.svg)](https://glama.ai/mcp/servers/webaesbyamin/agent-receipts)
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+![macOS](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
+![Windows](https://img.shields.io/badge/platform-Windows-lightgrey?logo=windows)
+![Linux](https://img.shields.io/badge/platform-Linux-lightgrey?logo=linux)
 
 ```json
 {
@@ -38,6 +41,8 @@ That's the difference between logs and receipts. Logs tell you something happene
 ## Quick Start: MCP Server
 
 Add the Agent Receipts MCP server to your AI tool's config and every action gets a cryptographic receipt automatically.
+
+> **Platform support:** macOS, Windows, and Linux — requires Node.js 18+
 
 ### Claude Desktop
 
