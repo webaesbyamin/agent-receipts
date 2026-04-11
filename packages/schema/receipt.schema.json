@@ -22,7 +22,8 @@
             "action",
             "verification",
             "judgment",
-            "arbitration"
+            "arbitration",
+            "memory"
           ]
         },
         "agent_id": {

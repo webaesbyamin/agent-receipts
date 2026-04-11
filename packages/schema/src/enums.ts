@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const ReceiptStatus = z.enum(['pending', 'completed', 'failed', 'timeout'])
 export type ReceiptStatus = z.infer<typeof ReceiptStatus>
 
-export const ReceiptType = z.enum(['action', 'verification', 'judgment', 'arbitration'])
+export const ReceiptType = z.enum(['action', 'verification', 'judgment', 'arbitration', 'memory'])
 export type ReceiptType = z.infer<typeof ReceiptType>
 
 export const Environment = z.enum(['development', 'production', 'staging', 'test'])

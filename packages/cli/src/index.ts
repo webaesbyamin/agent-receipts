@@ -10,6 +10,8 @@ import {
   KeyManager,
   ConfigManager,
   ReceiptEngine,
+  MemoryStore,
+  MemoryEngine,
   formatInvoiceJSON,
   formatInvoiceCSV,
   formatInvoiceMarkdown,
@@ -39,6 +41,17 @@ Commands:
   invoice [options]                 Generate an invoice from receipts
   seed [--demo] [--clean] [--count <n>]  Seed demo data for testing
   watch [options]                   Watch for new receipts in real-time
+  memory <subcommand>               Memory module commands
+
+Memory subcommands:
+  memory observe <entity> <type> <content>  Store an observation
+  memory recall [query]                     Search memories
+  memory entities [--type <t>]              List all entities
+  memory forget <id>                        Forget an observation or entity
+  memory audit                              Print memory audit report
+  memory provenance <obs_id>                Print provenance chain
+  memory export                             Export all memories as JSON
+  memory import <file>                      Import memories from JSON
 
 List options:
   --agent <id>                Filter by agent ID
@@ -73,7 +86,190 @@ async function getEngine(dataDir?: string) {
   await keyManager.init()
   const configManager = new ConfigManager(dir)
   await configManager.init()
-  return { engine: new ReceiptEngine(store, keyManager, configManager), keyManager, dataDir: dir }
+  return { engine: new ReceiptEngine(store, keyManager, configManager), keyManager, configManager, store, dataDir: dir }
+}
+
+async function getMemoryEngine(dataDir?: string) {
+  const { engine, store, configManager, ...rest } = await getEngine(dataDir)
+  const memoryStore = new MemoryStore(store.getDb())
+  memoryStore.init()
+  const memoryEngine = new MemoryEngine(engine, memoryStore)
+  const config = configManager.getConfig()
+  return { engine, memoryEngine, memoryStore, agentId: config.agentId, ...rest }
+}
+
+async function cmdMemory(subArgs: string[]) {
+  const sub = subArgs[0]
+  if (!sub) {
+    console.error('Usage: agent-receipts memory <subcommand>')
+    console.error('Subcommands: observe, recall, entities, forget, audit, provenance, export, import')
+    process.exit(1)
+  }
+
+  const { memoryEngine, memoryStore, agentId } = await getMemoryEngine()
+
+  switch (sub) {
+    case 'observe': {
+      const entityName = subArgs[1]
+      const entityType = subArgs[2]
+      const content = subArgs[3]
+      if (!entityName || !entityType || !content) {
+        console.error('Usage: agent-receipts memory observe <entity_name> <entity_type> <content>')
+        process.exit(1)
+      }
+      const validTypes = ['person', 'project', 'organization', 'preference', 'fact', 'context', 'tool', 'custom'] as const
+      if (!validTypes.includes(entityType as typeof validTypes[number])) {
+        console.error(`Invalid entity type: ${entityType}. Must be one of: ${validTypes.join(', ')}`)
+        process.exit(1)
+      }
+      const result = await memoryEngine.observe({
+        entityName,
+        entityType: entityType as typeof validTypes[number],
+        content,
+        agentId,
+      })
+      console.log(`Observed: ${result.observation.observation_id}`)
+      console.log(`  Entity: ${result.entity.name} (${result.entity.entity_id})`)
+      console.log(`  Content: ${content}`)
+      console.log(`  Receipt: ${result.receipt.receipt_id}`)
+      if (result.created_entity) console.log('  (new entity created)')
+      break
+    }
+
+    case 'recall': {
+      const query = subArgs[1]
+      const result = await memoryEngine.recall({ query, agentId })
+      console.log(`Recall: ${result.observations.length} observations across ${result.entities.length} entities`)
+      for (const entity of result.entities) {
+        console.log(`\n  ${entity.name} [${entity.entity_type}]`)
+        const entityObs = result.observations.filter(o => o.entity_id === entity.entity_id)
+        for (const obs of entityObs) {
+          console.log(`    - ${obs.content} (${obs.confidence})`)
+        }
+      }
+      console.log(`\nReceipt: ${result.receipt.receipt_id}`)
+      break
+    }
+
+    case 'entities': {
+      const typeIdx = subArgs.indexOf('--type')
+      const entityType = typeIdx >= 0 ? subArgs[typeIdx + 1] : undefined
+      const result = memoryStore.findEntities({
+        entity_type: entityType as ReturnType<typeof memoryStore.findEntities>['data'][number]['entity_type'],
+        include_forgotten: subArgs.includes('--forgotten'),
+        limit: 50,
+        page: 1,
+      })
+      console.log(`Entities: ${result.pagination.total} total`)
+      for (const e of result.data) {
+        const obsCount = memoryStore.getObservations(e.entity_id, false).length
+        console.log(`  ${e.entity_id}  ${e.name.padEnd(20)}  ${e.entity_type.padEnd(14)}  ${obsCount} obs`)
+      }
+      break
+    }
+
+    case 'forget': {
+      const id = subArgs[1]
+      if (!id) {
+        console.error('Usage: agent-receipts memory forget <entity_id|observation_id>')
+        process.exit(1)
+      }
+      const reason = subArgs.includes('--reason') ? subArgs[subArgs.indexOf('--reason') + 1] : undefined
+      const params = id.startsWith('ent_')
+        ? { entityId: id, agentId, reason }
+        : { observationId: id, agentId, reason }
+      const result = await memoryEngine.forget(params)
+      console.log(`Forgotten: ${id}`)
+      console.log(`Receipt: ${result.receipt.receipt_id}`)
+      break
+    }
+
+    case 'audit': {
+      const report = memoryEngine.memoryAudit({})
+      console.log('Memory Audit Report')
+      console.log(`  Entities: ${report.total_entities}`)
+      console.log(`  Observations: ${report.total_observations}`)
+      console.log(`  Relationships: ${report.total_relationships}`)
+      console.log(`  Forgotten observations: ${report.forgotten_observations}`)
+      console.log(`  Forgotten entities: ${report.forgotten_entities}`)
+      if (Object.keys(report.by_entity_type).length > 0) {
+        console.log('  By type:')
+        for (const [type, count] of Object.entries(report.by_entity_type)) {
+          console.log(`    ${type}: ${count}`)
+        }
+      }
+      break
+    }
+
+    case 'provenance': {
+      const obsId = subArgs[1]
+      if (!obsId) {
+        console.error('Usage: agent-receipts memory provenance <observation_id>')
+        process.exit(1)
+      }
+      const prov = memoryEngine.provenance(obsId)
+      if (!prov) {
+        console.log(`Observation not found: ${obsId}`)
+        break
+      }
+      console.log(`Provenance for ${obsId}`)
+      console.log(`  Entity: ${prov.entity.name} (${prov.entity.entity_id})`)
+      console.log(`  Content: ${prov.observation.content}`)
+      console.log(`  Agent: ${prov.observation.source_agent_id}`)
+      console.log(`  Observed: ${prov.observation.observed_at}`)
+      console.log(`  Receipt: ${prov.receipt_id}`)
+      if (prov.observation.source_context) {
+        console.log(`  Context: ${prov.observation.source_context}`)
+      }
+      break
+    }
+
+    case 'export': {
+      const allEntities = memoryStore.findEntities({ include_forgotten: true, limit: 100, page: 1 })
+      const exported: Record<string, unknown>[] = []
+      for (const entity of allEntities.data) {
+        const observations = memoryStore.getObservations(entity.entity_id, true)
+        const relationships = memoryStore.getRelationships(entity.entity_id)
+        exported.push({ entity, observations, relationships })
+      }
+      console.log(JSON.stringify(exported, null, 2))
+      break
+    }
+
+    case 'import': {
+      const filePath = subArgs[1]
+      if (!filePath) {
+        console.error('Usage: agent-receipts memory import <file>')
+        process.exit(1)
+      }
+      const raw = await readFile(filePath, 'utf-8')
+      const data = JSON.parse(raw) as Array<{ entity: Record<string, unknown>; observations: Record<string, unknown>[] }>
+      let entityCount = 0
+      let obsCount = 0
+      for (const item of data) {
+        try {
+          memoryStore.createEntity(item.entity as Parameters<typeof memoryStore.createEntity>[0])
+          entityCount++
+        } catch {
+          // Entity may already exist
+        }
+        for (const obs of item.observations) {
+          try {
+            memoryStore.addObservation(obs as Parameters<typeof memoryStore.addObservation>[0])
+            obsCount++
+          } catch {
+            // Observation may already exist
+          }
+        }
+      }
+      console.log(`Imported ${entityCount} entities and ${obsCount} observations`)
+      break
+    }
+
+    default:
+      console.error(`Unknown memory subcommand: ${sub}`)
+      process.exit(1)
+  }
 }
 
 async function cmdInit() {
@@ -749,6 +945,9 @@ async function main() {
       break
     case 'watch':
       await cmdWatch(args.slice(1))
+      break
+    case 'memory':
+      await cmdMemory(args.slice(1))
       break
     default:
       console.error(`Unknown command: ${command}`)

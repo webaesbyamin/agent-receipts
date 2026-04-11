@@ -139,6 +139,10 @@ export class SqliteReceiptStore {
     }
   }
 
+  getDb(): Database.Database {
+    return this.db
+  }
+
   async save(receipt: ActionReceipt): Promise<void> {
     const row = this.toRow(receipt)
     this.db.prepare(`INSERT OR REPLACE INTO receipts (

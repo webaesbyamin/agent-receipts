@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Database,
   BookOpen,
+  Brain,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: '/constraints', label: 'Constraints', icon: CheckSquare },
   { href: '/judgments', label: 'Judgments', icon: Scale },
   { href: '/invoices', label: 'Invoices', icon: FileText },
+  { href: '/memory', label: 'Memory', icon: Brain },
   { href: '/verify', label: 'Verify', icon: ShieldCheck },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/how-it-works', label: 'How It Works', icon: BookOpen },

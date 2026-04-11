@@ -35,7 +35,7 @@ export interface TrackParams {
 export interface CreateParams {
   action: string
   input_hash: string
-  receipt_type?: 'action' | 'verification' | 'judgment' | 'arbitration'
+  receipt_type?: 'action' | 'verification' | 'judgment' | 'arbitration' | 'memory'
   output_hash?: string | null
   output_summary?: string | null
   model?: string | null

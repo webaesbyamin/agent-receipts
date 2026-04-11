@@ -124,9 +124,76 @@ npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 4. **Receipt is Ed25519-signed** — with a locally generated private key
 5. **Anyone can verify** — share your public key; recipients verify independently
 
+## Memory Module (v0.3.0)
+
+Memory in Agent Receipts is not a separate system — memory IS receipts. Every memory operation produces a signed, chained, auditable receipt.
+
+### Memory via MCP Tools
+
+```
+memory_observe   — Store an observation about an entity
+memory_recall    — Search and retrieve memories
+memory_forget    — Soft-delete an observation or entity
+memory_entities  — List known entities
+memory_relate    — Create a relationship between entities
+memory_provenance — Trace a memory back to its source
+memory_audit     — Generate a memory audit report
+```
+
+### Memory via SDK
+
+```typescript
+const ar = new AgentReceipts()
+
+// Observe — store a memory
+const { entity, observation, receipt } = await ar.observe({
+  entityName: 'Alice',
+  entityType: 'person',
+  content: 'Prefers TypeScript over JavaScript',
+  agentId: 'my-agent',
+  confidence: 'high',
+})
+
+// Recall — search memories
+const { entities, observations } = await ar.recall({
+  query: 'TypeScript',
+  agentId: 'my-agent',
+})
+
+// Forget — auditable soft-delete
+await ar.forget({
+  observationId: observation.observation_id,
+  agentId: 'my-agent',
+  reason: 'No longer relevant',
+})
+```
+
+### Memory via CLI
+
+```bash
+npx @agent-receipts/cli memory observe "Alice" "person" "Prefers TypeScript"
+npx @agent-receipts/cli memory recall TypeScript
+npx @agent-receipts/cli memory entities
+npx @agent-receipts/cli memory forget <observation_id>
+npx @agent-receipts/cli memory audit
+npx @agent-receipts/cli memory provenance <observation_id>
+npx @agent-receipts/cli memory export
+npx @agent-receipts/cli memory import memories.json
+```
+
+### Key Concepts
+
+- **Entity** — A typed object (person, project, preference, fact, etc.)
+- **Observation** — A specific fact about an entity, linked to a receipt
+- **Relationship** — A connection between two entities
+- **Provenance** — Full chain from observation back to source receipt
+- Every operation creates a signed `receipt_type: 'memory'` receipt
+- Deletion is always soft — forgotten memories are retained for audit
+- Full-text search via SQLite FTS5 — no external dependencies
+
 ## MCP Tools Reference
 
-The MCP server exposes 14 tools that AI agents can call directly:
+The MCP server exposes 21 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -144,6 +211,13 @@ The MCP server exposes 14 tools that AI agents can call directly:
 | `cleanup` | Delete expired receipts (TTL) | `dry_run` |
 | `generate_invoice` | Generate an invoice from receipts in a date range | `from`, `to`, `format`, `agent_id` |
 | `get_started` | Show a getting-started guide with usage examples | — |
+| `memory_observe` | Store a memory observation about an entity | `entity_name`, `entity_type`, `content` |
+| `memory_recall` | Search and retrieve stored memories | `query`, `entity_type`, `scope` |
+| `memory_forget` | Soft-delete an observation or entity | `entity_id` or `observation_id` |
+| `memory_entities` | List known entities with filtering | `entity_type`, `scope`, `query` |
+| `memory_relate` | Create a relationship between two entities | `from_entity_id`, `to_entity_id`, `relationship_type` |
+| `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
+| `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
 
 ## SDK API Reference
 
@@ -238,6 +312,63 @@ const receipt = await ar.track({
 const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
 ```
 
+### `ar.observe(params)` — Store a memory observation
+
+```typescript
+const { entity, observation, receipt } = await ar.observe({
+  entityName: 'Alice',
+  entityType: 'person',
+  content: 'Prefers concise responses',
+  agentId: 'my-agent',
+  confidence: 'high',  // certain | high | medium | low
+  scope: 'user',       // agent | user | team
+})
+```
+
+### `ar.recall(params?)` — Search memories
+
+```typescript
+const { entities, observations } = await ar.recall({
+  query: 'TypeScript',
+  entityType: 'preference',
+  agentId: 'my-agent',
+})
+```
+
+### `ar.forget(params)` — Soft-delete a memory
+
+```typescript
+await ar.forget({ observationId: 'obs_abc', agentId: 'my-agent' })
+await ar.forget({ entityId: 'ent_abc', agentId: 'my-agent' })
+```
+
+### `ar.entities(filters?)` — List entities
+
+```typescript
+const { data, pagination } = await ar.entities({ entity_type: 'person' })
+```
+
+### `ar.relate(params)` — Create a relationship
+
+```typescript
+await ar.relate({
+  fromEntityId: 'ent_alice', toEntityId: 'ent_project',
+  relationshipType: 'builds', agentId: 'my-agent',
+})
+```
+
+### `ar.provenance(observationId)` — Get provenance chain
+
+```typescript
+const chain = await ar.provenance('obs_abc')
+```
+
+### `ar.memoryAudit(params?)` — Memory audit report
+
+```typescript
+const report = await ar.memoryAudit()
+```
+
 ### `ar.cleanup()` — Delete expired receipts
 
 ```typescript
@@ -285,6 +416,14 @@ const invoice = await ar.generateInvoice({
 | `seed --demo --clean` | Delete all receipts before seeding |
 | `watch` | Watch for new receipts in real-time |
 | `watch --agent <id>` | Watch filtered by agent, action, or status |
+| `memory observe <name> <type> <content>` | Store a memory observation |
+| `memory recall [query]` | Search memories |
+| `memory entities [--type <t>]` | List all entities |
+| `memory forget <id>` | Soft-delete an observation or entity |
+| `memory audit` | Print memory audit report |
+| `memory provenance <obs_id>` | Print provenance chain |
+| `memory export` | Export all memories as JSON |
+| `memory import <file>` | Import memories from JSON |
 
 ## Receipt Format
 
@@ -351,7 +490,7 @@ All data is stored locally in the data directory:
 └── config.json              # Agent and org configuration
 ```
 
-As of v0.2.7, receipts are stored in SQLite with indexed queries for fast filtering and pagination. Existing JSON receipt files are automatically migrated on first startup.
+As of v0.2.7, receipts are stored in SQLite with indexed queries for fast filtering and pagination. Existing JSON receipt files are automatically migrated on first startup. As of v0.3.0, memory entities, observations, and relationships are stored in the same database with full-text search via FTS5.
 
 ## Architecture
 
@@ -387,9 +526,9 @@ npx @agent-receipts/dashboard
 
 Opens Mission Control at http://localhost:3274 — visualize, verify, and manage all receipts.
 
-Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, invoice generation, dark mode, global search.
+Features: real-time receipt feed, chain visualization, constraint health monitoring, judgment scores, signature verification, invoice generation, memory browser, dark mode, global search.
 
-13 pages: Overview, Receipts, Receipt Detail, Chains, Chain Detail, Agents, Agent Detail, Constraints, Judgments, Invoices, Verify, Settings, How It Works.
+16 pages: Overview, Receipts, Receipt Detail, Chains, Chain Detail, Agents, Agent Detail, Constraints, Judgments, Invoices, Memory, Entity Detail, Memory Audit, Verify, Settings, How It Works.
 
 ## Examples
 
@@ -417,7 +556,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 - [x] Local-first receipt storage (SQLite with indexed queries)
 - [x] Ed25519 signing and verification
-- [x] MCP server with 14 tools
+- [x] MCP server with 21 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
 - [x] Constraint verification (6 built-in types)
@@ -425,9 +564,10 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 - [x] Output schema validation (JSON Schema)
 - [x] Receipt TTL and cleanup
 - [x] Invoice generation (JSON, CSV, Markdown, HTML)
-- [x] Mission Control dashboard (13 pages, dark mode, search)
+- [x] Mission Control dashboard (16 pages, dark mode, search)
 - [x] Dashboard npm package — `npx @agent-receipts/dashboard`
 - [x] Live demo at [agent-receipts-web.vercel.app](https://agent-receipts-web.vercel.app/)
+- [x] Memory Module — entity-observation pattern with cryptographic provenance
 - [ ] Receipt anchoring to blockchain/timestamping services
 - [ ] Multi-agent receipt sharing protocol
 - [ ] Receipt compression and archival

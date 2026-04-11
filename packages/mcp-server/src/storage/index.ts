@@ -1,3 +1,5 @@
 export { ReceiptStore } from './receipt-store.js'
 export { KeyManager } from './key-manager.js'
 export { ConfigManager } from './config-manager.js'
+export { MemoryStore } from './memory-store.js'
+export type { SearchResult, ProvenanceChain, MemoryRecallResult } from './memory-store.js'

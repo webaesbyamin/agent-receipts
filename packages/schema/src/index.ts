@@ -30,6 +30,19 @@ export {
   ErrorResponse,
 } from './api'
 
+// Memory schemas + types
+export {
+  EntityType,
+  MemoryOperation,
+  MemoryScope,
+  ConfidenceLevel,
+  Observation,
+  Relationship,
+  Entity,
+  MemoryReceiptPayload,
+  MemoryQuery,
+} from './memory'
+
 // Validation utilities
 export { validate, formatZodError, createErrorResponse } from './validation'
 
