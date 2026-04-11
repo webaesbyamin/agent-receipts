@@ -6,12 +6,12 @@
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "source": "github"
   },
-  "version": "0.2.11",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@agent-receipts/mcp-server",
-      "version": "0.2.11",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       }
