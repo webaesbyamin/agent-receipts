@@ -124,7 +124,7 @@ npx @agent-receipts/cli verify <id>   # Verify a receipt signature
 4. **Receipt is Ed25519-signed** — with a locally generated private key
 5. **Anyone can verify** — share your public key; recipients verify independently
 
-## Memory Module (v0.3.0)
+## Memory Module
 
 Memory in Agent Receipts is not a separate system — memory IS receipts. Every memory operation produces a signed, chained, auditable receipt.
 
@@ -225,7 +225,7 @@ The MCP server exposes 22 tools that AI agents can call directly:
 | `memory_entities` | List known entities with filtering | `entity_type`, `scope`, `query` |
 | `memory_relate` | Create a relationship between two entities | `from_entity_id`, `to_entity_id`, `relationship_type` |
 | `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
-| `memory_context` | Get a structured memory context summary | `entity_type`, `scope`, `agent_id` |
+| `memory_context` | Get a structured memory context summary | `scope`, `max_entities`, `max_observations` |
 | `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
 
 ## SDK API Reference
@@ -325,11 +325,12 @@ const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
 
 ```typescript
 const context = await ar.context({
-  entityType: 'person',  // optional filter
-  scope: 'user',         // optional: agent | user | team
-  agentId: 'my-agent',   // optional filter
+  scope: 'user',           // optional: agent | user | team
+  maxEntities: 10,         // optional: top entities by observation count (max: 50)
+  maxObservations: 20,     // optional: most recent observations (max: 100)
 })
-// Returns structured summary of entities, observations, and relationships
+// context.entities, context.recent_observations, context.relationships,
+// context.preferences, context.stats, context.receipt
 ```
 
 ### `ar.observe(params)` — Store a memory observation
