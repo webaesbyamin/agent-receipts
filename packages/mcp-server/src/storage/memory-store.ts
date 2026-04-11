@@ -75,6 +75,7 @@ export class MemoryStore {
         forgotten_at TEXT,
         forgotten_by TEXT,
         superseded_by TEXT,
+        expires_at TEXT,
         tags TEXT NOT NULL DEFAULT '[]',
         metadata TEXT NOT NULL DEFAULT '{}',
         FOREIGN KEY (entity_id) REFERENCES entities(entity_id)
@@ -85,6 +86,7 @@ export class MemoryStore {
       CREATE INDEX IF NOT EXISTS idx_obs_confidence ON observations(confidence);
       CREATE INDEX IF NOT EXISTS idx_obs_forgotten ON observations(forgotten_at);
       CREATE INDEX IF NOT EXISTS idx_obs_receipt ON observations(source_receipt_id);
+      CREATE INDEX IF NOT EXISTS idx_obs_expires ON observations(expires_at);
 
       CREATE TABLE IF NOT EXISTS relationships (
         relationship_id TEXT PRIMARY KEY,
@@ -104,6 +106,13 @@ export class MemoryStore {
       CREATE INDEX IF NOT EXISTS idx_rel_to ON relationships(to_entity_id);
       CREATE INDEX IF NOT EXISTS idx_rel_type ON relationships(relationship_type);
     `)
+
+    // Migration: add expires_at column if missing (for databases created with v0.3.0)
+    try {
+      this.db.exec('ALTER TABLE observations ADD COLUMN expires_at TEXT')
+    } catch {
+      // Column already exists
+    }
 
     // FTS table — created separately to handle already-exists gracefully
     try {
@@ -289,10 +298,10 @@ export class MemoryStore {
     this.db.prepare(`
       INSERT INTO observations (observation_id, entity_id, content, confidence,
         source_receipt_id, source_agent_id, source_context, observed_at,
-        forgotten_at, forgotten_by, superseded_by, tags, metadata)
+        forgotten_at, forgotten_by, superseded_by, expires_at, tags, metadata)
       VALUES (@observation_id, @entity_id, @content, @confidence,
         @source_receipt_id, @source_agent_id, @source_context, @observed_at,
-        @forgotten_at, @forgotten_by, @superseded_by, @tags, @metadata)
+        @forgotten_at, @forgotten_by, @superseded_by, @expires_at, @tags, @metadata)
     `).run({
       observation_id: obs.observation_id,
       entity_id: obs.entity_id,
@@ -305,6 +314,7 @@ export class MemoryStore {
       forgotten_at: obs.forgotten_at,
       forgotten_by: obs.forgotten_by,
       superseded_by: obs.superseded_by,
+      expires_at: obs.expires_at ?? null,
       tags: JSON.stringify(obs.tags),
       metadata: JSON.stringify(obs.metadata),
     })
@@ -320,7 +330,7 @@ export class MemoryStore {
   getObservations(entityId: string, includeForgotten = false): Observation[] {
     const where = includeForgotten
       ? 'WHERE entity_id = ?'
-      : 'WHERE entity_id = ? AND forgotten_at IS NULL'
+      : 'WHERE entity_id = ? AND forgotten_at IS NULL AND (expires_at IS NULL OR expires_at > datetime(\'now\'))'
     const rows = this.db.prepare(
       `SELECT * FROM observations ${where} ORDER BY observed_at DESC`
     ).all(entityId) as Record<string, unknown>[]
@@ -387,6 +397,7 @@ export class MemoryStore {
         JOIN observations o ON o.rowid = observations_fts.rowid
         WHERE observations_fts MATCH ?
           AND o.forgotten_at IS NULL
+          AND (o.expires_at IS NULL OR o.expires_at > datetime('now'))
         ORDER BY rank
         LIMIT ?
       `).all(query, limit) as Array<Record<string, unknown> & { rank: number }>
@@ -405,6 +416,7 @@ export class MemoryStore {
       const likeRows = this.db.prepare(`
         SELECT * FROM observations
         WHERE content LIKE ? AND forgotten_at IS NULL
+          AND (expires_at IS NULL OR expires_at > datetime('now'))
         ORDER BY observed_at DESC
         LIMIT ?
       `).all(`%${query}%`, limit) as Record<string, unknown>[]
@@ -535,6 +547,117 @@ export class MemoryStore {
     }
   }
 
+  // --- Duplicate detection ---
+
+  findPossibleDuplicates(entityId: string): Entity[] {
+    const entity = this.getEntity(entityId)
+    if (!entity) return []
+
+    const nameTokens = entity.name.toLowerCase().split(/\s+/).filter(t => t.length >= 2)
+    if (nameTokens.length === 0) return []
+
+    const conditions = nameTokens.map(() => '(LOWER(name) LIKE ? OR LOWER(aliases) LIKE ?)').join(' OR ')
+    const params: unknown[] = []
+    for (const token of nameTokens) {
+      params.push(`%${token}%`, `%${token}%`)
+    }
+
+    const rows = this.db.prepare(`
+      SELECT * FROM entities
+      WHERE entity_type = ?
+        AND entity_id != ?
+        AND forgotten_at IS NULL
+        AND merged_into IS NULL
+        AND (${conditions})
+    `).all(entity.entity_type, entityId, ...params) as Record<string, unknown>[]
+
+    return rows.map(r => this.rowToEntity(r))
+  }
+
+  // --- Context helpers ---
+
+  getTopEntities(limit: number, scope?: string): Array<Entity & { observation_count: number; latest_observation: string }> {
+    const scopeFilter = scope ? 'AND e.scope = ?' : ''
+    const params: unknown[] = scope ? [scope, limit] : [limit]
+    const rows = this.db.prepare(`
+      SELECT e.*, COUNT(o.observation_id) as obs_count, MAX(o.observed_at) as latest
+      FROM entities e
+      LEFT JOIN observations o ON o.entity_id = e.entity_id AND o.forgotten_at IS NULL
+        AND (o.expires_at IS NULL OR o.expires_at > datetime('now'))
+      WHERE e.forgotten_at IS NULL AND e.merged_into IS NULL ${scopeFilter}
+      GROUP BY e.entity_id
+      ORDER BY obs_count DESC
+      LIMIT ?
+    `).all(...params) as Array<Record<string, unknown>>
+    return rows.map(r => ({
+      ...this.rowToEntity(r),
+      observation_count: r.obs_count as number,
+      latest_observation: (r.latest as string) ?? '',
+    }))
+  }
+
+  getRecentObservations(limit: number, agentId?: string): Observation[] {
+    const agentFilter = agentId ? 'AND source_agent_id = ?' : ''
+    const params: unknown[] = agentId ? [agentId, limit] : [limit]
+    const rows = this.db.prepare(`
+      SELECT * FROM observations
+      WHERE forgotten_at IS NULL
+        AND (expires_at IS NULL OR expires_at > datetime('now'))
+        ${agentFilter}
+      ORDER BY observed_at DESC
+      LIMIT ?
+    `).all(...params) as Record<string, unknown>[]
+    return rows.map(r => this.rowToObservation(r))
+  }
+
+  getActiveRelationships(limit: number): Relationship[] {
+    const rows = this.db.prepare(
+      'SELECT * FROM relationships WHERE forgotten_at IS NULL ORDER BY created_at DESC LIMIT ?'
+    ).all(limit) as Record<string, unknown>[]
+    return rows.map(r => this.rowToRelationship(r))
+  }
+
+  getPreferenceObservations(limit: number): Observation[] {
+    const rows = this.db.prepare(`
+      SELECT o.* FROM observations o
+      JOIN entities e ON e.entity_id = o.entity_id
+      WHERE e.entity_type = 'preference'
+        AND o.forgotten_at IS NULL
+        AND (o.expires_at IS NULL OR o.expires_at > datetime('now'))
+      ORDER BY o.observed_at DESC
+      LIMIT ?
+    `).all(limit) as Record<string, unknown>[]
+    return rows.map(r => this.rowToObservation(r))
+  }
+
+  getContextStats(): {
+    total_entities: number
+    total_observations: number
+    total_relationships: number
+    agents_contributing: string[]
+  } {
+    const entities = (this.db.prepare('SELECT COUNT(*) as cnt FROM entities WHERE forgotten_at IS NULL').get() as { cnt: number }).cnt
+    const observations = (this.db.prepare("SELECT COUNT(*) as cnt FROM observations WHERE forgotten_at IS NULL AND (expires_at IS NULL OR expires_at > datetime('now'))").get() as { cnt: number }).cnt
+    const relationships = (this.db.prepare('SELECT COUNT(*) as cnt FROM relationships WHERE forgotten_at IS NULL').get() as { cnt: number }).cnt
+    const agentRows = this.db.prepare('SELECT DISTINCT source_agent_id FROM observations WHERE forgotten_at IS NULL').all() as Array<{ source_agent_id: string }>
+    return {
+      total_entities: entities,
+      total_observations: observations,
+      total_relationships: relationships,
+      agents_contributing: agentRows.map(r => r.source_agent_id),
+    }
+  }
+
+  // --- Cleanup ---
+
+  cleanupExpiredObservations(): number {
+    const result = this.db.prepare(`
+      UPDATE observations SET forgotten_at = datetime('now'), forgotten_by = 'system:cleanup'
+      WHERE expires_at IS NOT NULL AND expires_at <= datetime('now') AND forgotten_at IS NULL
+    `).run()
+    return result.changes
+  }
+
   // --- Row converters ---
 
   private rowToEntity(row: Record<string, unknown>): Entity {
@@ -567,6 +690,7 @@ export class MemoryStore {
       forgotten_at: (row.forgotten_at as string) || null,
       forgotten_by: (row.forgotten_by as string) || null,
       superseded_by: (row.superseded_by as string) || null,
+      expires_at: (row.expires_at as string) || null,
       tags: JSON.parse(row.tags as string || '[]') as string[],
       metadata: JSON.parse(row.metadata as string || '{}') as Record<string, unknown>,
     }

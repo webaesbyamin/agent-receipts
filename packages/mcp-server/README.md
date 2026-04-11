@@ -53,7 +53,7 @@ Add to `.cursor/mcp.json` in your project root:
 
 ## Tools
 
-The MCP server exposes 12 tools:
+The MCP server exposes 22 tools:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -69,6 +69,16 @@ The MCP server exposes 12 tools:
 | `complete_judgment` | Complete a pending judgment with results | `receipt_id`, `verdict`, `score`, `criteria` |
 | `get_judgments` | Get all judgments for a receipt | `receipt_id` |
 | `cleanup` | Delete expired receipts (TTL) | `dry_run` |
+| `generate_invoice` | Generate an invoice from receipts | `from`, `to`, `format`, `agent_id` |
+| `get_started` | Show a getting-started guide with usage examples | -- |
+| `memory_observe` | Store a memory observation about an entity | `entity_name`, `entity_type`, `content`, `ttl_seconds` |
+| `memory_recall` | Search and retrieve stored memories | `query`, `entity_type`, `scope` |
+| `memory_forget` | Soft-delete an observation or entity | `entity_id` or `observation_id` |
+| `memory_entities` | List known entities with filtering | `entity_type`, `scope`, `query` |
+| `memory_relate` | Create a relationship between two entities | `from_entity_id`, `to_entity_id`, `relationship_type` |
+| `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
+| `memory_context` | Get a structured memory context summary | `entity_type`, `scope`, `agent_id` |
+| `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
 
 ## Configuration
 

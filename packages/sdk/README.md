@@ -123,6 +123,47 @@ const receipt = await ar.track({
 const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
 ```
 
+### `ar.context(params?)` — Get memory context summary
+
+```typescript
+const context = await ar.context({
+  entityType: 'person',  // optional filter
+  scope: 'user',         // optional: agent | user | team
+  agentId: 'my-agent',   // optional filter
+})
+// Returns structured summary of entities, observations, and relationships
+```
+
+### `ar.observe(params)` — Store a memory observation
+
+```typescript
+const { entity, observation, receipt } = await ar.observe({
+  entityName: 'Alice',
+  entityType: 'person',
+  content: 'Prefers TypeScript over JavaScript',
+  agentId: 'my-agent',
+  confidence: 'high',
+  ttl_seconds: 86400,  // optional: auto-expire after 24 hours
+})
+```
+
+### `ar.recall(params?)` — Search memories
+
+```typescript
+const { entities, observations } = await ar.recall({
+  query: 'TypeScript',
+  entityType: 'preference',
+  agentId: 'my-agent',
+})
+```
+
+### `ar.forget(params)` — Soft-delete a memory
+
+```typescript
+await ar.forget({ observationId: 'obs_abc', agentId: 'my-agent' })
+await ar.forget({ entityId: 'ent_abc', agentId: 'my-agent' })
+```
+
 ### `ar.cleanup()` — Delete expired receipts
 
 ```typescript

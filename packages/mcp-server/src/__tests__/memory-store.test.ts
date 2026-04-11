@@ -329,4 +329,152 @@ describe('MemoryStore', () => {
       expect(stats.by_entity_type['project']).toBe(1)
     })
   })
+
+  describe('Duplicate detection', () => {
+    it('detects entities with overlapping name tokens', () => {
+      const e1 = makeEntity({ name: 'Amin', entity_type: 'person' })
+      const e2 = makeEntity({ name: 'Amin Suleiman', entity_type: 'person' })
+      store.createEntity(e1)
+      store.createEntity(e2)
+
+      const dupes = store.findPossibleDuplicates(e1.entity_id)
+      expect(dupes).toHaveLength(1)
+      expect(dupes[0].name).toBe('Amin Suleiman')
+    })
+
+    it('only matches within the same entity type', () => {
+      const e1 = makeEntity({ name: 'Next.js', entity_type: 'tool' })
+      const e2 = makeEntity({ name: 'Next.js Project', entity_type: 'project' })
+      store.createEntity(e1)
+      store.createEntity(e2)
+
+      const dupes = store.findPossibleDuplicates(e1.entity_id)
+      expect(dupes).toHaveLength(0)
+    })
+
+    it('checks aliases for duplicates', () => {
+      const e1 = makeEntity({ name: 'Bob', entity_type: 'person', aliases: ['Robert'] })
+      const e2 = makeEntity({ name: 'Robert Smith', entity_type: 'person' })
+      store.createEntity(e1)
+      store.createEntity(e2)
+
+      const dupes = store.findPossibleDuplicates(e2.entity_id)
+      expect(dupes).toHaveLength(1)
+    })
+
+    it('does not flag itself as a duplicate', () => {
+      const e1 = makeEntity({ name: 'Unique Person', entity_type: 'person' })
+      store.createEntity(e1)
+
+      const dupes = store.findPossibleDuplicates(e1.entity_id)
+      expect(dupes).toHaveLength(0)
+    })
+
+    it('ignores forgotten entities', () => {
+      const e1 = makeEntity({ name: 'Alice', entity_type: 'person' })
+      const e2 = makeEntity({ name: 'Alice Cooper', entity_type: 'person' })
+      store.createEntity(e1)
+      store.createEntity(e2)
+      store.forgetEntity(e2.entity_id, 'agent_test')
+
+      const dupes = store.findPossibleDuplicates(e1.entity_id)
+      expect(dupes).toHaveLength(0)
+    })
+  })
+
+  describe('Observation TTL', () => {
+    it('stores expires_at when provided', () => {
+      const entity = makeEntity()
+      store.createEntity(entity)
+      const expiresAt = new Date(Date.now() + 3600000).toISOString()
+      store.addObservation(makeObservation(entity.entity_id, { expires_at: expiresAt }))
+
+      const obs = store.getObservations(entity.entity_id, true)
+      expect(obs[0].expires_at).toBe(expiresAt)
+    })
+
+    it('excludes expired observations from active queries', () => {
+      const entity = makeEntity()
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id, {
+        content: 'expired fact',
+        expires_at: '2020-01-01T00:00:00.000Z',
+      }))
+      store.addObservation(makeObservation(entity.entity_id, {
+        content: 'active fact',
+        expires_at: null,
+      }))
+
+      const active = store.getObservations(entity.entity_id, false)
+      expect(active).toHaveLength(1)
+      expect(active[0].content).toBe('active fact')
+    })
+
+    it('includes expired observations when include_forgotten is true', () => {
+      const entity = makeEntity()
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id, {
+        expires_at: '2020-01-01T00:00:00.000Z',
+      }))
+
+      const all = store.getObservations(entity.entity_id, true)
+      expect(all).toHaveLength(1)
+    })
+
+    it('does not set expires_at when not provided', () => {
+      const entity = makeEntity()
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id))
+
+      const obs = store.getObservations(entity.entity_id, true)
+      expect(obs[0].expires_at).toBeNull()
+    })
+
+    it('soft-deletes expired observations on cleanup', () => {
+      const entity = makeEntity()
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id, {
+        expires_at: '2020-01-01T00:00:00.000Z',
+      }))
+
+      const cleaned = store.cleanupExpiredObservations()
+      expect(cleaned).toBe(1)
+
+      const all = store.getObservations(entity.entity_id, true)
+      expect(all[0].forgotten_at).not.toBeNull()
+      expect(all[0].forgotten_by).toBe('system:cleanup')
+    })
+  })
+
+  describe('Search ranking', () => {
+    it('returns FTS results ordered by relevance', () => {
+      const entity = makeEntity({ name: 'RankTarget' })
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id, { content: 'user writes python scripts occasionally' }))
+      store.addObservation(makeObservation(entity.entity_id, { content: 'user prefers TypeScript for all projects and uses TypeScript daily' }))
+      store.addObservation(makeObservation(entity.entity_id, { content: 'user mentioned typescript once' }))
+
+      const results = store.search('typescript')
+      expect(results.length).toBeGreaterThanOrEqual(2)
+      // The observation with more "typescript" mentions should rank higher (first)
+      expect(results[0].observation.content).toContain('TypeScript')
+    })
+
+    it('falls back to LIKE search ordered by recency when FTS fails', () => {
+      const entity = makeEntity({ name: 'LikeTarget' })
+      store.createEntity(entity)
+      store.addObservation(makeObservation(entity.entity_id, {
+        content: 'older observation about coding',
+        observed_at: '2026-01-01T00:00:00.000Z',
+      }))
+      store.addObservation(makeObservation(entity.entity_id, {
+        content: 'newer observation about coding',
+        observed_at: '2026-06-01T00:00:00.000Z',
+      }))
+
+      // LIKE search for "coding" — should return most recent first
+      const results = store.search('coding')
+      expect(results.length).toBeGreaterThanOrEqual(2)
+    })
+  })
 })

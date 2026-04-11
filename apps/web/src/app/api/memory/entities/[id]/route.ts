@@ -8,10 +8,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (isDemoMode()) {
-      return NextResponse.json({ error: 'Not available in demo mode' }, { status: 404 })
-    }
     const { id } = await params
+    if (isDemoMode()) {
+      const { getDemoMemoryStore } = await import('@/lib/demo-memory-store')
+      const store = getDemoMemoryStore()
+      const entity = store.getEntity(id)
+      if (!entity) {
+        return NextResponse.json({ error: `Entity not found: ${id}` }, { status: 404 })
+      }
+      const observations = store.getObservations(id, true)
+      const relationships = store.getRelationships(id)
+      return NextResponse.json({ entity, observations, relationships })
+    }
     const { getMemoryStore } = await import('@/lib/sdk-server')
     const memoryStore = await getMemoryStore()
     const entity = memoryStore.getEntity(id)

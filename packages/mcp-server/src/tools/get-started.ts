@@ -105,7 +105,18 @@ track_action({
 
 Retrieve a chain with \`get_chain({ chain_id: "chain_abc" })\`.
 
-## 6. Query & Verify
+## 6. Memory
+
+- **\`memory_context\`** — Get a structured summary of all memory for the current context
+- **\`memory_observe\`** — Store observations about entities (supports \`ttl_seconds\` for auto-expiry and duplicate detection)
+- **\`memory_recall\`** — Search and retrieve stored memories
+- **\`memory_forget\`** — Soft-delete an observation or entity
+- **\`memory_entities\`** — List known entities
+- **\`memory_relate\`** — Create relationships between entities
+- **\`memory_provenance\`** — Trace a memory back to its source receipt
+- **\`memory_audit\`** — Generate a memory operations audit report
+
+## 7. Query & Verify
 
 - **\`list_receipts\`** — Filter by agent, action, status, tags, date range
 - **\`get_receipt\`** — Fetch a single receipt by ID
@@ -113,7 +124,7 @@ Retrieve a chain with \`get_chain({ chain_id: "chain_abc" })\`.
 - **\`get_judgments\`** — Get all judgments for a receipt
 - **\`get_public_key\`** — Retrieve the signing public key
 
-## 7. Maintenance
+## 8. Maintenance
 
 - **\`cleanup_expired\`** — Delete receipts past their \`expires_at\` date
 - **\`generate_invoice\`** — Generate invoices from receipt data
@@ -135,7 +146,17 @@ Retrieve a chain with \`get_chain({ chain_id: "chain_abc" })\`.
 | \`get_judgments\` | Get judgments for a receipt |
 | \`cleanup_expired\` | Delete expired receipts |
 | \`generate_invoice\` | Generate invoice from receipts |
+| \`memory_context\` | Get a structured memory context summary |
 | \`get_started\` | Show this guide |
+
+**Total: 22 tools**
+
+## Recommended Flow
+
+1. **Start with \`memory_context\`** — Get a structured summary of everything known about the current context
+2. **Observe during conversation** — Use \`memory_observe\` to store new facts (supports \`ttl_seconds\` for auto-expiry)
+3. **Recall to search** — Use \`memory_recall\` when you need to find specific memories
+4. **Forget for cleanup** — Use \`memory_forget\` for manual removal, or rely on TTL for automatic expiry
 `
 
 export function registerGetStarted(server: McpServer, _engine: ReceiptEngine): void {

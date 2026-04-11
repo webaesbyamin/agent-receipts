@@ -1,4 +1,5 @@
 import type { ActionReceipt } from '@agent-receipts/schema'
+import { DEMO_MEMORY_RECEIPTS } from './demo-memory-data'
 
 export const DEMO_RECEIPTS: ActionReceipt[] = [
   {
@@ -5441,6 +5442,7 @@ export const DEMO_RECEIPTS: ActionReceipt[] = [
     confidence: 0.94,
     metadata: {},
   },
+  ...DEMO_MEMORY_RECEIPTS,
 ]
 
 export const DEMO_PUBLIC_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2'

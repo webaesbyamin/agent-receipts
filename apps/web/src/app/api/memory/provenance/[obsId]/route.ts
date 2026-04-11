@@ -8,10 +8,16 @@ export async function GET(
   { params }: { params: Promise<{ obsId: string }> }
 ) {
   try {
-    if (isDemoMode()) {
-      return NextResponse.json({ error: 'Not available in demo mode' }, { status: 404 })
-    }
     const { obsId } = await params
+    if (isDemoMode()) {
+      const { getDemoMemoryStore } = await import('@/lib/demo-memory-store')
+      const store = getDemoMemoryStore()
+      const result = store.getProvenance(obsId)
+      if (!result) {
+        return NextResponse.json({ error: `Observation not found: ${obsId}` }, { status: 404 })
+      }
+      return NextResponse.json(result)
+    }
     const { getMemoryEngine } = await import('@/lib/sdk-server')
     const memoryEngine = await getMemoryEngine()
     const result = memoryEngine.provenance(obsId)

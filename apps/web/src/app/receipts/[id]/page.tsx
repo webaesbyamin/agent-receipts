@@ -15,7 +15,7 @@ import { LoadingPage } from '@/components/shared/loading'
 import { formatDuration, formatCurrency, formatDate, formatNumber, truncateId } from '@/lib/formatters'
 import { VERDICT_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/cn'
-import { ArrowLeft, Check, X, ShieldCheck, ShieldX, Info } from 'lucide-react'
+import { ArrowLeft, Check, X, ShieldCheck, ShieldX, Info, Brain } from 'lucide-react'
 
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
@@ -37,6 +37,50 @@ function Section({ title, badge, children }: { title: string; badge?: React.Reac
       </div>
       <div className="px-4 py-2">{children}</div>
     </div>
+  )
+}
+
+function MemorySection({ metadata }: { metadata: Record<string, unknown> | null }) {
+  if (!metadata?.memory) return null
+  const mem = metadata.memory as Record<string, unknown>
+  const memOp = String(mem.memory_operation ?? '')
+  const memEntityId = mem.entity_id ? String(mem.entity_id) : null
+  const memObsId = mem.observation_id ? String(mem.observation_id) : null
+  const memScope = mem.scope ? String(mem.scope) : null
+  const memConfidence = mem.confidence ? String(mem.confidence) : null
+  const memQuery = mem.query ? String(mem.query) : null
+  const memResultsCount = mem.results_count != null ? String(mem.results_count) : null
+
+  return (
+    <Section title="Memory Operation" badge={
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+        <Brain className="w-3 h-3" />
+        {memOp}
+      </span>
+    }>
+      {memEntityId && (
+        <DetailRow label="Entity">
+          <Link href={`/memory/${memEntityId}`} className="text-primary hover:underline font-mono text-xs">
+            {memEntityId}
+          </Link>
+        </DetailRow>
+      )}
+      {memObsId && (
+        <DetailRow label="Observation" mono>{memObsId}</DetailRow>
+      )}
+      {memScope && (
+        <DetailRow label="Scope"><span className="capitalize">{memScope}</span></DetailRow>
+      )}
+      {memConfidence && (
+        <DetailRow label="Confidence"><span className="capitalize">{memConfidence}</span></DetailRow>
+      )}
+      {memQuery && (
+        <DetailRow label="Query"><span className="italic">&ldquo;{memQuery}&rdquo;</span></DetailRow>
+      )}
+      {memResultsCount !== null && (
+        <DetailRow label="Results">{memResultsCount}</DetailRow>
+      )}
+    </Section>
   )
 }
 
@@ -297,6 +341,9 @@ export default function ReceiptDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </Section>
       )}
+
+      {/* Memory Operation */}
+      <MemorySection metadata={metadata} />
 
       {/* Chain */}
       {data.chain && data.chain.length > 1 && (

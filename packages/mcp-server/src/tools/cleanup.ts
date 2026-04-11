@@ -1,13 +1,15 @@
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { ReceiptEngine } from '../engine/receipt-engine.js'
+import type { MemoryStore } from '../storage/memory-store.js'
 
-export function registerCleanup(server: McpServer, engine: ReceiptEngine): void {
+export function registerCleanup(server: McpServer, engine: ReceiptEngine, memoryStore?: MemoryStore): void {
   server.tool(
     'cleanup',
-    'Delete receipts that have passed their expiration time based on the expires_at field in metadata. Expired receipts are receipts where metadata.expires_at is set and is earlier than the current time. Supports dry_run mode to preview deletions without committing. Returns count of deleted receipts and remaining total. Use periodically to manage storage and enforce TTL policies set during receipt creation.',
+    'Delete receipts that have passed their expiration time based on the expires_at field in metadata. Expired receipts are receipts where metadata.expires_at is set and is earlier than the current time. Supports dry_run mode to preview deletions without committing. Returns count of deleted receipts and remaining total. Use periodically to manage storage and enforce TTL policies set during receipt creation. Set cleanup_memory to also soft-delete expired memory observations.',
     {
       dry_run: z.boolean().default(false).describe('If true, returns what would be deleted without actually deleting. Defaults to false.'),
+      cleanup_memory: z.boolean().default(false).describe('Also clean up expired memory observations (soft-delete). Defaults to false.'),
     },
     async (params) => {
       if (params.dry_run) {
@@ -35,12 +37,17 @@ export function registerCleanup(server: McpServer, engine: ReceiptEngine): void 
       }
 
       const result = await engine.cleanup()
+      let memoryCleanedUp = 0
+      if (params.cleanup_memory && memoryStore) {
+        memoryCleanedUp = memoryStore.cleanupExpiredObservations()
+      }
       return {
         content: [{
           type: 'text' as const,
           text: JSON.stringify({
             deleted: result.deleted,
             remaining: result.remaining,
+            memory_observations_cleaned: memoryCleanedUp,
           }, null, 2),
         }],
       }

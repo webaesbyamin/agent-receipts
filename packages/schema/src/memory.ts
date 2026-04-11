@@ -56,6 +56,7 @@ export const Observation = z.object({
   forgotten_at: z.string().datetime().nullable(),
   forgotten_by: z.string().nullable(),
   superseded_by: z.string().nullable(),
+  expires_at: z.string().datetime().nullable().default(null),
   tags: z.array(z.string()).default([]),
   metadata: z.record(z.unknown()).default({}),
 })

@@ -101,7 +101,14 @@ function ReceiptExplorerContent() {
       key: 'action',
       label: 'Action',
       sortable: true,
-      render: (r) => <span className="text-sm">{r.action as string}</span>,
+      render: (r) => (
+        <span className="text-sm flex items-center gap-1.5">
+          {r.receipt_type === 'memory' && (
+            <span className="inline-block w-2 h-2 rounded-full bg-purple-500 shrink-0" title="Memory receipt" />
+          )}
+          {r.action as string}
+        </span>
+      ),
     },
     {
       key: 'status',
@@ -198,6 +205,7 @@ function ReceiptExplorerContent() {
             <option value="action">Action</option>
             <option value="judgment">Judgment</option>
             <option value="arbitration">Arbitration</option>
+            <option value="memory">Memory</option>
           </select>
 
           <select

@@ -44,6 +44,7 @@ Commands:
   memory <subcommand>               Memory module commands
 
 Memory subcommands:
+  memory context                            Get structured memory context summary
   memory observe <entity> <type> <content>  Store an observation
   memory recall [query]                     Search memories
   memory entities [--type <t>]              List all entities
@@ -122,15 +123,19 @@ async function cmdMemory(subArgs: string[]) {
         console.error(`Invalid entity type: ${entityType}. Must be one of: ${validTypes.join(', ')}`)
         process.exit(1)
       }
+      const ttlIdx = subArgs.indexOf('--ttl')
+      const ttlSeconds = ttlIdx >= 0 ? parseInt(subArgs[ttlIdx + 1], 10) : undefined
       const result = await memoryEngine.observe({
         entityName,
         entityType: entityType as typeof validTypes[number],
         content,
         agentId,
+        ttlSeconds,
       })
       console.log(`Observed: ${result.observation.observation_id}`)
       console.log(`  Entity: ${result.entity.name} (${result.entity.entity_id})`)
       console.log(`  Content: ${content}`)
+      if (result.observation.expires_at) console.log(`  Expires: ${result.observation.expires_at}`)
       console.log(`  Receipt: ${result.receipt.receipt_id}`)
       if (result.created_entity) console.log('  (new entity created)')
       break
@@ -221,6 +226,39 @@ async function cmdMemory(subArgs: string[]) {
       if (prov.observation.source_context) {
         console.log(`  Context: ${prov.observation.source_context}`)
       }
+      break
+    }
+
+    case 'context': {
+      const scopeIdx = subArgs.indexOf('--scope')
+      const ctxScope = scopeIdx >= 0 ? subArgs[scopeIdx + 1] as 'agent' | 'user' | 'team' : undefined
+      const maxEntIdx = subArgs.indexOf('--max-entities')
+      const maxEnt = maxEntIdx >= 0 ? parseInt(subArgs[maxEntIdx + 1], 10) : undefined
+      const result = await memoryEngine.getContext({ scope: ctxScope, maxEntities: maxEnt })
+      console.log(`Memory Context (${result.stats.total_entities} entities, ${result.stats.total_observations} observations)`)
+      console.log('')
+      if (result.entities.length > 0) {
+        console.log('Top Entities:')
+        for (const e of result.entities) {
+          console.log(`  ${e.name} [${e.entity_type}] — ${e.observation_count} observations`)
+        }
+      }
+      if (result.preferences.length > 0) {
+        console.log('')
+        console.log('Preferences:')
+        for (const p of result.preferences) {
+          console.log(`  - ${p.content} (${p.confidence})`)
+        }
+      }
+      if (result.relationships.length > 0) {
+        console.log('')
+        console.log(`Relationships: ${result.relationships.length}`)
+        for (const r of result.relationships) {
+          console.log(`  ${r.from_entity_id} → ${r.relationship_type} → ${r.to_entity_id}`)
+        }
+      }
+      console.log('')
+      console.log(`Receipt: ${result.receipt.receipt_id}`)
       break
     }
 

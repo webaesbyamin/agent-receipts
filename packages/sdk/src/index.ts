@@ -27,6 +27,8 @@ import type {
   RelateParams,
   AuditParams,
   AuditReport,
+  ContextParams,
+  ContextResult,
 } from '@agent-receipts/mcp-server'
 import type { ActionReceipt, Entity, Relationship, MemoryQuery } from '@agent-receipts/schema'
 import type { ProvenanceChain } from '@agent-receipts/mcp-server'
@@ -172,10 +174,16 @@ export class AgentReceipts {
     const mem = await this.ensureMemory()
     return mem.memoryAudit(params ?? {})
   }
+
+  async context(params?: Partial<ContextParams>): Promise<ContextResult> {
+    const mem = await this.ensureMemory()
+    return mem.getContext(params ?? {})
+  }
 }
 
 export { hashData, formatInvoiceJSON, formatInvoiceCSV, formatInvoiceMarkdown, formatInvoiceHTML }
 export type {
   TrackParams, CreateParams, CompleteParams, ReceiptFilter, PaginatedResult, InvoiceOptions, Invoice,
   ObserveParams, ObserveResult, RecallParams, RecallResult, ForgetParams, RelateParams, AuditParams, AuditReport,
+  ContextParams, ContextResult,
 }

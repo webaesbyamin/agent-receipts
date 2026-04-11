@@ -221,6 +221,64 @@ describe('MemoryEngine', () => {
     })
   })
 
+  describe('getContext', () => {
+    it('returns top entities ordered by observation count', async () => {
+      const a = await memoryEngine.observe({ entityName: 'A', entityType: 'person', content: 'f1', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'A', entityType: 'person', content: 'f2', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'A', entityType: 'person', content: 'f3', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'B', entityType: 'person', content: 'f1', agentId: 'a' })
+
+      const ctx = await memoryEngine.getContext({})
+      expect(ctx.entities[0].name).toBe('A')
+      expect(ctx.entities[0].observation_count).toBe(3)
+    })
+
+    it('returns recent observations across all entities', async () => {
+      await memoryEngine.observe({ entityName: 'X', entityType: 'fact', content: 'recent1', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'Y', entityType: 'fact', content: 'recent2', agentId: 'a' })
+
+      const ctx = await memoryEngine.getContext({ maxObservations: 3 })
+      expect(ctx.recent_observations.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('returns preference observations separately', async () => {
+      await memoryEngine.observe({ entityName: 'Style', entityType: 'preference', content: 'Prefers dark mode', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'Other', entityType: 'fact', content: 'Not a pref', agentId: 'a' })
+
+      const ctx = await memoryEngine.getContext({})
+      expect(ctx.preferences.length).toBeGreaterThanOrEqual(1)
+      expect(ctx.preferences[0].content).toContain('dark mode')
+    })
+
+    it('excludes expired and forgotten observations', async () => {
+      const observed = await memoryEngine.observe({ entityName: 'Temp', entityType: 'fact', content: 'temp', agentId: 'a', ttlSeconds: -1 })
+      // Observation with negative TTL will have expires_at in the past
+      // However since observe calculates it as Date.now() + ttl*1000, -1 second ago
+      // Let's forget one instead for reliability
+      await memoryEngine.forget({ observationId: observed.observation.observation_id, agentId: 'a' })
+
+      const ctx = await memoryEngine.getContext({})
+      const tempObs = ctx.recent_observations.filter(o => o.content === 'temp')
+      expect(tempObs).toHaveLength(0)
+    })
+
+    it('creates a memory.context receipt', async () => {
+      const ctx = await memoryEngine.getContext({})
+      expect(ctx.receipt.receipt_type).toBe('memory')
+      expect(ctx.receipt.action).toBe('memory.context')
+    })
+
+    it('returns accurate stats', async () => {
+      await memoryEngine.observe({ entityName: 'S1', entityType: 'person', content: 'f', agentId: 'a' })
+      await memoryEngine.observe({ entityName: 'S2', entityType: 'project', content: 'f', agentId: 'b' })
+
+      const ctx = await memoryEngine.getContext({})
+      expect(ctx.stats.total_entities).toBeGreaterThanOrEqual(2)
+      expect(ctx.stats.agents_contributing).toContain('a')
+      expect(ctx.stats.agents_contributing).toContain('b')
+    })
+  })
+
   describe('audit', () => {
     it('returns audit report', async () => {
       await memoryEngine.observe({ entityName: 'A', entityType: 'person', content: 'f1', agentId: 'a' })

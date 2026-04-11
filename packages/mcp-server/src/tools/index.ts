@@ -23,6 +23,7 @@ import { registerMemoryEntities } from './memory-entities.js'
 import { registerMemoryRelate } from './memory-relate.js'
 import { registerMemoryProvenance } from './memory-provenance.js'
 import { registerMemoryAudit } from './memory-audit.js'
+import { registerMemoryContext } from './memory-context.js'
 
 export function registerAllTools(
   server: McpServer,
@@ -42,18 +43,19 @@ export function registerAllTools(
   registerJudgeReceipt(server, engine)
   registerCompleteJudgment(server, engine)
   registerGetJudgments(server, engine)
-  registerCleanup(server, engine)
+  registerCleanup(server, engine, memoryStore)
   registerGenerateInvoice(server, engine)
   registerGetStarted(server, engine)
 
   // Memory tools
   if (memoryEngine && memoryStore && agentId) {
-    registerMemoryObserve(server, memoryEngine, agentId)
+    registerMemoryObserve(server, memoryEngine, agentId, memoryStore)
     registerMemoryRecall(server, memoryEngine, agentId)
     registerMemoryForget(server, memoryEngine, agentId)
     registerMemoryEntities(server, memoryStore)
     registerMemoryRelate(server, memoryEngine, agentId)
     registerMemoryProvenance(server, memoryEngine)
     registerMemoryAudit(server, memoryEngine)
+    registerMemoryContext(server, memoryEngine)
   }
 }

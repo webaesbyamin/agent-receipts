@@ -131,10 +131,11 @@ Memory in Agent Receipts is not a separate system — memory IS receipts. Every 
 ### Memory via MCP Tools
 
 ```
-memory_observe   — Store an observation about an entity
+memory_context   — Get a structured summary of all memory for the current context
+memory_observe   — Store an observation about an entity (supports ttl_seconds for auto-expiry)
 memory_recall    — Search and retrieve memories
 memory_forget    — Soft-delete an observation or entity
-memory_entities  — List known entities
+memory_entities  — List known entities (with duplicate detection)
 memory_relate    — Create a relationship between entities
 memory_provenance — Trace a memory back to its source
 memory_audit     — Generate a memory audit report
@@ -145,13 +146,17 @@ memory_audit     — Generate a memory audit report
 ```typescript
 const ar = new AgentReceipts()
 
-// Observe — store a memory
+// Context — get a structured summary of all memory
+const context = await ar.context()
+
+// Observe — store a memory (with optional TTL)
 const { entity, observation, receipt } = await ar.observe({
   entityName: 'Alice',
   entityType: 'person',
   content: 'Prefers TypeScript over JavaScript',
   agentId: 'my-agent',
   confidence: 'high',
+  ttl_seconds: 86400,  // optional: auto-expire after 24 hours
 })
 
 // Recall — search memories
@@ -171,6 +176,7 @@ await ar.forget({
 ### Memory via CLI
 
 ```bash
+npx @agent-receipts/cli memory context
 npx @agent-receipts/cli memory observe "Alice" "person" "Prefers TypeScript"
 npx @agent-receipts/cli memory recall TypeScript
 npx @agent-receipts/cli memory entities
@@ -187,13 +193,15 @@ npx @agent-receipts/cli memory import memories.json
 - **Observation** — A specific fact about an entity, linked to a receipt
 - **Relationship** — A connection between two entities
 - **Provenance** — Full chain from observation back to source receipt
+- **Observation TTL** — Set `ttl_seconds` on observations for automatic expiry
+- **Duplicate Detection** — Entities are deduplicated by name and type automatically
 - Every operation creates a signed `receipt_type: 'memory'` receipt
 - Deletion is always soft — forgotten memories are retained for audit
 - Full-text search via SQLite FTS5 — no external dependencies
 
 ## MCP Tools Reference
 
-The MCP server exposes 21 tools that AI agents can call directly:
+The MCP server exposes 22 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -217,6 +225,7 @@ The MCP server exposes 21 tools that AI agents can call directly:
 | `memory_entities` | List known entities with filtering | `entity_type`, `scope`, `query` |
 | `memory_relate` | Create a relationship between two entities | `from_entity_id`, `to_entity_id`, `relationship_type` |
 | `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
+| `memory_context` | Get a structured memory context summary | `entity_type`, `scope`, `agent_id` |
 | `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
 
 ## SDK API Reference
@@ -310,6 +319,17 @@ const receipt = await ar.track({
 
 ```typescript
 const judgments = await ar.getJudgments('rcpt_8f3k2j4n')
+```
+
+### `ar.context(params?)` — Get memory context summary
+
+```typescript
+const context = await ar.context({
+  entityType: 'person',  // optional filter
+  scope: 'user',         // optional: agent | user | team
+  agentId: 'my-agent',   // optional filter
+})
+// Returns structured summary of entities, observations, and relationships
 ```
 
 ### `ar.observe(params)` — Store a memory observation
@@ -416,6 +436,7 @@ const invoice = await ar.generateInvoice({
 | `seed --demo --clean` | Delete all receipts before seeding |
 | `watch` | Watch for new receipts in real-time |
 | `watch --agent <id>` | Watch filtered by agent, action, or status |
+| `memory context` | Get a structured memory context summary |
 | `memory observe <name> <type> <content>` | Store a memory observation |
 | `memory recall [query]` | Search memories |
 | `memory entities [--type <t>]` | List all entities |
@@ -556,7 +577,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 - [x] Local-first receipt storage (SQLite with indexed queries)
 - [x] Ed25519 signing and verification
-- [x] MCP server with 21 tools
+- [x] MCP server with 22 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
 - [x] Constraint verification (6 built-in types)

@@ -23,6 +23,7 @@ export interface ObserveParams {
   agentId: string
   context?: string
   tags?: string[]
+  ttlSeconds?: number
 }
 
 export interface ObserveResult {
@@ -80,6 +81,27 @@ export interface TimelineEntry {
   type: 'observation' | 'relationship' | 'forget' | 'merge'
   timestamp: string
   data: Observation | Relationship | Record<string, unknown>
+}
+
+export interface ContextParams {
+  agentId?: string
+  scope?: MemoryScope
+  maxEntities?: number
+  maxObservations?: number
+}
+
+export interface ContextResult {
+  entities: Array<Entity & { observation_count: number; latest_observation: string }>
+  recent_observations: Observation[]
+  relationships: Relationship[]
+  preferences: Observation[]
+  stats: {
+    total_entities: number
+    total_observations: number
+    total_relationships: number
+    agents_contributing: string[]
+  }
+  receipt: ActionReceipt
 }
 
 export interface AuditReport {
@@ -155,6 +177,9 @@ export class MemoryEngine {
       forgotten_at: null,
       forgotten_by: null,
       superseded_by: null,
+      expires_at: params.ttlSeconds
+        ? new Date(Date.now() + params.ttlSeconds * 1000).toISOString()
+        : null,
       tags: params.tags ?? [],
       metadata: {},
     })
@@ -329,5 +354,38 @@ export class MemoryEngine {
 
   memoryAudit(params: AuditParams): AuditReport {
     return this.memoryStore.getMemoryStats(params.agentId, params.from, params.to)
+  }
+
+  async getContext(params: ContextParams): Promise<ContextResult> {
+    const maxEntities = Math.min(params.maxEntities ?? 10, 50)
+    const maxObservations = Math.min(params.maxObservations ?? 20, 100)
+
+    const entities = this.memoryStore.getTopEntities(maxEntities, params.scope)
+    const recent_observations = this.memoryStore.getRecentObservations(maxObservations, params.agentId)
+    const relationships = this.memoryStore.getActiveRelationships(50)
+    const preferences = this.memoryStore.getPreferenceObservations(20)
+    const stats = this.memoryStore.getContextStats()
+
+    const receipt = await this.receiptEngine.create({
+      action: 'memory.context',
+      receipt_type: 'memory',
+      input_hash: hashData({ scope: params.scope, maxEntities, maxObservations }),
+      output_hash: hashData({ entities: entities.length, observations: recent_observations.length }),
+      status: 'completed',
+      metadata: {
+        memory: {
+          memory_operation: 'recall',
+          entity_id: null,
+          observation_id: null,
+          relationship_id: null,
+          scope: params.scope ?? 'agent',
+          query: null,
+          results_count: entities.length + recent_observations.length,
+          confidence: null,
+        },
+      },
+    })
+
+    return { entities, recent_observations, relationships, preferences, stats, receipt }
   }
 }
