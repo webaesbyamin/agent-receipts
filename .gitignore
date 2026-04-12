@@ -48,7 +48,7 @@ pnpm-debug.log*
 .mcpregistry_*
 
 # Audit reports (internal)
-AUDIT-*.md
+*AUDIT*.md
 
 # Misc
 *.tgz
