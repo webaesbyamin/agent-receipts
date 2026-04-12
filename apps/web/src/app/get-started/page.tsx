@@ -46,11 +46,11 @@ export default function GetStartedPage() {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-          The trust layer for AI agents.
+          Your AI agent remembers everything — and you can prove it.
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mb-4 text-base leading-relaxed">
-          24 tools for cryptographic accountability — signed action receipts, provable memory,
-          constraint enforcement, and quality evaluation. Everything runs locally. No API key, no account, no monthly fee.
+          Persistent memory with cryptographic receipts. Every fact your agent learns is signed,
+          traceable, and verifiable. Local-first, zero config, free forever.
         </p>
         <p className="text-gray-500 dark:text-gray-400 mb-10 text-sm">
           Want to try it first?{' '}

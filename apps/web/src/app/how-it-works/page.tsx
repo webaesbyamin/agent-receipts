@@ -42,55 +42,59 @@ export default function HowItWorksPage() {
       <div>
         <h1 className="text-xl font-bold text-text-primary">How Agent Receipts Works</h1>
         <p className="mt-2 text-sm text-text-secondary">
-          The trust layer for AI agents. Cryptographic proof, accountable memory, and verifiable audit trails — all local-first.
+          Persistent memory backed by cryptographic proof. Here&apos;s what&apos;s happening under the hood.
         </p>
       </div>
 
-      {/* Section 1: What's a Receipt? */}
-      <Section id="what-is-a-receipt" title="What's a Receipt?" icon={FileCheck}>
-        <p>
-          <strong className="text-text-primary">Logs</strong> tell you something happened.
-          <strong className="text-text-primary"> Receipts</strong> prove it — with a cryptographic signature that anyone can verify, offline, without trusting a server.
-        </p>
+      {/* Section 1: Memory That Persists */}
+      <Section id="memory-that-persists" title="Memory That Persists" icon={Brain}>
+        <p>Your agent gets structured, persistent memory across sessions. Not a black box — an entity-observation graph you can inspect, search, export, and verify.</p>
 
-        <div className="card p-4 space-y-0">
-          <div className="text-xs font-medium text-text-muted mb-3 flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-success" />
-            Receipt Anatomy
+        <div className="card p-4 font-mono text-xs">
+          <div className="text-text-muted mb-2">Session 1: Agent learns things</div>
+          <div className="ml-4 space-y-1 text-text-primary">
+            <div>memory_observe → &quot;User prefers TypeScript&quot; → signed receipt</div>
+            <div>memory_observe → &quot;Building a SaaS called ModQuote&quot; → signed receipt</div>
+            <div>memory_observe → &quot;Uses Neovim&quot; → signed receipt</div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-            <div>
-              <div className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">Identity</div>
-              <ReceiptField label="receipt_id" value="rcpt_abc123" />
-              <ReceiptField label="agent_id" value="quote-agent" />
-              <ReceiptField label="chain_id" value="chain_xyz" />
+          <div className="border-t border-border/50 mt-3 pt-3 text-text-muted">Session 2: Agent already knows</div>
+          <div className="ml-4 space-y-1 text-text-primary mt-1">
+            <div>memory_context → 3 observations loaded → no re-explaining</div>
+          </div>
+        </div>
+
+        <p>Every observation is linked to a signed receipt. You can trace any memory back to the exact conversation that created it.</p>
+      </Section>
+
+      {/* Section 2: Why Receipts, Not Just Logs */}
+      <Section id="why-receipts" title="Why Receipts, Not Just Logs" icon={FileCheck}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card p-4">
+            <div className="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Log Entry</div>
+            <div className="font-mono text-xs text-text-secondary space-y-1">
+              <div>&quot;Generated quote: $2,400&quot;</div>
+              <div className="text-text-muted italic mt-2">text, mutable, no proof</div>
+              <div className="text-text-muted italic">written by the agent about itself</div>
             </div>
-            <div>
-              <div className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">Action</div>
-              <ReceiptField label="action" value="generate_quote" />
-              <ReceiptField label="input_hash" value="sha256:a1b2c3..." />
-              <ReceiptField label="output_hash" value="sha256:d4e5f6..." />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-text-muted mb-1 mt-2 uppercase tracking-wide">Timing</div>
-              <ReceiptField label="timestamp" value="2026-04-02T14:32:01Z" />
-              <ReceiptField label="latency_ms" value="658" />
-              <ReceiptField label="cost_usd" value="0.003" />
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-text-muted mb-1 mt-2 uppercase tracking-wide">Proof</div>
+          </div>
+          <div className="card p-4 border-primary/30">
+            <div className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">Receipt</div>
+            <div className="font-mono text-xs space-y-0.5">
+              <ReceiptField label="receipt_id" value="rcpt_8f3k2j4n" />
+              <ReceiptField label="action" value="generate_ppf_quote" />
+              <ReceiptField label="input_hash" value="sha256:abc123..." />
+              <ReceiptField label="output_hash" value="sha256:def456..." />
               <ReceiptField label="signature" value="ed25519:7f3a..." highlight />
-              <ReceiptField label="status" value="completed" />
-              <ReceiptField label="environment" value="production" />
             </div>
+            <div className="text-text-muted italic text-xs mt-2">signed, immutable, verifiable by anyone</div>
           </div>
         </div>
 
         <p>Input and output are <strong className="text-text-primary">SHA-256 hashed</strong> — raw data never leaves your machine. The receipt proves what was processed without exposing the data itself.</p>
       </Section>
 
-      {/* Section 2: Accountable Memory */}
-      <Section id="accountable-memory" title="What's Accountable Memory?" icon={Brain}>
+      {/* Section 3: Accountable Memory Detail */}
+      <Section id="accountable-memory" title="Entity-Observation Model" icon={Brain}>
         <p>AI agents remember things. Agent Receipts makes those memories <strong className="text-text-primary">provable</strong>.</p>
         <p>Every memory is an <strong className="text-text-primary">entity</strong> (person, project, tool, preference) with <strong className="text-text-primary">observations</strong> — each linked to a signed receipt.</p>
 
