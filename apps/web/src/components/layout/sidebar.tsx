@@ -18,10 +18,14 @@ import {
   Database,
   BookOpen,
   Brain,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
 const NAV_ITEMS = [
+  ...(isDemoMode ? [{ href: '/walkthrough', label: 'Try It', icon: Sparkles, accent: true }] : []),
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/receipts', label: 'Receipts', icon: Receipt },
   { href: '/chains', label: 'Chains', icon: Link2 },
@@ -64,6 +68,7 @@ export function Sidebar() {
         {NAV_ITEMS.map(item => {
           const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
           const Icon = item.icon
+          const hasAccent = 'accent' in item && item.accent
           return (
             <Link
               key={item.href}
@@ -73,7 +78,9 @@ export function Sidebar() {
                 collapsed && 'justify-center px-2',
                 isActive
                   ? 'bg-primary-subtle text-primary font-medium'
-                  : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                  : hasAccent
+                    ? 'text-primary font-semibold hover:bg-primary-subtle'
+                    : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
               )}
               title={collapsed ? item.label : undefined}
             >

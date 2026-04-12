@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { LayoutShell } from '@/components/layout/layout-shell'
+import { InteractiveProvider } from '@/lib/interactive-context'
+
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 export const metadata: Metadata = {
   title: 'Agent Receipts — Mission Control',
@@ -8,6 +11,8 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const content = <LayoutShell>{children}</LayoutShell>
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -25,7 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <LayoutShell>{children}</LayoutShell>
+        {isDemoMode ? (
+          <InteractiveProvider>{content}</InteractiveProvider>
+        ) : (
+          content
+        )}
       </body>
     </html>
   )

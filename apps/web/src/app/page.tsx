@@ -12,7 +12,7 @@ import { ConstraintBadge } from '@/components/shared/constraint-badge'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { ChartWrapper } from '@/components/shared/chart-wrapper'
 import { formatDuration, formatCurrency, formatNumber, formatPercent, truncateId } from '@/lib/formatters'
-import { Receipt, Clock, Bot, CheckSquare, Zap, DollarSign, Database } from 'lucide-react'
+import { Receipt, Clock, Bot, CheckSquare, Zap, DollarSign, Database, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -41,9 +41,33 @@ export default function OverviewPage() {
     return <ErrorState message={statsError.message} onRetry={() => statsRetry()} />
   }
 
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold text-text-primary">Overview</h1>
+
+      {/* Interactive demo CTA */}
+      {isDemoMode && (
+        <Link
+          href="/walkthrough"
+          className="card flex items-center gap-4 p-4 border-primary/30 hover:border-primary/50 transition-colors group"
+          style={{ borderLeftWidth: '3px', borderLeftColor: 'var(--primary)' }}
+        >
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary-subtle shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-text-primary">See Agent Receipts in Action</h3>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Walk through how AI agents store verifiable, signed memories — interactive, 60 seconds, no setup.
+            </p>
+          </div>
+          <span className="text-primary text-sm font-medium hidden sm:block group-hover:underline">
+            Try it &rarr;
+          </span>
+        </Link>
+      )}
 
       {/* Stat cards */}
       {statsLoading || !stats ? (
