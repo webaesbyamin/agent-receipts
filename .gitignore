@@ -47,6 +47,9 @@ pnpm-debug.log*
 # MCP Registry auth tokens
 .mcpregistry_*
 
+# Audit reports (internal)
+AUDIT-*.md
+
 # Misc
 *.tgz
 .cache/
