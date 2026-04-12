@@ -1,20 +1,38 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ShieldCheck, Brain, FileCheck, Zap, Link2, Scale, Package, Check, X } from 'lucide-react'
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({ id, title, icon: Icon, children }: { id: string; title: string; icon?: React.ElementType; children: React.ReactNode }) {
   return (
     <section id={id} className="scroll-mt-8">
-      <h2 className="text-lg font-semibold text-text-primary mb-4 pb-2 border-b border-border">{title}</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-4 pb-2 border-b border-border flex items-center gap-2">
+        {Icon && <Icon className="w-5 h-5 text-primary" />}
+        {title}
+      </h2>
       <div className="space-y-4 text-sm text-text-secondary leading-relaxed">{children}</div>
     </section>
   )
 }
 
-function Code({ children }: { children: React.ReactNode }) {
+function ReceiptField({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <pre className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 font-mono text-xs text-gray-800 dark:text-gray-200 overflow-x-auto">{children}</pre>
+    <div className="flex items-start gap-3 py-1.5">
+      <span className="text-xs text-text-muted w-24 shrink-0 font-mono">{label}</span>
+      <span className={`text-xs font-mono ${highlight ? 'text-primary font-medium' : 'text-text-primary'}`}>{value}</span>
+    </div>
+  )
+}
+
+function CompareRow({ feature, ar, mem0, langfuse, zep }: { feature: string; ar: string; mem0: string; langfuse: string; zep: string }) {
+  return (
+    <tr className="border-b border-border/50">
+      <td className="py-2 pr-4 text-xs font-medium text-text-primary">{feature}</td>
+      <td className="py-2 pr-4 text-xs text-primary font-medium">{ar}</td>
+      <td className="py-2 pr-4 text-xs text-text-secondary">{mem0}</td>
+      <td className="py-2 pr-4 text-xs text-text-secondary">{langfuse}</td>
+      <td className="py-2 text-xs text-text-secondary">{zep}</td>
+    </tr>
   )
 }
 
@@ -24,94 +42,163 @@ export default function HowItWorksPage() {
       <div>
         <h1 className="text-xl font-bold text-text-primary">How Agent Receipts Works</h1>
         <p className="mt-2 text-sm text-text-secondary">
-          Cryptographically signed, immutable proof of autonomous AI agent actions. Local-first. No server required.
+          The trust layer for AI agents. Cryptographic proof, accountable memory, and verifiable audit trails — all local-first.
         </p>
       </div>
 
-      {/* Section 1 */}
-      <Section id="what-is-a-receipt" title="What Is a Receipt?">
+      {/* Section 1: What's a Receipt? */}
+      <Section id="what-is-a-receipt" title="What's a Receipt?" icon={FileCheck}>
         <p>
-          <strong className="text-text-primary">Logs</strong> are internal, mutable, developer-only, and unverifiable.
-          Anyone can edit a log entry after the fact.
+          <strong className="text-text-primary">Logs</strong> tell you something happened.
+          <strong className="text-text-primary"> Receipts</strong> prove it — with a cryptographic signature that anyone can verify, offline, without trusting a server.
         </p>
-        <p>
-          <strong className="text-text-primary">Receipts</strong> are cryptographically signed, immutable, shareable, and independently verifiable.
-          Once signed, tampering is detectable by anyone with the public key.
-        </p>
-        <Code>{`{
-  receipt_id:    "rcpt_abc123"         // unique identifier
-  agent_id:      "my-agent"           // who acted
-  action:        "generate_code"      // what they did
-  input_hash:    "sha256:..."         // what they received (hashed)
-  output_hash:   "sha256:..."         // what they produced (hashed)
-  status:        "completed"          // outcome
-  timestamp:     "2026-04-02T..."     // when
-  signature:     "ed25519:..."        // cryptographic proof
-}`}</Code>
-        <p>The full schema has 29 fields covering identity, timing, performance metrics, constraints, judgments, and cryptographic proof.</p>
-      </Section>
 
-      {/* Section 2 */}
-      <Section id="cryptographic-proof" title="Cryptographic Proof">
-        <p>Every receipt is signed with Ed25519 — the same algorithm used by SSH, Signal, and TLS 1.3.</p>
-        <Code>{`How signing works:
-1. Generate a key pair (private + public) — stored locally
-2. When an action completes, 12 fields are extracted into a signable payload
-3. Fields are sorted alphabetically and JSON-serialized (canonical form)
-4. The payload is signed with your private key using Ed25519
-5. Signature stored on receipt as "ed25519:<base64>"
-
-The 12 signed fields:
-  action, agent_id, chain_id, completed_at, environment,
-  input_hash, org_id, output_hash, receipt_id,
-  receipt_type, status, timestamp`}</Code>
-        <p>
-          <strong className="text-text-primary">To verify:</strong> anyone with your public key can re-canonicalize the same 12 fields and check the signature — no server required.
-        </p>
-        <p>Input and output data is never stored — only SHA-256 hashes. Prove what was processed without exposing the data itself.</p>
-        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              In this demo, signatures are placeholders (<code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">ed25519:DEMO_...</code>).
-              In a real installation, every receipt is cryptographically signed using your locally-generated Ed25519 private key.
-            </p>
+        <div className="card p-4 space-y-0">
+          <div className="text-xs font-medium text-text-muted mb-3 flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-success" />
+            Receipt Anatomy
           </div>
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+            <div>
+              <div className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">Identity</div>
+              <ReceiptField label="receipt_id" value="rcpt_abc123" />
+              <ReceiptField label="agent_id" value="quote-agent" />
+              <ReceiptField label="chain_id" value="chain_xyz" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-text-muted mb-1 uppercase tracking-wide">Action</div>
+              <ReceiptField label="action" value="generate_quote" />
+              <ReceiptField label="input_hash" value="sha256:a1b2c3..." />
+              <ReceiptField label="output_hash" value="sha256:d4e5f6..." />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-text-muted mb-1 mt-2 uppercase tracking-wide">Timing</div>
+              <ReceiptField label="timestamp" value="2026-04-02T14:32:01Z" />
+              <ReceiptField label="latency_ms" value="658" />
+              <ReceiptField label="cost_usd" value="0.003" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-text-muted mb-1 mt-2 uppercase tracking-wide">Proof</div>
+              <ReceiptField label="signature" value="ed25519:7f3a..." highlight />
+              <ReceiptField label="status" value="completed" />
+              <ReceiptField label="environment" value="production" />
+            </div>
+          </div>
+        </div>
+
+        <p>Input and output are <strong className="text-text-primary">SHA-256 hashed</strong> — raw data never leaves your machine. The receipt proves what was processed without exposing the data itself.</p>
       </Section>
 
-      {/* Section 3 */}
-      <Section id="chains" title="Receipt Chains">
-        <p>Multi-step workflows are linked together as chains. Each step references the previous via <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">parent_receipt_id</code>.</p>
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-border font-mono text-xs space-y-1">
-          <p className="text-text-muted mb-2">Example: Code review pipeline (chain_abc)</p>
+      {/* Section 2: Accountable Memory */}
+      <Section id="accountable-memory" title="What's Accountable Memory?" icon={Brain}>
+        <p>AI agents remember things. Agent Receipts makes those memories <strong className="text-text-primary">provable</strong>.</p>
+        <p>Every memory is an <strong className="text-text-primary">entity</strong> (person, project, tool, preference) with <strong className="text-text-primary">observations</strong> — each linked to a signed receipt.</p>
+
+        <div className="card p-4 font-mono text-xs">
+          <div className="text-text-muted mb-2">Entity: &quot;Customer&quot; (person)</div>
+          <div className="ml-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted">├──</span>
+              <span className="text-text-primary">&quot;Prefers full-front PPF coverage&quot;</span>
+              <span className="text-success text-[10px] px-1.5 py-0.5 rounded bg-success/10">high</span>
+              <span className="text-text-muted">← signed receipt</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted">├──</span>
+              <span className="text-text-primary">&quot;Owns a Tesla Model 3&quot;</span>
+              <span className="text-primary text-[10px] px-1.5 py-0.5 rounded bg-primary/10">certain</span>
+              <span className="text-text-muted">← signed receipt</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-text-muted">└──</span>
+              <span className="text-text-primary">works_on → &quot;PPF Quote #1247&quot;</span>
+              <span className="text-text-muted text-[10px] px-1.5 py-0.5 rounded bg-bg-tertiary">relationship</span>
+            </div>
+          </div>
+        </div>
+
+        <p>No other memory system can answer: <strong className="text-text-primary">&quot;Prove when this agent learned that fact.&quot;</strong></p>
+        <p>Memories can be recalled, forgotten (auditably — the forget itself is receipted), exported as portable bundles, and verified by third parties.</p>
+      </Section>
+
+      {/* Section 3: The ModQuote Story */}
+      <Section id="modquote-story" title="Real-World Example: ModQuote" icon={Zap}>
+        <p>
+          <a href="https://modquote.io" className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer">ModQuote</a> is
+          a multi-tenant SaaS where AI agents generate quotes for automotive protection shops — PPF, ceramic coatings, window tint.
+        </p>
+
+        <div className="card divide-y divide-border/50">
+          <div className="px-4 py-3 flex items-start gap-3">
+            <span className="w-6 h-6 rounded-full bg-bg-tertiary flex items-center justify-center text-xs font-bold text-text-muted shrink-0">1</span>
+            <div>
+              <div className="text-xs font-medium text-text-primary">Customer requests a PPF quote for a Tesla Model 3</div>
+              <div className="text-xs text-text-muted mt-0.5">Agent receives vehicle data, shop pricing rules, coverage options</div>
+            </div>
+          </div>
+          <div className="px-4 py-3 flex items-start gap-3">
+            <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">2</span>
+            <div>
+              <div className="text-xs font-medium text-text-primary">Agent generates the quote → <code className="text-primary bg-primary/10 px-1 rounded">track_action</code> creates a signed receipt</div>
+              <div className="text-xs text-text-muted mt-0.5">Input hash proves what data was received. Output hash proves the $2,400 price.</div>
+            </div>
+          </div>
+          <div className="px-4 py-3 flex items-start gap-3">
+            <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">3</span>
+            <div>
+              <div className="text-xs font-medium text-text-primary">Agent remembers &quot;prefers full-front coverage&quot; → <code className="text-primary bg-primary/10 px-1 rounded">memory_observe</code></div>
+              <div className="text-xs text-text-muted mt-0.5">Memory is receipted — provenance chain links back to this conversation.</div>
+            </div>
+          </div>
+          <div className="px-4 py-3 flex items-start gap-3">
+            <span className="w-6 h-6 rounded-full bg-bg-tertiary flex items-center justify-center text-xs font-bold text-text-muted shrink-0">4</span>
+            <div>
+              <div className="text-xs font-medium text-text-primary">Next session → <code className="text-primary bg-primary/10 px-1 rounded">memory_context</code> loads the preference</div>
+              <div className="text-xs text-text-muted mt-0.5">Agent starts already informed. No re-explaining.</div>
+            </div>
+          </div>
+          <div className="px-4 py-3 flex items-start gap-3">
+            <span className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center text-xs font-bold text-success shrink-0">5</span>
+            <div>
+              <div className="text-xs font-medium text-text-primary">Customer disputes the price → pull the receipt chain</div>
+              <div className="text-xs text-text-muted mt-0.5">Input vehicle data, pricing rules applied, output price, timestamp, Ed25519 signature. Cryptographic proof.</div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Section 4: Receipt Chains */}
+      <Section id="chains" title="Receipt Chains" icon={Link2}>
+        <p>Multi-step workflows are linked together as chains. Each step references the previous via <code className="bg-bg-tertiary px-1 rounded text-xs">parent_receipt_id</code>.</p>
+        <div className="card p-4 font-mono text-xs space-y-1">
+          <div className="text-text-muted mb-2">Chain: PPF quote pipeline (chain_q1247)</div>
           <div className="flex items-center gap-2">
             <span className="w-14 text-text-muted">Step 1</span>
-            <span className="w-32">fetch_code</span>
+            <span className="w-36">lookup_vehicle</span>
             <span className="text-success">completed</span>
-            <span className="text-text-muted ml-auto">0.8s &middot; $0.01</span>
+            <span className="text-text-muted ml-auto">0.3s</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-14 text-text-muted">Step 2</span>
-            <span className="w-32">analyze_code</span>
+            <span className="w-36">calculate_pricing</span>
             <span className="text-success">completed</span>
-            <span className="text-text-muted ml-auto">3.2s &middot; $0.04</span>
+            <span className="text-text-muted ml-auto">1.2s</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-14 text-text-muted">Step 3</span>
-            <span className="w-32">generate_report</span>
+            <span className="w-36">generate_quote</span>
             <span className="text-success">completed</span>
-            <span className="text-text-muted ml-auto">2.1s &middot; $0.03</span>
+            <span className="text-text-muted ml-auto">2.1s</span>
           </div>
           <div className="pt-2 border-t border-border/50 text-text-muted">
-            Total: 6.1s &middot; $0.08 &middot; 3 receipts
+            Total: 3.6s &middot; 3 signed receipts &middot; full audit trail
           </div>
         </div>
-        <p>Benefits: full history of complex workflows, identify which step caused a failure, total cost/duration across the workflow, track which agents were involved at each stage.</p>
       </Section>
 
-      {/* Section 4 */}
-      <Section id="constraints" title="Constraints">
-        <p>Define rules that receipts must satisfy. Evaluated at creation/completion time. Results stored on the receipt — no re-evaluation needed.</p>
+      {/* Section 5: Quality & Compliance */}
+      <Section id="quality" title="Quality & Compliance" icon={Scale}>
+        <p><strong className="text-text-primary">Constraints</strong> — enforce rules on every receipt:</p>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -124,82 +211,63 @@ The 12 signed fields:
               <tr><td className="py-2 pr-4 font-mono">max_latency_ms</td><td className="py-2">latency_ms &le; value</td></tr>
               <tr><td className="py-2 pr-4 font-mono">max_cost_usd</td><td className="py-2">cost_usd &le; value</td></tr>
               <tr><td className="py-2 pr-4 font-mono">min_confidence</td><td className="py-2">confidence &ge; value</td></tr>
-              <tr><td className="py-2 pr-4 font-mono">required_fields</td><td className="py-2">all named fields are non-null</td></tr>
-              <tr><td className="py-2 pr-4 font-mono">status_must_be</td><td className="py-2">status is in the allowed list</td></tr>
               <tr><td className="py-2 pr-4 font-mono">output_schema</td><td className="py-2">output validates against JSON Schema</td></tr>
             </tbody>
           </table>
         </div>
-        <Code>{`constraints: [
-  { type: "max_latency_ms", value: 5000 },
-  { type: "max_cost_usd", value: 0.10 },
-  { type: "min_confidence", value: 0.8 }
-]`}</Code>
+
+        <p><strong className="text-text-primary">AI Judge</strong> — evaluate agent output against rubrics. The evaluation itself is a signed receipt chained to the original action.</p>
+        <p><strong className="text-text-primary">Memory Bundles</strong> — export portable, verifiable memory packages with entities, observations, receipts, and checksum integrity.</p>
       </Section>
 
-      {/* Section 5 */}
-      <Section id="ai-judgment" title="AI Judgment">
-        <p>An AI model can evaluate receipt outputs against a rubric — and the evaluation itself is stored as a signed receipt.</p>
-        <Code>{`Judgment flow:
-1. Define a rubric (criteria with weights and thresholds)
-2. Call judge_receipt with the receipt ID and rubric
-3. A pending judgment receipt is created
-4. An AI model evaluates the output against each criterion
-5. Judgment completed with verdict (pass/fail/partial) and score (0-1)
-
-Example rubric:
-  Accuracy      weight: 0.4  threshold: 0.7
-  Completeness  weight: 0.3  threshold: 0.6
-  Clarity       weight: 0.3  threshold: 0.7`}</Code>
-        <p>Judgments are stored as receipts themselves (<code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">receipt_type: &quot;judgment&quot;</code>) — signed, immutable, and verifiable.</p>
-      </Section>
-
-      {/* Section 6 */}
-      <Section id="getting-started" title="Getting Started">
-        <p className="font-medium text-text-primary">MCP Server (for Claude, Cursor, VS Code):</p>
-        <Code>{`{
-  "mcpServers": {
-    "agent-receipts": {
-      "command": "npx",
-      "args": ["@agent-receipts/mcp-server"]
-    }
-  }
-}`}</Code>
-
-        <p className="font-medium text-text-primary pt-2">TypeScript SDK:</p>
-        <Code>{`import { AgentReceipts } from '@agent-receipts/sdk'
-
-const client = new AgentReceipts()
-await client.track({
-  action: 'generate_code',
-  input: { prompt },
-  output: { code },
-  model: 'claude-sonnet-4-20250514',
-  tokens_in: 1200,
-  tokens_out: 400,
-  cost_usd: 0.008,
-  latency_ms: 2100,
-})`}</Code>
-
-        <p className="font-medium text-text-primary pt-2">CLI:</p>
-        <Code>{`npx @agent-receipts/cli init
-npx @agent-receipts/cli list
-npx @agent-receipts/cli verify <receipt-id>
-npx @agent-receipts/cli stats`}</Code>
-
-        <p>All receipts stored locally in <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">~/.agent-receipts/</code>. Your private key never leaves your machine.</p>
-
-        <div className="pt-4">
-          <a
-            href="https://github.com/webaesbyamin/agent-receipts"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-          >
-            View on GitHub <ArrowRight className="w-4 h-4" />
-          </a>
+      {/* Section 6: How It Compares */}
+      <Section id="comparison" title="How It Compares">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 pr-4 font-medium text-text-primary w-28"></th>
+                <th className="text-left py-2 pr-4 font-medium text-primary">Agent Receipts</th>
+                <th className="text-left py-2 pr-4 font-medium text-text-primary">Mem0</th>
+                <th className="text-left py-2 pr-4 font-medium text-text-primary">Langfuse</th>
+                <th className="text-left py-2 font-medium text-text-primary">Zep</th>
+              </tr>
+            </thead>
+            <tbody>
+              <CompareRow feature="Core" ar="Cryptographic proof" mem0="Memory persistence" langfuse="Observability" zep="Memory + RAG" />
+              <CompareRow feature="Signing" ar="Ed25519 every action" mem0="None" langfuse="None" zep="None" />
+              <CompareRow feature="Memory" ar="Signed + provable" mem0="Yes (hosted)" langfuse="No" zep="Yes (hosted)" />
+              <CompareRow feature="Verification" ar="Offline, by anyone" mem0="No" langfuse="No" zep="No" />
+              <CompareRow feature="Infrastructure" ar="Local-first" mem0="Cloud API" langfuse="Cloud/self-host" zep="Cloud API" />
+              <CompareRow feature="Audit trail" ar="Tamper-proof chain" mem0="Mutable" langfuse="Mutable logs" zep="Mutable" />
+            </tbody>
+          </table>
         </div>
+        <p className="text-text-muted text-xs mt-2">
+          Agent Receipts is not an observability tool. Observability tells you what happened <em>inside</em> your system.
+          Receipts prove what happened to anyone <em>outside</em> it.
+        </p>
       </Section>
+
+      {/* CTA */}
+      <div className="card p-6 text-center space-y-3">
+        <h3 className="text-lg font-semibold text-text-primary">Try it yourself</h3>
+        <p className="text-sm text-text-secondary">Experience Agent Receipts in 60 seconds — no installation required.</p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/walkthrough"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Interactive Demo <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href="/get-started"
+            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium border border-border rounded-lg text-text-primary hover:bg-bg-secondary transition-colors"
+          >
+            Get Started
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }
