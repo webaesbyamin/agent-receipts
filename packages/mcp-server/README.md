@@ -53,7 +53,7 @@ Add to `.cursor/mcp.json` in your project root:
 
 ## Tools
 
-The MCP server exposes 22 tools:
+The MCP server exposes 24 tools:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -79,6 +79,8 @@ The MCP server exposes 22 tools:
 | `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
 | `memory_context` | Get a structured memory context summary | `entity_type`, `scope`, `agent_id` |
 | `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
+| `memory_export_bundle` | Export memories as a portable, verifiable bundle | `entity_ids`, `include_receipts` |
+| `memory_import_bundle` | Import and verify a memory bundle | `bundle`, `skip_existing` |
 
 ## Configuration
 

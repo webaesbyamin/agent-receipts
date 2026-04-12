@@ -41,6 +41,7 @@ export {
   Entity,
   MemoryReceiptPayload,
   MemoryQuery,
+  MemoryBundle,
 } from './memory'
 
 // Validation utilities

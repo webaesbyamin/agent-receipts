@@ -197,11 +197,14 @@ npx @agent-receipts/cli memory import memories.json
 - **Duplicate Detection** — Entities are deduplicated by name and type automatically
 - Every operation creates a signed `receipt_type: 'memory'` receipt
 - Deletion is always soft — forgotten memories are retained for audit
+- **Quiet Recalls** — memory reads don't create receipts by default; set `audited: true` for compliance
+- **Memory Bundles** — portable, verifiable export format with checksum and receipt verification
+- **System Prompts** — ready-made prompts for Claude Code, Cursor, and other MCP clients
 - Full-text search via SQLite FTS5 — no external dependencies
 
 ## MCP Tools Reference
 
-The MCP server exposes 22 tools that AI agents can call directly:
+The MCP server exposes 24 tools that AI agents can call directly:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -227,6 +230,8 @@ The MCP server exposes 22 tools that AI agents can call directly:
 | `memory_provenance` | Get the provenance chain for an observation | `observation_id` |
 | `memory_context` | Get a structured memory context summary | `scope`, `max_entities`, `max_observations` |
 | `memory_audit` | Generate a memory operations audit report | `agent_id`, `from`, `to` |
+| `memory_export_bundle` | Export memories as a portable, verifiable bundle | `entity_ids`, `include_receipts` |
+| `memory_import_bundle` | Import and verify a memory bundle | `bundle`, `skip_existing` |
 
 ## SDK API Reference
 
@@ -390,6 +395,23 @@ const chain = await ar.provenance('obs_abc')
 const report = await ar.memoryAudit()
 ```
 
+### `ar.exportBundle(params?)` — Export portable memory bundle
+
+```typescript
+const bundle = await ar.exportBundle({
+  description: 'Project memories backup',
+  includeReceipts: true,    // include source receipts for verification
+})
+// bundle.entities, bundle.observations, bundle.relationships, bundle.receipts, bundle.checksum
+```
+
+### `ar.importBundle(bundle, params?)` — Import a memory bundle
+
+```typescript
+const result = await ar.importBundle(bundle, { skipExisting: true })
+// result.imported, result.skipped, result.receipt
+```
+
 ### `ar.cleanup()` — Delete expired receipts
 
 ```typescript
@@ -437,6 +459,7 @@ const invoice = await ar.generateInvoice({
 | `seed --demo --clean` | Delete all receipts before seeding |
 | `watch` | Watch for new receipts in real-time |
 | `watch --agent <id>` | Watch filtered by agent, action, or status |
+| `prompts <client>` | Show setup guide (claude-code, cursor, system) |
 | `memory context` | Get a structured memory context summary |
 | `memory observe <name> <type> <content>` | Store a memory observation |
 | `memory recall [query]` | Search memories |
@@ -578,7 +601,7 @@ Features: real-time receipt feed, chain visualization, constraint health monitor
 
 - [x] Local-first receipt storage (SQLite with indexed queries)
 - [x] Ed25519 signing and verification
-- [x] MCP server with 22 tools
+- [x] MCP server with 24 tools
 - [x] Node.js SDK
 - [x] CLI with full command set
 - [x] Constraint verification (6 built-in types)

@@ -120,3 +120,31 @@ export const MemoryQuery = z.object({
   page: z.number().int().min(1).default(1),
 })
 export type MemoryQuery = z.infer<typeof MemoryQuery>
+
+// --- Bundle Types ---
+
+export const MemoryBundle = z.object({
+  bundle_id: z.string(),
+  bundle_version: z.literal('1.0'),
+  created_at: z.string().datetime(),
+  created_by_agent: z.string(),
+  description: z.string().nullable().default(null),
+  public_key: z.string(),
+  entities: z.array(Entity),
+  observations: z.array(Observation),
+  relationships: z.array(Relationship),
+  receipts: z.array(z.record(z.unknown())),
+  checksum: z.string(),
+  stats: z.object({
+    entity_count: z.number().int(),
+    observation_count: z.number().int(),
+    relationship_count: z.number().int(),
+    receipt_count: z.number().int(),
+    agents: z.array(z.string()),
+    date_range: z.object({
+      earliest: z.string().datetime(),
+      latest: z.string().datetime(),
+    }),
+  }),
+})
+export type MemoryBundle = z.infer<typeof MemoryBundle>

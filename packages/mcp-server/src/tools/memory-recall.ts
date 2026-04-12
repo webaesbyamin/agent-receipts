@@ -13,6 +13,7 @@ export function registerMemoryRecall(server: McpServer, memoryEngine: MemoryEngi
       scope: z.enum(['agent', 'user', 'team']).optional().describe('Filter by memory scope'),
       limit: z.number().optional().describe('Max results to return (default: 20, max: 100)'),
       include_forgotten: z.boolean().optional().describe('Include soft-deleted memories (default: false)'),
+      audited: z.boolean().optional().describe('Create a signed receipt for this read operation (default: false)'),
     },
     async (params) => {
       const result = await memoryEngine.recall({
@@ -22,17 +23,24 @@ export function registerMemoryRecall(server: McpServer, memoryEngine: MemoryEngi
         agentId,
         scope: params.scope,
         limit: params.limit,
+        audited: params.audited,
       })
+
+      const response: Record<string, unknown> = {
+        entities: result.entities,
+        observations: result.observations,
+        total: result.observations.length,
+        receipt_id: result.receipt?.receipt_id ?? null,
+      }
+
+      if (result.observations.length === 0) {
+        response._guidance = 'No matches found. Try broader search terms, or check stored entities with memory_entities.'
+      }
 
       return {
         content: [{
           type: 'text' as const,
-          text: JSON.stringify({
-            entities: result.entities,
-            observations: result.observations,
-            total: result.observations.length,
-            receipt_id: result.receipt.receipt_id,
-          }, null, 2),
+          text: JSON.stringify(response, null, 2),
         }],
       }
     },

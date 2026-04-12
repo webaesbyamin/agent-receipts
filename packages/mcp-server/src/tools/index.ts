@@ -24,6 +24,8 @@ import { registerMemoryRelate } from './memory-relate.js'
 import { registerMemoryProvenance } from './memory-provenance.js'
 import { registerMemoryAudit } from './memory-audit.js'
 import { registerMemoryContext } from './memory-context.js'
+import { registerMemoryExportBundle } from './memory-export-bundle.js'
+import { registerMemoryImportBundle } from './memory-import-bundle.js'
 
 export function registerAllTools(
   server: McpServer,
@@ -57,5 +59,7 @@ export function registerAllTools(
     registerMemoryProvenance(server, memoryEngine)
     registerMemoryAudit(server, memoryEngine)
     registerMemoryContext(server, memoryEngine)
+    registerMemoryExportBundle(server, memoryEngine)
+    registerMemoryImportBundle(server, memoryEngine)
   }
 }

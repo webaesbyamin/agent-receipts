@@ -91,10 +91,10 @@ describe('MemoryEngine', () => {
       await memoryEngine.observe({ entityName: 'P1', entityType: 'project', content: 'Project one', agentId: 'a' })
       await memoryEngine.observe({ entityName: 'U1', entityType: 'person', content: 'Person one', agentId: 'a' })
 
-      const result = await memoryEngine.recall({ entityType: 'project', agentId: 'a' })
+      const result = await memoryEngine.recall({ entityType: 'project', agentId: 'a', audited: true })
       expect(result.entities).toHaveLength(1)
       expect(result.entities[0].name).toBe('P1')
-      expect(result.receipt.action).toBe('memory.recall')
+      expect(result.receipt!.action).toBe('memory.recall')
     })
 
     it('recalls by text query', async () => {
@@ -262,10 +262,15 @@ describe('MemoryEngine', () => {
       expect(tempObs).toHaveLength(0)
     })
 
-    it('creates a memory.context receipt', async () => {
+    it('creates a memory.context receipt when audited', async () => {
+      const ctx = await memoryEngine.getContext({ audited: true })
+      expect(ctx.receipt!.receipt_type).toBe('memory')
+      expect(ctx.receipt!.action).toBe('memory.context')
+    })
+
+    it('does not create a receipt by default', async () => {
       const ctx = await memoryEngine.getContext({})
-      expect(ctx.receipt.receipt_type).toBe('memory')
-      expect(ctx.receipt.action).toBe('memory.context')
+      expect(ctx.receipt).toBeNull()
     })
 
     it('returns accurate stats', async () => {

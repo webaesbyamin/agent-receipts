@@ -41,6 +41,7 @@ Commands:
   invoice [options]                 Generate an invoice from receipts
   seed [--demo] [--clean] [--count <n>]  Seed demo data for testing
   watch [options]                   Watch for new receipts in real-time
+  prompts <client>                  Show setup guide (claude-code, cursor, system)
   memory <subcommand>               Memory module commands
 
 Memory subcommands:
@@ -152,7 +153,7 @@ async function cmdMemory(subArgs: string[]) {
           console.log(`    - ${obs.content} (${obs.confidence})`)
         }
       }
-      console.log(`\nReceipt: ${result.receipt.receipt_id}`)
+      if (result.receipt) console.log(`\nReceipt: ${result.receipt.receipt_id}`)
       break
     }
 
@@ -258,7 +259,7 @@ async function cmdMemory(subArgs: string[]) {
         }
       }
       console.log('')
-      console.log(`Receipt: ${result.receipt.receipt_id}`)
+      if (result.receipt) console.log(`Receipt: ${result.receipt.receipt_id}`)
       break
     }
 
@@ -925,6 +926,75 @@ async function cmdWatch(args: string[]) {
   }
 }
 
+function cmdPrompts(client?: string) {
+  const systemPrompt = `## Agent Receipts — Memory & Accountability
+
+You have Agent Receipts connected. It provides cryptographically signed memory and action tracking.
+
+### On Session Start
+Call \`memory_context\` to load what you know about this user. If results come back, use them naturally.
+
+### During Conversation
+When you learn something worth remembering, call \`memory_observe\` with entity_name, entity_type, content, and confidence.
+
+### For Important Actions
+Call \`track_action\` to create a signed receipt for significant actions.
+
+### Memory Hygiene
+- Use \`memory_forget\` for information the user asks you to forget
+- Use \`ttl_seconds\` on \`memory_observe\` for temporary context
+- Don't store sensitive data as observations`
+
+  const mcpConfig = `{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agent-receipts/mcp-server"]
+    }
+  }
+}`
+
+  switch (client) {
+    case 'system':
+      console.log(systemPrompt)
+      break
+    case 'claude-code':
+      console.log('# Agent Receipts — Claude Code Setup\n')
+      console.log('## 1. Add to .mcp.json:\n')
+      console.log(mcpConfig)
+      console.log('\n## 2. Add to CLAUDE.md or project instructions:\n')
+      console.log(systemPrompt)
+      console.log('\n## 3. Verify:\n')
+      console.log('npx @agent-receipts/cli memory entities')
+      console.log('npx @agent-receipts/cli list --limit 5')
+      console.log('npx @agent-receipts/dashboard')
+      break
+    case 'claude-desktop':
+      console.log('# Agent Receipts — Claude Desktop Setup\n')
+      console.log('## 1. Add to ~/Library/Application Support/Claude/claude_desktop_config.json:\n')
+      console.log(mcpConfig)
+      console.log('\n## 2. System prompt (paste into conversation):\n')
+      console.log(systemPrompt)
+      break
+    case 'cursor':
+      console.log('# Agent Receipts — Cursor Setup\n')
+      console.log('## 1. Add to .cursor/mcp.json:\n')
+      console.log(mcpConfig)
+      console.log('\n## 2. Add to Cursor Rules for AI:\n')
+      console.log(systemPrompt)
+      break
+    default:
+      console.log('Usage: agent-receipts prompts <client>')
+      console.log('')
+      console.log('Clients:')
+      console.log('  claude-code     Claude Code setup guide')
+      console.log('  claude-desktop  Claude Desktop setup guide')
+      console.log('  cursor          Cursor setup guide')
+      console.log('  system          Just the system prompt')
+      break
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
@@ -986,6 +1056,9 @@ async function main() {
       break
     case 'memory':
       await cmdMemory(args.slice(1))
+      break
+    case 'prompts':
+      cmdPrompts(args[1])
       break
     default:
       console.error(`Unknown command: ${command}`)

@@ -29,8 +29,10 @@ import type {
   AuditReport,
   ContextParams,
   ContextResult,
+  ExportBundleParams,
+  ImportBundleResult,
 } from '@agent-receipts/mcp-server'
-import type { ActionReceipt, Entity, Relationship, MemoryQuery } from '@agent-receipts/schema'
+import type { ActionReceipt, Entity, Relationship, MemoryQuery, MemoryBundle } from '@agent-receipts/schema'
 import type { ProvenanceChain } from '@agent-receipts/mcp-server'
 
 export interface AgentReceiptsConfig {
@@ -179,11 +181,21 @@ export class AgentReceipts {
     const mem = await this.ensureMemory()
     return mem.getContext(params ?? {})
   }
+
+  async exportBundle(params?: ExportBundleParams): Promise<MemoryBundle> {
+    const mem = await this.ensureMemory()
+    return mem.exportBundle(params)
+  }
+
+  async importBundle(bundle: MemoryBundle, params?: { skipExisting?: boolean }): Promise<ImportBundleResult> {
+    const mem = await this.ensureMemory()
+    return mem.importBundle(bundle, params)
+  }
 }
 
 export { hashData, formatInvoiceJSON, formatInvoiceCSV, formatInvoiceMarkdown, formatInvoiceHTML }
 export type {
   TrackParams, CreateParams, CompleteParams, ReceiptFilter, PaginatedResult, InvoiceOptions, Invoice,
   ObserveParams, ObserveResult, RecallParams, RecallResult, ForgetParams, RelateParams, AuditParams, AuditReport,
-  ContextParams, ContextResult,
+  ContextParams, ContextResult, ExportBundleParams, ImportBundleResult,
 }

@@ -7,6 +7,7 @@ import { MemoryStore } from './storage/memory-store.js'
 import { ReceiptEngine } from './engine/receipt-engine.js'
 import { MemoryEngine } from './engine/memory-engine.js'
 import { registerAllTools } from './tools/index.js'
+import { SYSTEM_PROMPT_TEXT } from './prompts/system-prompt.js'
 
 async function main(): Promise<void> {
   const dataDir = ConfigManager.getDefaultDataDir()
@@ -35,11 +36,23 @@ async function main(): Promise<void> {
   // Create MCP server
   const server = new McpServer({
     name: 'agent-receipts',
-    version: '0.3.3',
+    version: '0.4.0',
   })
 
   // Register all tools (including memory)
   registerAllTools(server, engine, memoryEngine, memoryStore, config.agentId)
+
+  // Register system prompt
+  server.prompt(
+    'agent-receipts-system',
+    'System prompt for AI agents using Agent Receipts. Enables automatic memory and receipt tracking.',
+    () => ({
+      messages: [{
+        role: 'user' as const,
+        content: { type: 'text' as const, text: SYSTEM_PROMPT_TEXT },
+      }],
+    }),
+  )
 
   // Start stdio transport
   const transport = new StdioServerTransport()

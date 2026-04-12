@@ -16,6 +16,7 @@ export type {
   ObserveParams, ObserveResult, RecallParams, RecallResult,
   ForgetParams, RelateParams, MergeParams, AuditParams,
   AuditReport, TimelineEntry, ContextParams, ContextResult,
+  ExportBundleParams, ImportBundleResult,
 } from './engine/memory-engine.js'
 export type { TrackParams, CreateParams, CompleteParams } from './engine/receipt-engine.js'
 export { evaluateConstraints } from './engine/constraint-evaluator.js'

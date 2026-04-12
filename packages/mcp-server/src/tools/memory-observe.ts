@@ -45,6 +45,12 @@ export function registerMemoryObserve(server: McpServer, memoryEngine: MemoryEng
         }
       }
 
+      const dashboardUrl = process.env.AGENT_RECEIPTS_DASHBOARD_URL || 'http://localhost:3274'
+      response._hints = {
+        cli: `npx @agent-receipts/cli memory entities`,
+        dashboard: `${dashboardUrl}/memory/${result.entity.entity_id}`,
+      }
+
       return {
         content: [{
           type: 'text' as const,

@@ -38,6 +38,11 @@ export function registerTrackAction(server: McpServer, engine: ReceiptEngine): v
         response.constraints_passed = cr.passed
         response.constraint_summary = `${cr.results.filter((r: unknown) => (r as { passed: boolean }).passed).length}/${cr.results.length} passed`
       }
+      const dashboardUrl = process.env.AGENT_RECEIPTS_DASHBOARD_URL || 'http://localhost:3274'
+      response._hints = {
+        verify: `npx @agent-receipts/cli verify ${receipt.receipt_id}`,
+        dashboard: `${dashboardUrl}/receipts/${receipt.receipt_id}`,
+      }
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
       }

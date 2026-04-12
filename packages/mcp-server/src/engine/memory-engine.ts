@@ -7,6 +7,7 @@ import type {
   MemoryScope,
   ConfidenceLevel,
   MemoryQuery,
+  MemoryBundle,
 } from '@agent-receipts/schema'
 import type { ActionReceipt } from '@agent-receipts/schema'
 import { MemoryStore } from '../storage/memory-store.js'
@@ -40,12 +41,13 @@ export interface RecallParams {
   agentId: string
   scope?: MemoryScope
   limit?: number
+  audited?: boolean
 }
 
 export interface RecallResult {
   entities: Entity[]
   observations: Observation[]
-  receipt: ActionReceipt
+  receipt: ActionReceipt | null
 }
 
 export interface ForgetParams {
@@ -88,6 +90,7 @@ export interface ContextParams {
   scope?: MemoryScope
   maxEntities?: number
   maxObservations?: number
+  audited?: boolean
 }
 
 export interface ContextResult {
@@ -101,6 +104,19 @@ export interface ContextResult {
     total_relationships: number
     agents_contributing: string[]
   }
+  receipt: ActionReceipt | null
+}
+
+export interface ExportBundleParams {
+  entityIds?: string[]
+  includeReceipts?: boolean
+  includeForgotten?: boolean
+  description?: string
+}
+
+export interface ImportBundleResult {
+  imported: { entities: number; observations: number; relationships: number }
+  skipped: { entities: number; observations: number; relationships: number }
   receipt: ActionReceipt
 }
 
@@ -200,25 +216,28 @@ export class MemoryEngine {
 
     const result = this.memoryStore.recall(memoryQuery)
 
-    const receipt = await this.receiptEngine.create({
-      action: 'memory.recall',
-      receipt_type: 'memory',
-      input_hash: hashData({ query: params.query, entityType: params.entityType, entityId: params.entityId }),
-      output_hash: hashData({ entities: result.entities.length, observations: result.observations.length }),
-      status: 'completed',
-      metadata: {
-        memory: {
-          memory_operation: 'recall',
-          entity_id: params.entityId ?? null,
-          observation_id: null,
-          relationship_id: null,
-          scope: params.scope ?? 'agent',
-          query: params.query ?? null,
-          results_count: result.total,
-          confidence: null,
+    let receipt: ActionReceipt | null = null
+    if (params.audited) {
+      receipt = await this.receiptEngine.create({
+        action: 'memory.recall',
+        receipt_type: 'memory',
+        input_hash: hashData({ query: params.query, entityType: params.entityType, entityId: params.entityId }),
+        output_hash: hashData({ entities: result.entities.length, observations: result.observations.length }),
+        status: 'completed',
+        metadata: {
+          memory: {
+            memory_operation: 'recall',
+            entity_id: params.entityId ?? null,
+            observation_id: null,
+            relationship_id: null,
+            scope: params.scope ?? 'agent',
+            query: params.query ?? null,
+            results_count: result.total,
+            confidence: null,
+          },
         },
-      },
-    })
+      })
+    }
 
     return {
       entities: result.entities,
@@ -366,26 +385,181 @@ export class MemoryEngine {
     const preferences = this.memoryStore.getPreferenceObservations(20)
     const stats = this.memoryStore.getContextStats()
 
+    let receipt: ActionReceipt | null = null
+    if (params.audited) {
+      receipt = await this.receiptEngine.create({
+        action: 'memory.context',
+        receipt_type: 'memory',
+        input_hash: hashData({ scope: params.scope, maxEntities, maxObservations }),
+        output_hash: hashData({ entities: entities.length, observations: recent_observations.length }),
+        status: 'completed',
+        metadata: {
+          memory: {
+            memory_operation: 'recall',
+            entity_id: null,
+            observation_id: null,
+            relationship_id: null,
+            scope: params.scope ?? 'agent',
+            query: null,
+            results_count: entities.length + recent_observations.length,
+            confidence: null,
+          },
+        },
+      })
+    }
+
+    return { entities, recent_observations, relationships, preferences, stats, receipt }
+  }
+
+  async exportBundle(params?: ExportBundleParams): Promise<MemoryBundle> {
+    const { entityIds, includeReceipts = true, includeForgotten = false, description = null } = params ?? {}
+
+    const entityResult = entityIds
+      ? entityIds.map(id => this.memoryStore.getEntity(id)).filter((e): e is Entity => e !== null)
+      : this.memoryStore.findEntities({ include_forgotten: includeForgotten, limit: 100, page: 1 }).data
+
+    const observations: Observation[] = []
+    for (const entity of entityResult) {
+      const obs = this.memoryStore.getObservations(entity.entity_id, includeForgotten)
+      observations.push(...obs)
+    }
+
+    const seenRelIds = new Set<string>()
+    const relationships: Relationship[] = []
+    for (const entity of entityResult) {
+      const rels = this.memoryStore.getRelationships(entity.entity_id)
+      for (const rel of rels) {
+        if (!seenRelIds.has(rel.relationship_id)) {
+          seenRelIds.add(rel.relationship_id)
+          relationships.push(rel)
+        }
+      }
+    }
+
+    let receipts: Record<string, unknown>[] = []
+    if (includeReceipts) {
+      const receiptIds = new Set<string>()
+      for (const obs of observations) receiptIds.add(obs.source_receipt_id)
+      for (const entity of entityResult) receiptIds.add(entity.created_by_receipt)
+      for (const rel of relationships) receiptIds.add(rel.source_receipt_id)
+      for (const id of receiptIds) {
+        const receipt = await this.receiptEngine.get(id)
+        if (receipt) receipts.push(receipt as unknown as Record<string, unknown>)
+      }
+    }
+
+    const checksumPayload = JSON.stringify({
+      entities: [...entityResult].sort((a, b) => a.entity_id.localeCompare(b.entity_id)),
+      observations: [...observations].sort((a, b) => a.observation_id.localeCompare(b.observation_id)),
+      relationships: [...relationships].sort((a, b) => a.relationship_id.localeCompare(b.relationship_id)),
+    })
+    const checksum = hashData(checksumPayload)
+    const publicKey = this.receiptEngine.getPublicKey()
+
+    const allAgents = new Set<string>()
+    observations.forEach(o => allAgents.add(o.source_agent_id))
+    const timestamps = observations.map(o => o.observed_at).sort()
+    const now = new Date().toISOString()
+
+    return {
+      bundle_id: `bndl_${nanoid(12)}`,
+      bundle_version: '1.0' as const,
+      created_at: now,
+      created_by_agent: 'system',
+      description,
+      public_key: publicKey,
+      entities: entityResult,
+      observations,
+      relationships,
+      receipts,
+      checksum,
+      stats: {
+        entity_count: entityResult.length,
+        observation_count: observations.length,
+        relationship_count: relationships.length,
+        receipt_count: receipts.length,
+        agents: Array.from(allAgents),
+        date_range: {
+          earliest: timestamps[0] ?? now,
+          latest: timestamps[timestamps.length - 1] ?? now,
+        },
+      },
+    }
+  }
+
+  async importBundle(bundle: MemoryBundle, params?: {
+    skipExisting?: boolean
+  }): Promise<ImportBundleResult> {
+    const { skipExisting = true } = params ?? {}
+
+    // Verify checksum
+    const checksumPayload = JSON.stringify({
+      entities: [...bundle.entities].sort((a, b) => a.entity_id.localeCompare(b.entity_id)),
+      observations: [...bundle.observations].sort((a, b) => a.observation_id.localeCompare(b.observation_id)),
+      relationships: [...bundle.relationships].sort((a, b) => a.relationship_id.localeCompare(b.relationship_id)),
+    })
+    const computedChecksum = hashData(checksumPayload)
+    if (computedChecksum !== bundle.checksum) {
+      throw new Error('Bundle checksum mismatch — data may have been tampered with')
+    }
+
+    const imported = { entities: 0, observations: 0, relationships: 0 }
+    const skipped = { entities: 0, observations: 0, relationships: 0 }
+
+    for (const entity of bundle.entities) {
+      const existing = this.memoryStore.getEntity(entity.entity_id)
+      if (existing && skipExisting) {
+        skipped.entities++
+        continue
+      }
+      if (!existing) {
+        this.memoryStore.createEntity(entity)
+        imported.entities++
+      }
+    }
+
+    for (const obs of bundle.observations) {
+      const existing = this.memoryStore.getObservation(obs.observation_id)
+      if (existing && skipExisting) {
+        skipped.observations++
+        continue
+      }
+      if (!existing) {
+        this.memoryStore.addObservation(obs)
+        imported.observations++
+      }
+    }
+
+    for (const rel of bundle.relationships) {
+      try {
+        this.memoryStore.addRelationship(rel)
+        imported.relationships++
+      } catch {
+        skipped.relationships++
+      }
+    }
+
     const receipt = await this.receiptEngine.create({
-      action: 'memory.context',
+      action: 'memory.import_bundle',
       receipt_type: 'memory',
-      input_hash: hashData({ scope: params.scope, maxEntities, maxObservations }),
-      output_hash: hashData({ entities: entities.length, observations: recent_observations.length }),
+      input_hash: hashData({ bundle_id: bundle.bundle_id }),
+      output_hash: hashData(imported),
       status: 'completed',
       metadata: {
         memory: {
-          memory_operation: 'recall',
+          memory_operation: 'create',
           entity_id: null,
           observation_id: null,
           relationship_id: null,
-          scope: params.scope ?? 'agent',
+          scope: 'user',
           query: null,
-          results_count: entities.length + recent_observations.length,
+          results_count: imported.entities + imported.observations + imported.relationships,
           confidence: null,
         },
+        bundle_id: bundle.bundle_id,
       },
     })
 
-    return { entities, recent_observations, relationships, preferences, stats, receipt }
+    return { imported, skipped, receipt }
   }
 }
