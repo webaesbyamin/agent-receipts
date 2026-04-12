@@ -299,7 +299,7 @@ function ReceiptExplorerContent() {
             sortField={sortField}
             sortDir={sortDir as 'asc' | 'desc'}
             onSort={handleSort}
-            onRowClick={r => router.push(`/receipts/${r.receipt_id}`)}
+            onRowClick={r => { if (!('_isWalkthrough' in r)) router.push(`/receipts/${r.receipt_id}`) }}
             rowKey={r => r.receipt_id as string}
           />
 
