@@ -1,6 +1,8 @@
 # @agent-receipts/mcp-server
 
-Local-first MCP server for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Cryptographically signed, verifiable proof for every AI agent action. No hosted server required.
+Connect any MCP-compatible AI agent to cryptographic accountability in 3 lines of config. Every action gets a signed receipt. Every memory is provable. No API key, no account, no server — everything runs locally.
+
+[Try the Interactive Demo](https://agent-receipts-web.vercel.app/walkthrough) · [Full Documentation](https://github.com/webaesbyamin/agent-receipts)
 
 ## Quick Start
 

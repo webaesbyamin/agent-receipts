@@ -1,6 +1,6 @@
 # @agent-receipts/schema
 
-Zod schemas and TypeScript types for the [Action Receipt Protocol](https://github.com/webaesbyamin/agent-receipts).
+Zod schemas and TypeScript types for the Agent Receipts protocol — receipts, memory entities, observations, relationships, bundles, constraints, and judgments. Single source of truth for all data shapes.
 
 ## Install
 

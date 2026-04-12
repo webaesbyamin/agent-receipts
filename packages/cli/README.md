@@ -1,6 +1,8 @@
 # @agent-receipts/cli
 
-Command-line tool for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Inspect, verify, and manage cryptographically signed receipts.
+Command-line interface for Agent Receipts. Inspect receipts, search memories, verify signatures, export bundles, and manage your local receipt store from the terminal.
+
+[Full Documentation](https://github.com/webaesbyamin/agent-receipts)
 
 ## Install
 

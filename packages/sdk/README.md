@@ -1,6 +1,8 @@
 # @agent-receipts/sdk
 
-TypeScript SDK for [Agent Receipts](https://github.com/webaesbyamin/agent-receipts). Track, verify, and manage signed receipts for AI agent actions. Everything runs locally.
+TypeScript SDK for Agent Receipts — track actions, manage accountable memory, and verify receipts programmatically. Build AI features where every decision is cryptographically provable.
+
+[Full Documentation](https://github.com/webaesbyamin/agent-receipts)
 
 ## Install
 

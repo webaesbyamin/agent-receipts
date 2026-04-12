@@ -1,6 +1,6 @@
 # @agent-receipts/crypto
 
-Ed25519 signing and verification for the [Action Receipt Protocol](https://github.com/webaesbyamin/agent-receipts).
+Ed25519 signing and verification for the Agent Receipts protocol. Signs receipts, verifies signatures, manages key pairs. Pure JavaScript, zero native dependencies, audited cryptography via @noble/ed25519.
 
 ## Install
 
