@@ -405,3 +405,8 @@ export function useInteractive(): InteractiveState {
   }
   return ctx
 }
+
+/** Safe version that returns null when outside provider (for use in pages that render in both demo and production) */
+export function useInteractiveSafe(): InteractiveState | null {
+  return useContext(InteractiveContext)
+}

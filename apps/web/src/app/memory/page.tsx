@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { StatCard } from '@/components/shared/stat-card'
@@ -9,8 +9,9 @@ import { ErrorState } from '@/components/shared/error-state'
 import { LoadingPage } from '@/components/shared/loading'
 import { TimeAgo } from '@/components/shared/time-ago'
 import { formatNumber } from '@/lib/formatters'
-import { Brain, Eye, Link2, Trash2 } from 'lucide-react'
+import { Brain, Eye, Link2, Trash2, Sparkles } from 'lucide-react'
 import { useAutoRefresh } from '@/hooks/use-auto-refresh'
+import { useInteractiveSafe } from '@/lib/interactive-context'
 
 interface EntityWithCounts {
   entity_id: string
@@ -51,6 +52,23 @@ function MemoryContent() {
   )
 
   const { data: audit } = useSWR<AuditReport>('/api/memory/audit', fetcher, { refreshInterval })
+
+  const interactive = useInteractiveSafe()
+
+  const mergedEntities = useMemo(() => {
+    if (!data) return []
+    const apiEntities = data.entities || []
+    if (!interactive || (!interactive.isActive && !interactive.isComplete)) return apiEntities
+    const wtEntities = interactive.getEntities()
+    if (wtEntities.length === 0) return apiEntities
+    const enriched = wtEntities.map(e => ({
+      ...e,
+      observation_count: interactive.getObservations(e.entity_id).length,
+      latest_observation: interactive.getObservations(e.entity_id)[0]?.observed_at ?? e.created_at,
+      _isWalkthrough: true,
+    }))
+    return [...enriched, ...apiEntities]
+  }, [data, interactive])
 
   if (error) return <ErrorState message={error.message} onRetry={() => mutate()} />
   if (!data) return <LoadingPage />
@@ -112,14 +130,17 @@ function MemoryContent() {
           </h3>
         </div>
         <div className="divide-y divide-border-subtle">
-          {data.entities.map(entity => (
+          {mergedEntities.map(entity => (
             <div
               key={entity.entity_id}
               className="px-4 py-3 hover:bg-bg-secondary transition-colors cursor-pointer"
-              onClick={() => router.push(`/memory/${entity.entity_id}`)}
+              onClick={() => ('_isWalkthrough' in entity) ? undefined : router.push(`/memory/${entity.entity_id}`)}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
+                  {'_isWalkthrough' in entity && (
+                    <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
                   <span className="font-medium text-sm text-text-primary">{entity.name}</span>
                   <span className="px-2 py-0.5 rounded-full text-xs bg-bg-tertiary text-text-secondary">
                     {entity.entity_type}

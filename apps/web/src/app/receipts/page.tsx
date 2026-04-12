@@ -1,8 +1,9 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, useMemo, Suspense } from 'react'
 import { useReceipts } from '@/hooks/use-receipts'
+import { useInteractiveSafe } from '@/lib/interactive-context'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { Pagination } from '@/components/shared/pagination'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -34,7 +35,21 @@ function ReceiptExplorerContent() {
     search: searchParams.get('search') ?? undefined,
   }
 
-  const { data, error, isLoading, mutate } = useReceipts(params)
+  const { data: rawData, error, isLoading, mutate } = useReceipts(params)
+
+  const interactive = useInteractiveSafe()
+  const data = useMemo(() => {
+    if (!rawData) return rawData
+    if (!interactive || (!interactive.isActive && !interactive.isComplete)) return rawData
+    const wtReceipts = interactive.getReceipts()
+    if (wtReceipts.length === 0) return rawData
+    const enriched = wtReceipts.map(r => ({ ...r, _isWalkthrough: true }))
+    return {
+      ...rawData,
+      data: [...enriched, ...rawData.data],
+      pagination: { ...rawData.pagination, total: rawData.pagination.total + wtReceipts.length },
+    }
+  }, [rawData, interactive])
 
   const updateParams = useCallback((updates: Record<string, string | undefined>) => {
     const sp = new URLSearchParams(searchParams.toString())

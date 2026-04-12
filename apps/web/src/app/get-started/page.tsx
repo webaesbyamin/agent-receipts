@@ -48,9 +48,15 @@ export default function GetStartedPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
           Cryptographic receipts for every AI agent action.
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-10 text-base leading-relaxed">
+        <p className="text-gray-500 dark:text-gray-400 mb-4 text-base leading-relaxed">
           Every receipt is Ed25519 signed, stored locally, and verifiable
           without a server. Works with Claude Desktop, Claude Code, Cursor, and VS Code.
+        </p>
+        <p className="text-gray-500 dark:text-gray-400 mb-10 text-sm">
+          Want to try it first?{' '}
+          <a href="/walkthrough" className="text-blue-500 hover:underline font-medium">
+            Run the interactive demo &rarr;
+          </a>
         </p>
 
         <div className="mb-8">
