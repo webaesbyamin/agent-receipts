@@ -45,7 +45,7 @@ memory_recall → "what tech stack does the user prefer?" → structured results
 memory_forget → soft delete with audit trail
 ```
 
-The agent handles this automatically when you add the [system prompt](#system-prompt). You don't manage memory manually.
+The agent handles this automatically when you add the [system prompt](#2-add-the-system-prompt). You don't manage memory manually.
 
 ### Proof that's actually proof
 
@@ -122,7 +122,7 @@ claude mcp add agent-receipts -- npx @agent-receipts/mcp-server
 }
 ```
 
-### 2. Add the System Prompt {#system-prompt}
+### 2. Add the System Prompt
 
 This tells your agent when to observe memories, recall context, and track actions — so it works automatically:
 
