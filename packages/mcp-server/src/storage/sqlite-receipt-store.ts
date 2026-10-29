@@ -1,4 +1,5 @@
-import { readdir, readFile, mkdir } from 'node:fs/promises'
+import { readdir, mkdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import type { ActionReceipt } from '@agent-receipts/schema'
@@ -94,8 +95,7 @@ export class SqliteReceiptStore {
       for (const file of jsonFiles) {
         try {
           // Synchronous read for transaction performance
-          const fs = require('node:fs')
-          const raw = fs.readFileSync(join(this.receiptsDir, file), 'utf-8')
+          const raw = readFileSync(join(this.receiptsDir, file), 'utf-8')
           const receipt = JSON.parse(raw) as ActionReceipt
           insert.run(this.toRow(receipt))
           migrated++
@@ -143,7 +143,17 @@ export class SqliteReceiptStore {
     return this.db
   }
 
+  /**
+   * Save a receipt. Append-only once finalized: a receipt that is stored with
+   * any status other than `pending` can never be overwritten. Pending
+   * receipts may be replaced (that is how `complete()` finalizes them).
+   */
   async save(receipt: ActionReceipt): Promise<void> {
+    const existing = this.db.prepare('SELECT status FROM receipts WHERE receipt_id = ?')
+      .get(receipt.receipt_id) as { status: string } | undefined
+    if (existing && existing.status !== 'pending') {
+      throw new Error(`RECEIPT_IMMUTABLE: receipt ${receipt.receipt_id} is ${existing.status} and cannot be overwritten`)
+    }
     const row = this.toRow(receipt)
     this.db.prepare(`INSERT OR REPLACE INTO receipts (
       receipt_id, chain_id, parent_receipt_id, receipt_type, agent_id, org_id,
@@ -208,6 +218,19 @@ export class SqliteReceiptStore {
         has_prev: page > 1,
       },
     }
+  }
+
+  /**
+   * The receipt the next finalized receipt in this chain should link to:
+   * the most recently finalized one. Finalizing always (re)inserts the row,
+   * so rowid order is finalization order, with no timestamp ties.
+   */
+  async getChainTip(chainId: string): Promise<ActionReceipt | null> {
+    const row = this.db.prepare(
+      `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending'
+       ORDER BY rowid DESC LIMIT 1`
+    ).get(chainId) as { data: string } | undefined
+    return row ? (JSON.parse(row.data) as ActionReceipt) : null
   }
 
   async getChain(chainId: string): Promise<ActionReceipt[]> {

@@ -19,7 +19,7 @@ import {
   seedDemoData,
 } from '@agent-receipts/mcp-server'
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
-import { verifyReceipt, getSignablePayload, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
+import { verifyAnyReceipt, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts
@@ -31,7 +31,9 @@ Commands:
   init                              Create data directory and generate signing keys
   keys [--export] [--import <hex>]  Display, export, or import signing keys
   inspect <id|file>                 Pretty-print a receipt
-  verify <id|file> [--key <hex>]    Verify a receipt's signature
+  verify <id|file> [--key <hex>] [--require-v2]
+                                    Verify a receipt's signature
+  verify-chain <chain_id>           Verify every signature and link in a chain
   list [options]                    List receipts
   chain <chain_id> [--tree]         Show all receipts in a chain
   judgments <receipt_id> [--json]    Show judgments for a receipt
@@ -473,14 +475,41 @@ async function cmdVerify(target: string, args: string[]) {
     publicKey = keyManager.getPublicKey()
   }
 
-  const signable = getSignablePayload(receipt)
-  const verified = verifyReceipt(signable, receipt.signature, publicKey)
+  const result = verifyAnyReceipt(receipt, publicKey, { requireV2: args.includes('--require-v2') })
 
-  if (verified) {
+  if (result.valid) {
     console.log(`Verified: ${receipt.receipt_id}`)
     console.log(`Public key: ${publicKey}`)
+    console.log(result.covers_all_fields
+      ? 'Signature: v2 (covers every field)'
+      : 'Signature: v1 (covers 12 core fields only; summary, cost and metadata are not signed)')
+    if (result.key_id_matches === false) console.log('Warning: key_id on the receipt does not match this public key')
+  } else if (result.sig_version === 1 && args.includes('--require-v2')) {
+    console.error(`FAILED: ${receipt.receipt_id} — v1 receipt, but --require-v2 was set`)
+    process.exit(1)
   } else {
     console.error(`FAILED: ${receipt.receipt_id} — signature invalid`)
+    process.exit(1)
+  }
+}
+
+async function cmdVerifyChain(chainId: string) {
+  const { engine } = await getEngine()
+  const result = await engine.verifyChain(chainId)
+  if (result.receipts.length === 0) {
+    console.error(`Chain not found: ${chainId}`)
+    process.exit(1)
+  }
+  for (const r of result.receipts) {
+    const sig = r.signature_valid ? 'sig ok' : 'SIG BAD'
+    const link = r.link_valid === null ? 'link n/a' : r.link_valid ? 'link ok' : 'LINK BAD'
+    console.log(`  ${r.receipt_id.padEnd(20)} v${r.sig_version}  ${sig.padEnd(8)} ${link.padEnd(9)} ${r.status}`)
+  }
+  if (result.valid) {
+    console.log(`Chain verified: ${chainId} (${result.receipts.length} receipts)`)
+  } else {
+    for (const p of result.problems) console.error(`  - ${p}`)
+    console.error(`FAILED: ${chainId}`)
     process.exit(1)
   }
 }
@@ -1023,6 +1052,10 @@ async function main() {
     case 'verify':
       if (!args[1]) { console.error('Usage: agent-receipts verify <id|file>'); process.exit(1) }
       await cmdVerify(args[1], args.slice(2))
+      break
+    case 'verify-chain':
+      if (!args[1]) { console.error('Usage: agent-receipts verify-chain <chain_id>'); process.exit(1) }
+      await cmdVerifyChain(args[1])
       break
     case 'list':
       await cmdList(args.slice(1))

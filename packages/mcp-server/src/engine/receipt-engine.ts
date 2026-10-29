@@ -1,7 +1,8 @@
 import { nanoid } from 'nanoid'
-import { ActionReceipt, CreateReceiptInput, CompleteReceiptInput } from '@agent-receipts/schema'
-import type { ConstraintDefinition } from '@agent-receipts/schema'
-import { signReceipt, verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
+import { ActionReceipt } from '@agent-receipts/schema'
+import type { ConstraintDefinition, FileManifestEntry } from '@agent-receipts/schema'
+import { signReceiptV2, verifyAnyReceipt, computeKeyId, hashReceipt } from '@agent-receipts/crypto'
+import type { VerifyResult } from '@agent-receipts/crypto'
 import { SqliteReceiptStore as ReceiptStore } from '../storage/sqlite-receipt-store.js'
 import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'
@@ -30,6 +31,8 @@ export interface TrackParams {
   constraints?: ConstraintDefinition[]
   expires_at?: string
   ttl_ms?: number
+  /** Files hashed by the harness for this action (see hashFile). */
+  files?: FileManifestEntry[]
 }
 
 export interface CreateParams {
@@ -53,6 +56,7 @@ export interface CreateParams {
   constraints?: ConstraintDefinition[]
   expires_at?: string
   ttl_ms?: number
+  files?: FileManifestEntry[]
   _rawOutput?: unknown
 }
 
@@ -70,6 +74,20 @@ export interface CompleteParams {
   callback_verified?: boolean | null
   error?: Record<string, unknown> | null
   metadata?: Record<string, unknown>
+  files?: FileManifestEntry[]
+}
+
+export interface ChainVerification {
+  chain_id: string
+  valid: boolean
+  receipts: Array<{
+    receipt_id: string
+    status: string
+    signature_valid: boolean
+    sig_version: 1 | 2
+    link_valid: boolean | null
+  }>
+  problems: string[]
 }
 
 export class ReceiptEngine {
@@ -103,7 +121,17 @@ export class ReceiptEngine {
       metadata.expires_at = expiresAt
     }
 
+    const publicKey = this.keyManager.getPublicKey()
+    const status = params.status ?? 'pending'
+    // Finalized receipts link to the chain's current tip; pending ones get
+    // their link when complete() finalizes them.
+    const prevReceiptHash = status === 'pending' ? null : await this.linkFor(chainId)
+
     const receiptData = {
+      sig_version: 2 as const,
+      key_id: computeKeyId(publicKey),
+      prev_receipt_hash: prevReceiptHash,
+      files: params.files ?? null,
       receipt_id: receiptId,
       parent_receipt_id: params.parent_receipt_id ?? null,
       chain_id: chainId,
@@ -121,8 +149,8 @@ export class ReceiptEngine {
       latency_ms: params.latency_ms ?? null,
       tool_calls: params.tool_calls ?? null,
       timestamp: now,
-      completed_at: params.status === 'completed' ? now : null,
-      status: params.status ?? 'pending',
+      completed_at: status === 'pending' ? null : now,
+      status,
       error: null,
       environment: config.environment,
       tags: params.tags ?? null,
@@ -144,10 +172,8 @@ export class ReceiptEngine {
       )
     }
 
-    // Sign the receipt
-    const signable = getSignablePayload(receiptData)
-    const signature = signReceipt(signable, this.keyManager.getPrivateKey())
-    receiptData.signature = signature
+    // Sign the receipt (v2: every field except signature + verify_url)
+    receiptData.signature = signReceiptV2(receiptData, this.keyManager.getPrivateKey())
 
     // Validate against ActionReceipt schema
     const receipt = ActionReceipt.parse(receiptData)
@@ -169,8 +195,13 @@ export class ReceiptEngine {
     }
 
     const now = new Date().toISOString()
+    const publicKey = this.keyManager.getPublicKey()
     const updated = {
       ...existing,
+      sig_version: 2 as const,
+      key_id: computeKeyId(publicKey),
+      prev_receipt_hash: await this.linkFor(existing.chain_id),
+      files: params.files ?? existing.files ?? null,
       status: params.status,
       completed_at: now,
       output_hash: params.output_hash ?? existing.output_hash,
@@ -198,10 +229,8 @@ export class ReceiptEngine {
       )
     }
 
-    // Re-sign with updated data
-    const signable = getSignablePayload(updated)
-    const signature = signReceipt(signable, this.keyManager.getPrivateKey())
-    updated.signature = signature
+    // Re-sign with updated data (always as v2)
+    updated.signature = signReceiptV2(updated as Record<string, unknown>, this.keyManager.getPrivateKey())
 
     const receipt = ActionReceipt.parse(updated)
     await this.store.save(receipt)
@@ -233,20 +262,69 @@ export class ReceiptEngine {
       constraints: params.constraints,
       expires_at: params.expires_at,
       ttl_ms: params.ttl_ms,
+      files: params.files,
       _rawOutput: params.output,
     })
   }
 
-  async verify(receiptId: string): Promise<{ verified: boolean; receipt: ActionReceipt }> {
+  async verify(receiptId: string): Promise<{ verified: boolean; receipt: ActionReceipt; details: VerifyResult }> {
     const receipt = await this.store.get(receiptId)
     if (!receipt) {
       throw new Error(`Receipt not found: ${receiptId}`)
     }
 
-    const signable = getSignablePayload(receipt)
-    const verified = verifyReceipt(signable, receipt.signature, this.keyManager.getPublicKey())
+    const details = verifyAnyReceipt(receipt as Record<string, unknown>, this.keyManager.getPublicKey())
+    return { verified: details.valid, receipt, details }
+  }
 
-    return { verified, receipt }
+  /**
+   * Check every signature in a chain and every prev_receipt_hash link.
+   * Detects edited receipts, removed receipts that something links to, and
+   * forks. It cannot detect removal of the newest receipt (no hash chain can
+   * without an outside anchor).
+   */
+  async verifyChain(chainId: string): Promise<ChainVerification> {
+    const receipts = await this.store.getChain(chainId)
+    const publicKey = this.keyManager.getPublicKey()
+    const problems: string[] = []
+    const byHash = new Map<string, ActionReceipt>()
+    for (const r of receipts) byHash.set(hashReceipt(r as Record<string, unknown>), r)
+
+    const linkedFrom = new Map<string, string>()
+    let genesisCount = 0
+    const rows = receipts.map((r) => {
+      const sig = verifyAnyReceipt(r as Record<string, unknown>, publicKey)
+      if (!sig.valid) problems.push(`${r.receipt_id}: signature does not verify`)
+      let linkValid: boolean | null = null
+      if (r.sig_version === 2 && r.status !== 'pending') {
+        const prev = r.prev_receipt_hash ?? null
+        if (prev === null) {
+          genesisCount++
+          linkValid = true
+        } else {
+          linkValid = byHash.has(prev)
+          if (!linkValid) problems.push(`${r.receipt_id}: links to a receipt that is missing or was changed`)
+          const other = linkedFrom.get(prev)
+          if (other) problems.push(`${r.receipt_id}: forks the chain (same parent as ${other})`)
+          linkedFrom.set(prev, r.receipt_id)
+        }
+      }
+      return {
+        receipt_id: r.receipt_id,
+        status: r.status,
+        signature_valid: sig.valid,
+        sig_version: sig.sig_version,
+        link_valid: linkValid,
+      }
+    })
+    if (genesisCount > 1) problems.push(`chain has ${genesisCount} starting receipts (expected 1)`)
+
+    return { chain_id: chainId, valid: problems.length === 0, receipts: rows, problems }
+  }
+
+  private async linkFor(chainId: string): Promise<string | null> {
+    const tip = await this.store.getChainTip(chainId)
+    return tip ? hashReceipt(tip as Record<string, unknown>) : null
   }
 
   async get(receiptId: string): Promise<ActionReceipt | null> {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeyManager } from '@/lib/storage'
-import { verifyReceipt as verifyReceiptCrypto, getSignablePayload } from '@agent-receipts/crypto'
+import { verifyAnyReceipt } from '@agent-receipts/crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,11 +30,12 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const signable = getSignablePayload(receipt)
-      const verified = verifyReceiptCrypto(signable, receipt.signature, publicKey)
+      const result = verifyAnyReceipt(receipt, publicKey)
 
       return NextResponse.json({
-        verified,
+        verified: result.valid,
+        sig_version: result.sig_version,
+        covers_all_fields: result.covers_all_fields,
         public_key_used: publicKey,
         receipt_id: receipt.receipt_id,
       })

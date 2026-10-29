@@ -2,7 +2,7 @@
 export { ReceiptStatus, ReceiptType, Environment, ErrorCode } from './enums'
 
 // Receipt schemas + types
-export { SignablePayload, ActionReceipt } from './receipt'
+export { SignablePayload, ActionReceipt, FileManifestEntry } from './receipt'
 
 // Constraint schemas + types
 export {
