@@ -393,7 +393,7 @@ function Step4() {
       <div>
         <h2 className="text-xl font-bold text-text-primary mb-2">Verify the Proof</h2>
         <p className="text-text-secondary text-sm leading-relaxed">
-          Every receipt is Ed25519 signed. The 12 signable fields are serialized as canonical JSON and signed
+          Every receipt is Ed25519 signed. Every field, from the summary and cost to the files and the link to the previous receipt, is serialized as canonical JSON and signed
           with the agent&apos;s private key. Anyone with the public key can verify the receipt is authentic and
           untampered.
         </p>
