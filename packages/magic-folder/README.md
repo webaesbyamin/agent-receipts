@@ -18,6 +18,8 @@ Magic Folder/
 
 ## Quick start
 
+Needs Node 20–24. (On Node 25+ the SQLite driver, better-sqlite3, may have no prebuilt binary yet and has to compile from source, which needs current Xcode Command Line Tools on a Mac.)
+
 ```bash
 npm install -g @agent-receipts/magic-folder @anthropic-ai/claude-agent-sdk
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -49,10 +51,36 @@ A receipt file carries its own public key, so on its own it can only prove it ha
 
 ```bash
 magic-folder key                       # prints your key id + public key to publish
-magic-folder verify-page verify.html --trust-key key_… --trust-name "Your Studio" --title "Verify a Your Studio receipt"
+magic-folder verify-page verify.html --trust-key <your public key> --trust-name "Your Studio" --title "Verify a Your Studio receipt"
 ```
 
-Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
+Pass the public key (not just the `key_…` id) so the page can also check `receipt.json` files, which carry no key of their own. Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
+
+## Run free on your own computer (Ollama)
+
+Install [Ollama](https://ollama.com), pull a model, and jobs run locally: no API key, nothing leaves the computer, no credits used. Receipts say **Free (ran on this computer)** and name the model.
+
+```bash
+ollama pull qwen3:8b
+magic-folder doctor                      # shows which models are ready and how they'll run
+magic-folder run ~/"Magic Folder" --engine ollama
+```
+
+Or mix engines: keep Claude as the default and put `engine: ollama` in the recipes you want to run locally.
+
+How local models work:
+- **Tools mode** (models with tool calling, e.g. qwen3): the model reads and writes through tools Magic Folder implements itself, fenced by the same sandbox as the Claude engine.
+- **JSON mode** (every other model, or `--ollama-mode json`): the files go into the prompt and the model answers with `{ summary, files }`, which the runner writes. This is the more reliable choice for small models.
+- Images go only to models that can see them (`vision` in `ollama show`). PDFs and Word files need saving as .txt or .md first.
+
+Local models are much smaller than Claude, so expect plainer writing and check results more closely.
+
+| Flag | Default |
+| --- | --- |
+| `--engine claude\|ollama` | claude |
+| `--ollama-model <name>` | the first installed model |
+| `--ollama-host <url>` | `http://127.0.0.1:11434` (or `$OLLAMA_HOST`) |
+| `--ollama-mode auto\|tools\|json` | auto |
 
 ## Recipes
 
@@ -77,6 +105,8 @@ Write a product description for each input file...
 | `max_minutes` | 5 | Hard time limit |
 | `max_cost_usd` | 0.50 | Spend cap passed to the Agent SDK |
 | `needs_approval` | false | Results wait in `Needs your OK/`; moving the job to `Done/` signs an approval receipt |
+| `engine` | the runner's default | `claude` or `ollama` |
+| `model` | the engine's default | e.g. `qwen3:8b` for Ollama |
 
 A broken recipe never runs: the folder gets a `Recipe problem.txt` explaining why, and files dropped there are left alone.
 

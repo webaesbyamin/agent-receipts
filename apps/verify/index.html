@@ -217,7 +217,7 @@ function arRenderReceipt(d, seal) {
     ['Time taken', arDur(r.latency_ms)],
     ['Credits', ok ? String(m.credits == null ? 0 : m.credits) : '0'],
     ['Model', r.model || '—'],
-    ['Model cost', typeof r.cost_usd === 'number' ? arUsd(r.cost_usd) + (m.cost_is_estimate ? ' (estimate)' : '') : '—'],
+    ['Model cost', m.local ? 'Free (ran on this computer)' : typeof r.cost_usd === 'number' ? arUsd(r.cost_usd) + (m.cost_is_estimate ? ' (estimate)' : '') : '—'],
   ];
   if (a) details.push(['Approved', arTime(a.timestamp, tz)]);
   var verifyUrl = arUrl(d.verifyPageUrl);
@@ -286,7 +286,10 @@ async function check(text) {
   var data;
   try { data = arExtract(text); } catch (e) { show('bad', 'Not a receipt', 'This file has no receipt data in it.'); return; }
   var expected = document.getElementById('expected').value.trim();
-  var key = data.publicKey || (/^[0-9a-f]{64}$/i.test(expected) ? expected : null);
+  // A receipt.json carries no key: use the trusted key it names, or a typed public key.
+  var named = null;
+  for (var t = 0; t < TRUSTED.length; t++) if (TRUSTED[t].publicKey && TRUSTED[t].keyId === data.receipt.key_id) named = TRUSTED[t].publicKey;
+  var key = data.publicKey || named || (/^[0-9a-f]{64}$/i.test(expected) ? expected : null);
   if (!key) { show('bad', 'Need a public key', 'This receipt file has no key in it. Paste the signer\'s 64-character public key above.'); return; }
   var r = await arVerify(data.receipt, key, { requireV2: false });
   var signedRows = [['Action', data.receipt.action], ['Status', data.receipt.status], ['Receipt', data.receipt.receipt_id, true], ['Signed by key', r.key_id || '\u2014', true]];

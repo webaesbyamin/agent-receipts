@@ -5,6 +5,10 @@ import { KeyManager, ConfigManager } from '@agent-receipts/mcp-server'
 import { MagicFolder } from './runner.js'
 import type { MagicFolderEvent } from './runner.js'
 import { ClaudeExecutor } from './claude-executor.js'
+import { OllamaExecutor } from './ollama-executor.js'
+import { EngineRouter } from './engines.js'
+import { ENGINES } from './recipe.js'
+import type { Engine } from './recipe.js'
 import { initMagicFolder } from './starter.js'
 import { extractReceiptData } from './render.js'
 import { isApprovalOf } from './runner.js'
@@ -20,12 +24,17 @@ Usage:
       --issuer <name>                        Name printed on receipts (e.g. "Webaes")
       --key-url <url>                        Where you publish your public key
       --verify-url <url>                     Link to a hosted verify page
-      --model <id>                           Default model for recipes without one
+      --engine claude|ollama                 Default engine (default: claude). Recipes can set their own.
+      --model <id>                           Default Claude model for recipes without one
+      --ollama-model <name>                  Default local model (default: first installed)
+      --ollama-host <url>                    Ollama address (default http://127.0.0.1:11434)
+      --ollama-mode auto|tools|json          How local models work (default auto)
+  magic-folder doctor                        Check what's ready: Claude key, Agent SDK, Ollama models
   magic-folder key [--data-dir <dir>]        Print your key id and public key (publish these)
   magic-folder verify <receipt.html|json> [--key-id <key_…> | --key <hex>]
                                              Check a receipt. Without a key it can only say
                                              "unchanged", not who signed it.
-  magic-folder verify-page [out.html] [--trust-key <key_…> --trust-name <name>] [--title <t>]
+  magic-folder verify-page [out.html] [--trust-key <key_… or public key> --trust-name <name>] [--title <t>]
                                              Write the static verify page (with your key baked in)
 
 Running jobs needs ANTHROPIC_API_KEY and: npm install @anthropic-ai/claude-agent-sdk
@@ -64,8 +73,22 @@ async function main(argv: string[]): Promise<number> {
       const issuerName = flag(rest, '--issuer')
       const keyUrl = flag(rest, '--key-url')
       const model = flag(rest, '--model')
+      const engine = (flag(rest, '--engine') ?? 'claude') as Engine
+      if (!(ENGINES as readonly string[]).includes(engine)) { console.error(`--engine must be one of ${ENGINES.join(', ')}`); return 1 }
+      const ollamaMode = flag(rest, '--ollama-mode')
+      if (ollamaMode && !['auto', 'tools', 'json'].includes(ollamaMode)) { console.error('--ollama-mode must be auto, tools or json'); return 1 }
+      const ollamaModel = flag(rest, '--ollama-model')
+      const ollamaHost = flag(rest, '--ollama-host')
+      const executor = new EngineRouter({
+        claude: new ClaudeExecutor(model ? { model } : {}),
+        ollama: new OllamaExecutor({
+          ...(ollamaModel ? { model: ollamaModel } : {}),
+          ...(ollamaHost ? { host: ollamaHost } : {}),
+          ...(ollamaMode ? { mode: ollamaMode as 'auto' | 'tools' | 'json' } : {}),
+        }),
+      }, engine)
       const mf = new MagicFolder(resolve(target), {
-        executor: new ClaudeExecutor(model ? { model } : {}),
+        executor,
         dataDir: flag(rest, '--data-dir'),
         issuer: issuerName ? { name: issuerName, ...(keyUrl ? { keyUrl } : {}) } : undefined,
         verifyPageUrl: flag(rest, '--verify-url'),
@@ -80,6 +103,28 @@ async function main(argv: string[]): Promise<number> {
       await mf.start()
       console.log(`Watching ${resolve(target)} — signing key ${mf.receipts.getPublicKey().slice(0, 16)}… (Ctrl+C to stop)`)
       await new Promise<void>((done) => process.once('SIGINT', () => { mf.close(); done() }))
+      return 0
+    }
+    case 'doctor': {
+      const ok = (b: boolean) => (b ? '✓' : '·')
+      console.log(`${ok(Number(process.versions.node.split('.')[0]) >= 20)} Node ${process.versions.node} (needs 20+)`)
+      console.log(`${ok(!!process.env['ANTHROPIC_API_KEY'])} ANTHROPIC_API_KEY ${process.env['ANTHROPIC_API_KEY'] ? 'is set' : 'not set (needed for the claude engine)'}`)
+      let sdk = false
+      try { await import('@anthropic-ai/claude-agent-sdk' as string); sdk = true } catch { /* not installed */ }
+      console.log(`${ok(sdk)} Claude Agent SDK ${sdk ? 'installed' : 'not installed (npm i @anthropic-ai/claude-agent-sdk)'}`)
+      const st = await new OllamaExecutor(flag(argv, '--ollama-host') ? { host: flag(argv, '--ollama-host')! } : {}).status()
+      if (!st.running) {
+        console.log(`· Ollama not reachable at ${st.host} (install from ollama.com for free local jobs)`)
+      } else if (!st.models.length) {
+        console.log(`· Ollama running at ${st.host}, no models yet. Try: ollama pull qwen3:8b`)
+      } else {
+        console.log(`✓ Ollama running at ${st.host}`)
+        for (const m of st.models) {
+          const caps = m.capabilities.filter((c) => c !== 'completion')
+          const how = m.capabilities.includes('tools') ? 'tools mode' : 'json mode'
+          console.log(`    ${m.name.padEnd(28)} ${how}${caps.includes('vision') ? ', sees images' : ''}`)
+        }
+      }
       return 0
     }
     case 'key': {
@@ -131,9 +176,13 @@ async function main(argv: string[]): Promise<number> {
       const trustName = flag(argv, '--trust-name')
       if (trustKey && !trustName) { console.error('--trust-key needs --trust-name'); return 1 }
       const pageTitle = flag(argv, '--title')
+      // --trust-key takes a key id (key_…) or the 64-hex public key; the public key also lets the page check receipt.json
+      const trusted = trustKey && trustName
+        ? [/^[0-9a-f]{64}$/i.test(trustKey) ? { publicKey: trustKey, name: trustName } : { keyId: trustKey, name: trustName }]
+        : undefined
       const html = renderVerifyPage({
         ...(pageTitle ? { title: pageTitle } : {}),
-        ...(trustKey && trustName ? { trustedKeys: [{ keyId: trustKey, name: trustName }] } : {}),
+        ...(trusted ? { trustedKeys: trusted } : {}),
       })
       const out = target && !target.startsWith('--') ? target : undefined
       if (out) { await writeFile(out, html); console.log(`Wrote ${out}`) } else process.stdout.write(html)

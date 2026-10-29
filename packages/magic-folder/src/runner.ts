@@ -305,10 +305,13 @@ export class MagicFolder {
         job_id: jobId,
         recipe: recipe.name,
         recipe_sha256: recipeHash,
-        credits: ok ? recipe.credits : 0,
+        // Failed jobs and jobs that ran on the user's own computer cost nothing
+        credits: ok && !exec.local ? recipe.credits : 0,
         needs_approval: ok && recipe.needsApproval,
-        cost_is_estimate: true,
-        executor: this.options.executor.name,
+        cost_is_estimate: !exec.local,
+        executor: exec.engine ?? this.options.executor.name,
+        ...(exec.local ? { local: true } : {}),
+        ...(exec.mode ? { engine_mode: exec.mode } : {}),
         ...(this.options.issuer
           ? { issuer: { name: this.options.issuer.name, ...(this.options.issuer.keyUrl ? { key_url: this.options.issuer.keyUrl } : {}) } }
           : {}),

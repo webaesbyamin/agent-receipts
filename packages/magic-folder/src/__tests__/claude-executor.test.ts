@@ -145,6 +145,7 @@ describe('ClaudeExecutor with an SDK', () => {
     expect(o['settingSources']).toEqual([])
     expect(o['cwd']).toBe(workDir)
     expect(o['maxBudgetUsd']).toBe(job.recipe.maxCostUsd)
+    expect(o['tools']).toEqual(job.recipe.tools)
     const disallowed = o['disallowedTools'] as string[]
     expect(disallowed).toContain('Bash')
     expect(disallowed).toContain('WebFetch')

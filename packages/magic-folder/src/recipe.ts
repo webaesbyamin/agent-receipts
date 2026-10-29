@@ -8,7 +8,8 @@
  *   max_minutes: 5
  *   max_cost_usd: 0.50
  *   needs_approval: false
- *   model: claude-sonnet-4-5        (optional)
+ *   engine: ollama                  (optional: claude or ollama)
+ *   model: qwen3:8b                 (optional: model id for that engine)
  *   ---
  *   Write a product description for the item in the dropped file...
  *
@@ -34,9 +35,14 @@ export interface Recipe {
   maxCostUsd: number
   /** Results go to "Needs your OK" instead of "Done" */
   needsApproval: boolean
-  /** Model id; omitted = the executor's default */
+  /** Model id; omitted = the engine's default */
   model?: string
+  /** Which engine runs it; omitted = the runner's default */
+  engine?: Engine
 }
+
+export const ENGINES = ['claude', 'ollama'] as const
+export type Engine = (typeof ENGINES)[number]
 
 export const RECIPE_DEFAULTS = {
   credits: 1,
@@ -73,6 +79,13 @@ export function parseRecipe(name: string, source: string): Recipe {
     needsApproval: bool(name, front['needs_approval'], RECIPE_DEFAULTS.needsApproval),
   }
   if (front['model']) recipe.model = front['model']
+  if (front['engine']) {
+    const e = front['engine'].toLowerCase()
+    if (!(ENGINES as readonly string[]).includes(e)) {
+      throw new RecipeError(`${name}: engine must be one of ${ENGINES.join(', ')} (got "${front['engine']}")`)
+    }
+    recipe.engine = e as Engine
+  }
   return recipe
 }
 

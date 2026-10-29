@@ -26,6 +26,8 @@ For each product, write one markdown file named "<product name> - description.md
 4. An SEO title of 60 characters or fewer.
 5. A meta description of 155 characters or fewer.
 
+Write the SEO title and meta description from the product's real details only: no filler phrases such as "perfect for any home or office".
+
 Only state facts you can see in the photo or read in the file. If something important is unknown (material, size, price), leave it out rather than guessing, and list what was missing at the end under "Missing details".
 `,
   'Fix typos': `---
@@ -37,7 +39,7 @@ needs_approval: false
 ---
 Fix spelling, grammar and punctuation in each input file. Keep the author's wording, tone and formatting; do not rewrite sentences that are already correct.
 
-Works on plain text formats: .txt, .md, .html, .csv. For each one, write the corrected copy with the same name plus " (fixed)" before the extension, and a file "changes.md" listing every change as "before -> after".
+Works on plain text formats: .txt, .md, .html, .csv. For each one, write the corrected copy with the same name plus " (fixed)" before the extension, and a file "changes.md" listing every change as "before -> after". Before finishing, compare the corrected copy with the original line by line and make sure changes.md lists every single change, and nothing you didn't change.
 
 If a file is not plain text (for example .docx or .pdf), don't change it. Instead add a line to changes.md saying it needs to be saved as .txt or .md first.
 `,

@@ -65,7 +65,7 @@ function arRenderReceipt(d, seal) {
     ['Time taken', arDur(r.latency_ms)],
     ['Credits', ok ? String(m.credits == null ? 0 : m.credits) : '0'],
     ['Model', r.model || '—'],
-    ['Model cost', typeof r.cost_usd === 'number' ? arUsd(r.cost_usd) + (m.cost_is_estimate ? ' (estimate)' : '') : '—'],
+    ['Model cost', m.local ? 'Free (ran on this computer)' : typeof r.cost_usd === 'number' ? arUsd(r.cost_usd) + (m.cost_is_estimate ? ' (estimate)' : '') : '—'],
   ];
   if (a) details.push(['Approved', arTime(a.timestamp, tz)]);
   var verifyUrl = arUrl(d.verifyPageUrl);
