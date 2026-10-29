@@ -21,13 +21,15 @@ export default function Install() {
         <section className="hero" style={{ paddingBottom: 40 }}>
           <div className="wrap narrow">
             <p className="kicker">Install</p>
-            <h1>Set up Magic Folder in about 15 minutes.</h1>
-            <p className="lede">You’ll install three free things: Node.js (which Magic Folder runs on), Ollama (the AI that runs on your computer) and Magic Folder itself. Most of the time is the AI model downloading.</p>
-            <p className="small">Used every day on a Mac. On Mac, Windows and Linux, every command on this page is also run automatically on a clean machine whenever the code changes. The one exception is Ollama itself, which is too large for those test machines.</p>
+            <h1>Set up Magic Folder on your computer.</h1>
+            <p className="lede">You’ll install three free things: Node.js (which Magic Folder runs on), Ollama (the AI that runs on your computer) and Magic Folder itself. The longest part is the AI model download, about 5 GB.</p>
+            <p className="small">Used every day on a Mac. Every step on this page except installing Ollama and its model is also tested automatically on clean Mac, Windows and Linux machines whenever the code changes. Ollama is too large for those test machines, so jobs that use it are tested by hand on a Mac.</p>
           </div>
         </section>
 
         <section className="wrap narrow" style={{ paddingBottom: 72 }}>
+          {/* Targets for /install#mac, #windows, #linux (the script opens that tab) */}
+          {OSES.map((os) => <span key={os.id} id={os.id} />)}
           <div className="tabs" role="tablist" aria-label="Your computer">
             {OSES.map((os, i) => (
               <button key={os.id} type="button" role="tab" id={`tab-${os.id}`} data-os={os.id} aria-controls={`panel-${os.id}`} aria-selected={i === 0} tabIndex={i === 0 ? 0 : -1}>{os.name}</button>
@@ -40,7 +42,7 @@ export default function Install() {
               <ol className="steps">
                 {(os.steps as Step[]).map((s) => (
                   <li key={s.title}>
-                    <h3>{s.title}</h3>
+                    <h2 className="step-title">{s.title}</h2>
                     {s.body && <p dangerouslySetInnerHTML={html(s.body)} />}
                     {s.code && <Code code={s.code} label={`${os.name}: ${s.title}`} />}
                     {s.after && <p style={{ marginTop: 12 }}>{s.after}</p>}

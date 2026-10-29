@@ -9,5 +9,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@agent-receipts/web"]
+  "ignore": ["@agent-receipts/web", "@agent-receipts/site"]
 }

@@ -22,7 +22,7 @@ Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 22 or 24** (24 r
 
 For free local jobs you also need [Ollama](https://ollama.com) with a model (`qwen3:8b`, about 5 GB). For Claude instead, see [Use Claude](#use-claude-optional).
 
-How this is tested: every step below runs automatically on Mac, Windows and Linux on each change (install, `init`, `doctor`, a job and its receipt, and keeping it running). Ollama itself can't run in that test, so jobs on Ollama are tested by hand on a Mac.
+How this is tested: every step below except installing Ollama and its model runs automatically on clean Mac, Windows and Linux machines on each change (Node, the install command, `init`, `doctor`, a job and its signed receipt, keeping it running, uninstall). Ollama is too large for those machines, so jobs that use it are tested by hand on a Mac.
 
 ### Mac
 

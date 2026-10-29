@@ -107,7 +107,7 @@ export default function Home() {
               </div>
               <div className="hv-mini">
                 <div className="top">{receipt.metadata.issuer.name}<span>RECEIPT</span></div>
-                <h3>{receipt.metadata.recipe}</h3>
+                <p className="hv-title">{receipt.metadata.recipe}</p>
                 <p>{duration(receipt.latency_ms)} · {receipt.model} · Free (ran on this computer)</p>
                 <div className="seal-row"><span className="seal-dot" aria-hidden="true" />Verified, signed by {receipt.metadata.issuer.name}</div>
               </div>
@@ -121,7 +121,7 @@ export default function Home() {
             <h2>A folder that does the job, and shows its work.</h2>
             <div className="grid3">
               <div className="card"><span className="num">1</span><h3>Drop it into the job you want</h3><p>Your Magic Folder has a folder for each job, like <em>Fix typos</em> or <em>Meeting notes to tasks</em>. Drop a file in.</p></div>
-              <div className="card"><span className="num">2</span><h3>Leave it</h3><p>A “working” note appears next to your file while the job runs. You don’t need to do anything.</p></div>
+              <div className="card"><span className="num">2</span><h3>Leave it</h3><p>Your file moves out of the job folder at once, and a “working” note takes its place until the job is done. You don’t need to do anything.</p></div>
               <div className="card"><span className="num">3</span><h3>Open Done</h3><p>The result, your original (untouched) and a receipt land together in <em>Done</em>, in their own folder.</p></div>
             </div>
             <p className="note">Some jobs, like a client email, wait in <em>Needs your OK</em> first. Check the draft, then move it to <em>Done</em> to approve it. The approval gets its own signed receipt.</p>
@@ -148,7 +148,7 @@ export default function Home() {
                 )
               })}
             </div>
-            <p className="note"><strong>Make your own job:</strong> copy a folder, rename it, and edit the one text file inside that says what to do.</p>
+            <p className="note"><strong>Make your own job:</strong> copy a job folder, rename it, and edit the one hidden text file inside that says what to do.</p>
           </div>
         </section>
 
@@ -161,7 +161,8 @@ export default function Home() {
               <div className="editor">
                 <label htmlFor="summary">The summary on this receipt</label>
                 <textarea id="summary" defaultValue={receipt.output_summary} spellCheck={false} />
-                <div className="status" id="status" role="status" aria-live="polite">Checking…</div>
+                {/* The demo script writes this before React hydrates; React must leave it alone */}
+                <div className="status" id="status" role="status" aria-live="polite" suppressHydrationWarning>Checking…</div>
                 <button className="btn" type="button" id="reset">Reset</button>
                 <p className="caption">A real receipt from a real job. Your browser checks the signature itself. Nothing is sent anywhere.</p>
               </div>
