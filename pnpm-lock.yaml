@@ -193,6 +193,10 @@ importers:
         version: 2.1.9(@types/node@20.19.33)
 
   packages/dashboard:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.8.0
+        version: 12.8.0
     devDependencies:
       tsup:
         specifier: ^8.2.0

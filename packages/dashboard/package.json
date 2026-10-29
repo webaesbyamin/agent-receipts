@@ -31,6 +31,12 @@
     "build:standalone": "node scripts/build-standalone.js",
     "prepublishOnly": "npm run build:standalone"
   },
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
   "devDependencies": {
     "tsup": "^8.2.0",
     "typescript": "^5.4.0"
