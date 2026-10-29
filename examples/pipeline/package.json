@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/example-pipeline",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Document analysis pipeline with chained receipts and constraints",
   "scripts": {
