@@ -1,5 +1,5 @@
 import { resolve, sep, dirname, basename, join } from 'node:path'
-import { realpathSync } from 'node:fs'
+import { realpathSync, lstatSync } from 'node:fs'
 import type { Recipe } from './recipe.js'
 
 /** What the runner hands an executor for one job. */
@@ -81,6 +81,11 @@ function real(p: string): string {
   try {
     return realpathSync(p)
   } catch {
+    // A dangling symlink: realpath fails, but writing through it would land
+    // wherever it points. Treat it as outside everything.
+    try {
+      if (lstatSync(p).isSymbolicLink()) return '\0dangling-symlink'
+    } catch { /* doesn't exist: fine */ }
     const parent = dirname(p)
     if (parent === p) return p
     return join(real(parent), basename(p))

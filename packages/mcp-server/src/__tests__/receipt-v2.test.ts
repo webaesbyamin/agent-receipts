@@ -119,6 +119,22 @@ describe('Receipt v2 in the engine', () => {
     expect(chain.valid).toBe(true)
   })
 
+  it('TTL cleanup leaves the chain verifiable; an ordinary delete does not', async () => {
+    const a = await engine.track({ action: 'one', input: 1, ttl_ms: 1 })
+    const b = await engine.track({ action: 'two', input: 2, chain_id: a.chain_id })
+    await new Promise((r) => setTimeout(r, 10))
+    const cleaned = await store.cleanup()
+    expect(cleaned.deleted).toBe(1)
+    let chain = await engine.verifyChain(a.chain_id)
+    expect(chain.valid).toBe(true)
+    expect(chain.receipts.map((r) => r.receipt_id)).toEqual([b.receipt_id])
+    const c = await engine.track({ action: 'three', input: 3, chain_id: a.chain_id })
+    await store.delete(b.receipt_id)
+    chain = await engine.verifyChain(a.chain_id)
+    expect(chain.valid).toBe(false)
+    expect(chain.problems.join(' ')).toContain(c.receipt_id)
+  })
+
   it('verifyChain catches a fork', async () => {
     const a = await engine.track({ action: 'one', input: 1 })
     await engine.track({ action: 'two', input: 2, chain_id: a.chain_id })

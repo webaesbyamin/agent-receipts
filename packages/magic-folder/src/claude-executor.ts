@@ -148,7 +148,8 @@ export function checkToolUse(
 }
 
 function escapesFolder(pattern: string): boolean {
-  return isAbsoluteLike(pattern) || pattern.startsWith('~') || pattern.split(/[\\/]/).includes('..')
+  // Any ".." at all (also inside braces like {..,x}) is refused.
+  return isAbsoluteLike(pattern) || pattern.startsWith('~') || /[{,]\s*([\\/~]|[A-Za-z]:)/.test(pattern) || pattern.includes('..')
 }
 
 function isAbsoluteLike(p: string): boolean {

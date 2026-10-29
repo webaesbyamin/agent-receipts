@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import type { ActionReceipt } from '@agent-receipts/schema'
+import { hashReceipt } from '@agent-receipts/crypto'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
 
 const SORTABLE_COLUMNS = new Set([
@@ -62,6 +63,18 @@ export class SqliteReceiptStore {
       CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
       CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
       CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
+
+      -- Receipts removed by TTL cleanup leave their hash behind, so chains
+      -- that link to them still verify (as "expired"), while a receipt
+      -- deleted any other way shows up as a broken link.
+      CREATE TABLE IF NOT EXISTS receipt_tombstones (
+        receipt_hash TEXT PRIMARY KEY,
+        receipt_id TEXT NOT NULL,
+        chain_id TEXT NOT NULL,
+        expired_at TEXT NOT NULL,
+        deleted_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
     `)
 
     await this.migrateJsonFiles()
@@ -278,11 +291,29 @@ export class SqliteReceiptStore {
     const totalRow = this.db.prepare('SELECT COUNT(*) as cnt FROM receipts').get() as { cnt: number }
     const total = totalRow.cnt
 
-    const result = this.db.prepare(
-      'DELETE FROM receipts WHERE expires_at IS NOT NULL AND expires_at < ?'
-    ).run(now)
+    const expired = this.db.prepare(
+      'SELECT data, expires_at FROM receipts WHERE expires_at IS NOT NULL AND expires_at < ?'
+    ).all(now) as { data: string; expires_at: string }[]
+    const tombstone = this.db.prepare(
+      'INSERT OR IGNORE INTO receipt_tombstones (receipt_hash, receipt_id, chain_id, expired_at, deleted_at) VALUES (?, ?, ?, ?, ?)'
+    )
+    const remove = this.db.prepare('DELETE FROM receipts WHERE receipt_id = ?')
+    let deleted = 0
+    this.db.transaction(() => {
+      for (const row of expired) {
+        const r = JSON.parse(row.data) as ActionReceipt
+        tombstone.run(hashReceipt(r as Record<string, unknown>), r.receipt_id, r.chain_id, row.expires_at, now)
+        deleted += remove.run(r.receipt_id).changes
+      }
+    })()
 
-    return { deleted: result.changes, total }
+    return { deleted, total }
+  }
+
+  /** Hashes of receipts in this chain that TTL cleanup removed. */
+  getTombstoneHashes(chainId: string): Set<string> {
+    const rows = this.db.prepare('SELECT receipt_hash FROM receipt_tombstones WHERE chain_id = ?').all(chainId) as { receipt_hash: string }[]
+    return new Set(rows.map(r => r.receipt_hash))
   }
 
   private buildWhere(filter?: ReceiptFilter): { where: string; params: unknown[] } {

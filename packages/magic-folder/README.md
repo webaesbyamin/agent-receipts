@@ -43,7 +43,7 @@ The point of a receipt is that the agent doesn't write it.
 
 ### Who signed it
 
-A receipt file carries its own public key, so on its own it can only prove it hasn't been changed. Anyone could sign a fake with their own key. So the file's seal says **"Unchanged since signing"**, never "Verified".
+A receipt file carries its own public key, so on its own it can only prove it hasn't been changed. Anyone could sign a fake with their own key. So the file's seal says **"Unchanged since signing"** in amber, never a green "Verified".
 
 **Verified** comes from a verify page that knows your key:
 
@@ -52,7 +52,7 @@ magic-folder key                       # prints your key id + public key to publ
 magic-folder verify-page verify.html --trust-key key_… --trust-name "Your Studio" --title "Verify a Your Studio receipt"
 ```
 
-Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until someone enters a key (or opens it as `…/verify?key=key_…`). On the command line: `magic-folder verify receipt.html --key-id key_…`.
+Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
 
 ## Recipes
 

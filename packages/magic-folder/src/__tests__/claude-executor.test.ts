@@ -90,6 +90,20 @@ describe('sandbox details', () => {
     }
   })
 
+  it('denies a dangling symlink that would write outside', async () => {
+    const { mkdtemp, mkdir, symlink, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const dir = await mkdtemp(join(tmpdir(), 'mf-dangle-'))
+    try {
+      await mkdir(join(dir, 'output'), { recursive: true })
+      await symlink(join(tmpdir(), 'mf-does-not-exist-' + Date.now()), join(dir, 'output', 'link'))
+      const j = { ...job, workDir: dir, outputDir: join(dir, 'output') }
+      expect(checkToolUse(j, 'Write', { file_path: join(dir, 'output', 'link') }).behavior).toBe('deny')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it('denies Glob and Grep patterns that climb out or are absolute', () => {
     const g = { ...job, recipe: parseRecipe('Search', '---\ntools: Read, Glob, Grep\n---\nFind.') }
     expect(checkToolUse(g, 'Glob', { pattern: '**/*.md' }).behavior).toBe('allow')
@@ -100,6 +114,10 @@ describe('sandbox details', () => {
     expect(checkToolUse(g, 'Grep', { pattern: 'secret', glob: '../../**' }).behavior).toBe('deny')
     expect(checkToolUse(g, 'Grep', { pattern: 'secret', path: '/' }).behavior).toBe('deny')
     expect(checkToolUse(g, 'Grep', { pattern: 'price', glob: '*.csv' }).behavior).toBe('allow')
+    expect(checkToolUse(g, 'Glob', { pattern: '{..,x}/{..,x}/**' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: '**/{..}/**' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: '{x,/etc}/*' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: '{input,output}/*.md' }).behavior).toBe('allow')
   })
 })
 

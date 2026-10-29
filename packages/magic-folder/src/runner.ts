@@ -60,14 +60,16 @@ interface FolderState {
   chain_id: string | null
 }
 
+/**
+ * Written into each job workspace. It sits in the watched (maybe shared)
+ * folder, so recovery treats it as a hint only: every path is rebuilt from
+ * the job's folder name and checked to be inside the Magic Folder, and
+ * whether the job was signed is looked up in the receipt database.
+ */
 interface JobJournal {
   jobId: string
-  recipeDir: string
+  recipe: string
   dropped: string[]
-  statusFile: string
-  phase: 'running' | 'signed'
-  receiptId?: string
-  destination?: string
 }
 
 export const RESULT_DIR = 'result'
@@ -81,6 +83,10 @@ export function isApprovalOf(job: ActionReceipt): (r: ActionReceipt) => boolean 
     && r.action === APPROVAL_ACTION
     && r.status === 'completed'
     && (r.metadata as { kind?: string }).kind === 'magic_folder_approval'
+}
+
+function statusName(dropped: string[]): string {
+  return `${basename(dropped.find((n) => n !== NOTE_FILE) ?? dropped[0] ?? 'job')}${WORKING_SUFFIX}`
 }
 
 /** "a.txt" -> "a (2).txt" if taken. */
@@ -247,9 +253,8 @@ export class MagicFolder {
     const outputDir = join(workDir, 'output')
     await mkdir(inputDir, { recursive: true })
     await mkdir(outputDir, { recursive: true })
-    const statusFile = join(recipeDir, `${dropped.find((n) => n !== NOTE_FILE) ?? dropped[0]}${WORKING_SUFFIX}`)
-    const journal: JobJournal = { jobId, recipeDir, dropped, statusFile, phase: 'running' }
-    await this.writeJournal(workDir, journal)
+    const statusFile = join(recipeDir, statusName(dropped))
+    await this.writeJournal(workDir, { jobId, recipe: basename(recipeDir), dropped })
 
     // 1. Take the drop out of the recipe folder at once, so it can't run twice.
     for (const name of dropped) await moveFile(join(recipeDir, name), join(inputDir, name))
@@ -322,11 +327,10 @@ export class MagicFolder {
       await this.writeState(state)
     }
 
-    // 5. Deliver. The journal records the signed receipt first, so a crash
-    //    mid-delivery is finished on the next start instead of losing files.
-    const destination = join(this.root, ok && recipe.needsApproval ? APPROVAL_DIR : DONE_DIR, jobId)
-    await this.writeJournal(workDir, { ...journal, phase: 'signed', receiptId: receipt.receipt_id, destination })
-    await this.deliver(workDir, receipt, destination, journal)
+    // 5. Deliver. If this is interrupted, the next start finds the signed
+    //    receipt by job id and finishes delivery (see recoverJobs).
+    const destination = this.destinationFor(receipt, jobId)
+    await this.deliver(workDir, receipt, destination, statusFile)
 
     this.emit({ type: 'job-finished', jobId, recipe: recipe.name, ok, receiptId: receipt.receipt_id, destination })
     return { jobId, ok, receipt, destination }
@@ -362,7 +366,12 @@ export class MagicFolder {
    * Safe to run again after a crash: it only moves what is still in the job
    * workspace and never overwrites a file.
    */
-  private async deliver(workDir: string, receipt: ActionReceipt, destination: string, journal: JobJournal): Promise<void> {
+  private destinationFor(receipt: ActionReceipt, jobId: string): string {
+    const needsOk = receipt.status === 'completed' && (receipt.metadata as { needs_approval?: boolean }).needs_approval === true
+    return join(this.root, needsOk ? APPROVAL_DIR : DONE_DIR, jobId)
+  }
+
+  private async deliver(workDir: string, receipt: ActionReceipt, destination: string, statusFile: string | null): Promise<void> {
     await mkdir(destination, { recursive: true })
     if (receipt.status === 'completed') {
       for (const name of await listFiles(join(workDir, 'output'))) {
@@ -373,7 +382,7 @@ export class MagicFolder {
       await moveFile(join(workDir, 'input', name), join(destination, ORIGINAL_DIR, name))
     }
     await this.writeReceiptFiles(destination, receipt, null)
-    await rm(journal.statusFile, { force: true })
+    if (statusFile) await rm(statusFile, { force: true })
     await rm(workDir, { recursive: true, force: true })
   }
 
@@ -382,32 +391,52 @@ export class MagicFolder {
     const jobsDir = join(this.root, STATE_DIR, 'jobs')
     for (const e of await readdir(jobsDir, { withFileTypes: true })) {
       if (!e.isDirectory()) continue
-      const workDir = join(jobsDir, e.name)
+      const jobId = e.name
+      const workDir = join(jobsDir, jobId)
       const journal = await this.readJournal(workDir)
+      // Only a recipe folder directly inside this Magic Folder is accepted.
+      const recipeName = journal && typeof journal.recipe === 'string' && !/[\\/]/.test(journal.recipe) && !journal.recipe.startsWith('.')
+        ? journal.recipe : null
+      const recipeDir = recipeName && (await exists(join(this.root, recipeName, RECIPE_FILE))) ? join(this.root, recipeName) : null
+      const dropped = Array.isArray(journal?.dropped) ? journal!.dropped.filter((n) => typeof n === 'string') : []
+      const statusFile = recipeDir && dropped.length ? join(recipeDir, statusName(dropped)) : null
       try {
-        if (journal?.phase === 'signed' && journal.receiptId && journal.destination) {
-          const receipt = await this.receipts.get(journal.receiptId)
-          if (receipt) {
-            await this.deliver(workDir, receipt, journal.destination, journal)
-            this.emit({ type: 'recovered', jobId: e.name, action: 'delivered' })
-            continue
+        let receipt = await this.findJobReceipt(jobId)
+        if (receipt) {
+          if (receipt.status === 'pending') {
+            receipt = await this.receipts.complete(receipt.receipt_id, { status: 'failed', error: { message: 'The job was interrupted.' } })
           }
+          await this.deliver(workDir, receipt, this.destinationFor(receipt, jobId), statusFile)
+          this.emit({ type: 'recovered', jobId, action: 'delivered' })
+          continue
         }
         // Never signed: put the drop back where it came from so it runs again.
-        const back = journal?.recipeDir
-        if (!back || !(await exists(back))) {
-          this.emit({ type: 'error', message: `Interrupted job ${e.name} could not be returned; its files are in ${workDir}` })
+        if (!recipeDir) {
+          this.emit({ type: 'error', message: `Interrupted job ${jobId} could not be returned; its files are in ${workDir}` })
           continue
         }
         for (const name of await listFiles(join(workDir, 'input'))) {
-          await moveFile(join(workDir, 'input', name), await freeName(join(back, name)))
+          await moveFile(join(workDir, 'input', name), await freeName(join(recipeDir, basename(name))))
         }
-        if (journal?.statusFile) await rm(journal.statusFile, { force: true })
+        if (statusFile) await rm(statusFile, { force: true })
         await rm(workDir, { recursive: true, force: true })
-        this.emit({ type: 'recovered', jobId: e.name, action: 'returned' })
+        this.emit({ type: 'recovered', jobId, action: 'returned' })
       } catch (err) {
-        this.emit({ type: 'error', message: `Recovering ${e.name}: ${err instanceof Error ? err.message : String(err)}` })
+        this.emit({ type: 'error', message: `Recovering ${jobId}: ${err instanceof Error ? err.message : String(err)}` })
       }
+    }
+  }
+
+  /** The job's receipt in our own database, found by job id (newest first). */
+  private async findJobReceipt(jobId: string): Promise<ActionReceipt | null> {
+    for (let page = 1; ; page++) {
+      const res = await this.receipts.list({ tag: 'magic-folder' }, page, 200, 'timestamp:desc')
+      const hit = res.data.find((r) => {
+        const m = r.metadata as { kind?: string; job_id?: string }
+        return m.kind === 'magic_folder_job' && m.job_id === jobId
+      })
+      if (hit) return hit
+      if (!res.pagination.has_next) return null
     }
   }
 

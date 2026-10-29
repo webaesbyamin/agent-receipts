@@ -290,6 +290,7 @@ export class ReceiptEngine {
     const receipts = await this.store.getChain(chainId)
     const publicKey = this.keyManager.getPublicKey()
     const problems: string[] = []
+    const expired = this.store.getTombstoneHashes(chainId)
     const byHash = new Map<string, ActionReceipt>()
     for (const r of receipts) byHash.set(hashReceipt(r as Record<string, unknown>), r)
 
@@ -305,7 +306,7 @@ export class ReceiptEngine {
           genesisCount++
           linkValid = true
         } else {
-          linkValid = byHash.has(prev)
+          linkValid = byHash.has(prev) || expired.has(prev)
           if (!linkValid) problems.push(`${r.receipt_id}: links to a receipt that is missing or was changed`)
           const other = linkedFrom.get(prev)
           if (other) problems.push(`${r.receipt_id}: forks the chain (same parent as ${other})`)

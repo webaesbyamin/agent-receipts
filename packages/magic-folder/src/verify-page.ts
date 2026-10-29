@@ -103,8 +103,8 @@ ${BROWSER_RENDER_JS}
 var TRUSTED = JSON.parse(document.getElementById('trusted-keys').textContent);
 var lastFile = null;
 (function () {
-  var q = new URLSearchParams(location.search).get('key');
-  if (q) document.getElementById('expected').value = q;
+  // No ?key= parameter on purpose: a link could otherwise carry an attacker's
+  // key and turn a forged receipt green.
   if (TRUSTED.length) {
     var n = document.getElementById('trusted-note');
     n.textContent = 'This page confirms receipts signed by ' + TRUSTED.map(function (k) { return k.name + ' (' + k.keyId + ')'; }).join(', ') + '.';
@@ -154,16 +154,17 @@ async function check(text) {
     return;
   }
 
-  // Who signed it?
+  // Who signed it? A page with built-in keys only ever trusts those; a typed
+  // key can narrow the check but never vouch for a key the page doesn't know.
   var signer = null, mismatch = null;
+  for (var i = 0; i < TRUSTED.length; i++) if (TRUSTED[i].keyId === r.key_id) signer = TRUSTED[i].name;
   if (expected) {
     var expectedId = /^[0-9a-f]{64}$/i.test(expected) ? await arKeyId(expected) : expected;
-    if (expectedId === r.key_id) signer = 'the key you entered'; else mismatch = expectedId;
-  } else {
-    for (var i = 0; i < TRUSTED.length; i++) if (TRUSTED[i].keyId === r.key_id) signer = TRUSTED[i].name;
+    if (expectedId !== r.key_id) { mismatch = expectedId; signer = null; }
+    else if (!TRUSTED.length) signer = 'the key you entered';
   }
   if (mismatch) { show('bad', 'Signed by a different key', 'The receipt is intact, but it was signed by ' + r.key_id + ', not ' + mismatch + '.', signedRows); return; }
-  if (!expected && TRUSTED.length && !signer) {
+  if (TRUSTED.length && !signer) {
     var names = TRUSTED.map(function (k) { return k.name; }).join(' or ');
     show('bad', 'Not signed by ' + names, 'This receipt was signed by ' + r.key_id + ', which is not ' + names + '\\'s key. Treat it as not genuine.', signedRows);
     return;

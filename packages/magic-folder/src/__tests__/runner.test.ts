@@ -214,7 +214,7 @@ describe('MagicFolder runner', () => {
     await mkdir(join(work, 'input'), { recursive: true })
     await writeFile(join(work, 'input', 'lost.txt'), 'precious')
     await writeFile(join(root, 'Fix typos', 'lost.txt - working.txt'), 'working')
-    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: '2026-01-01 0000 lost', recipeDir: join(root, 'Fix typos'), dropped: ['lost.txt'], statusFile: join(root, 'Fix typos', 'lost.txt - working.txt'), phase: 'running' }))
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: '2026-01-01 0000 lost', recipe: 'Fix typos', dropped: ['lost.txt'] }))
 
     const events: string[] = []
     const again = open(describeEach, { onEvent: (e: { type: string }) => events.push(e.type) })
@@ -230,7 +230,8 @@ describe('MagicFolder runner', () => {
   it('recovers a job interrupted after signing: delivery is finished', async () => {
     const folder = open(describeEach)
     await folder.init()
-    const receipt = await folder.receipts.create({ action: 'magic_folder.fix-typos', status: 'completed', input_hash: 'sha256:1', metadata: { kind: 'magic_folder_job', job_id: 'j1', recipe: 'Fix typos', credits: 1 } })
+    // Crash right after signing, before delivery: only the database knows
+    const receipt = await folder.receipts.create({ action: 'magic_folder.fix-typos', status: 'completed', input_hash: 'sha256:1', tags: ['magic-folder'], metadata: { kind: 'magic_folder_job', job_id: 'j1', recipe: 'Fix typos', credits: 1 } })
     folder.close()
     mf = null
     const work = join(root, STATE_DIR, 'jobs', 'j1')
@@ -239,7 +240,7 @@ describe('MagicFolder runner', () => {
     await writeFile(join(work, 'input', 'a.txt'), 'in')
     await writeFile(join(work, 'output', 'a-fixed.txt'), 'out')
     const destination = join(root, DONE_DIR, 'j1')
-    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: 'j1', recipeDir: join(root, 'Fix typos'), dropped: ['a.txt'], statusFile: join(root, 'Fix typos', 'a.txt - working.txt'), phase: 'signed', receiptId: receipt.receipt_id, destination }))
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: 'j1', recipe: 'Fix typos', dropped: ['a.txt'] }))
 
     const again = open(describeEach)
     await again.init()
@@ -247,6 +248,46 @@ describe('MagicFolder runner', () => {
     expect(await readFile(join(destination, 'result', 'a-fixed.txt'), 'utf-8')).toBe('out')
     expect(JSON.parse(await readFile(join(destination, 'receipt.json'), 'utf-8')).receipt_id).toBe(receipt.receipt_id)
     expect(await readdir(join(root, STATE_DIR, 'jobs'))).toEqual([])
+  })
+
+  it('a crafted job journal cannot touch files outside the Magic Folder', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'mf-outside-'))
+    try {
+      await writeFile(join(outside, 'victim.txt'), 'keep me')
+      const folder = open(describeEach)
+      await folder.init()
+      folder.close()
+      mf = null
+      const work = join(root, STATE_DIR, 'jobs', 'evil')
+      await mkdir(join(work, 'input'), { recursive: true })
+      await writeFile(join(work, 'input', 'payload.sh'), 'rm -rf /')
+      await writeFile(join(work, '.job.json'), JSON.stringify({
+        jobId: 'evil', recipe: '../../' + outside, dropped: ['victim.txt'],
+        recipeDir: outside, statusFile: join(outside, 'victim.txt'), phase: 'signed', destination: outside,
+      }))
+      await open(describeEach).init()
+      expect(await readFile(join(outside, 'victim.txt'), 'utf-8')).toBe('keep me')
+      expect((await readdir(outside)).sort()).toEqual(['victim.txt'])
+    } finally {
+      await rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('a job whose failure was signed pending is closed out as failed on recovery', async () => {
+    const folder = open(describeEach)
+    await folder.init()
+    await folder.receipts.create({ action: 'magic_folder.fix-typos', input_hash: 'sha256:1', tags: ['magic-folder'], metadata: { kind: 'magic_folder_job', job_id: 'j2', recipe: 'Fix typos', credits: 0 } })
+    folder.close()
+    mf = null
+    const work = join(root, STATE_DIR, 'jobs', 'j2')
+    await mkdir(join(work, 'input'), { recursive: true })
+    await writeFile(join(work, 'input', 'b.txt'), 'b')
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: 'j2', recipe: 'Fix typos', dropped: ['b.txt'] }))
+    await open(describeEach).init()
+    const r = JSON.parse(await readFile(join(root, DONE_DIR, 'j2', 'receipt.json'), 'utf-8'))
+    expect(r.status).toBe('failed')
+    expect(r.error).toEqual({ message: 'The job was interrupted.' })
+    expect(await readFile(join(root, DONE_DIR, 'j2', 'original', 'b.txt'), 'utf-8')).toBe('b')
   })
 
   it('editing receipt.json cannot conjure an approval, and approvals are never duplicated', async () => {
