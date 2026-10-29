@@ -1,5 +1,12 @@
 # @agent-receipts/example-chained
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [[`83f52c8`](https://github.com/webaesbyamin/agent-receipts/commit/83f52c8f10cd7876b5e68ed3c3b85c5dcb965555)]:
+  - @agent-receipts/sdk@0.5.2
+
 ## 0.1.3
 
 ### Patch Changes

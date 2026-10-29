@@ -19,6 +19,7 @@ import { registerMemoryAudit } from '../tools/memory-audit.js'
 
 describe('Memory MCP Tools', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let memoryEngine: MemoryEngine
   let memoryStore: MemoryStore
   let server: McpServer
@@ -27,7 +28,7 @@ describe('Memory MCP Tools', () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'memory-tools-'))
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
 
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     const keyManager = new KeyManager(tmpDir)
     await keyManager.init()
@@ -52,6 +53,7 @@ describe('Memory MCP Tools', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })

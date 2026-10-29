@@ -155,7 +155,8 @@ function escapesFolder(pattern: string): boolean {
 }
 
 function isAbsoluteLike(p: string): boolean {
-  return p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p)
+  // "/x", "\\x" (also UNC and "\\?\" long paths) and "C:\x" / "C:/x"
+  return p.startsWith('/') || p.startsWith('\\') || /^[A-Za-z]:[\\/]/.test(p)
 }
 
 function failure(error: string, toolCalls: string[] = [], model: string | null = null): ExecResult {

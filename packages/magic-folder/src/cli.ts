@@ -102,12 +102,22 @@ async function main(argv: string[]): Promise<number> {
       }
       await mf.start()
       console.log(`Watching ${resolve(target)} — signing key ${mf.receipts.getPublicKey().slice(0, 16)}… (Ctrl+C to stop)`)
-      await new Promise<void>((done) => process.once('SIGINT', () => { mf.close(); done() }))
+      // Ctrl+C in a terminal; SIGTERM when a service manager (launchd, systemd) stops it
+      await new Promise<void>((done) => {
+        const stop = () => { mf.close(); done() }
+        process.once('SIGINT', stop)
+        process.once('SIGTERM', stop)
+      })
       return 0
     }
     case 'doctor': {
       const ok = (b: boolean) => (b ? '✓' : '·')
-      console.log(`${ok(Number(process.versions.node.split('.')[0]) >= 20)} Node ${process.versions.node} (needs 20+)`)
+      const major = Number(process.versions.node.split('.')[0])
+      console.log(major < 22
+        ? `· Node ${process.versions.node} is too old: install Node 24`
+        : major > 24
+          ? `· Node ${process.versions.node}: Magic Folder is tested on Node 22 to 24. If something fails, install Node 24`
+          : `✓ Node ${process.versions.node} (Magic Folder needs 22 to 24)`)
       console.log(`${ok(!!process.env['ANTHROPIC_API_KEY'])} ANTHROPIC_API_KEY ${process.env['ANTHROPIC_API_KEY'] ? 'is set' : 'not set (needed for the claude engine)'}`)
       let sdk = false
       try { await import('@anthropic-ai/claude-agent-sdk' as string); sdk = true } catch { /* not installed */ }

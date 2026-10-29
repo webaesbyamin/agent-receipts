@@ -77,9 +77,20 @@ export function buildPrompt(job: JobContext): string {
  * job folder can't point the agent somewhere else.
  */
 export function isInside(root: string, target: string): boolean {
-  const r = real(resolve(root))
-  const t = real(resolve(resolve(root), target))
+  const r = comparable(real(resolve(plain(root))))
+  const t = comparable(real(resolve(resolve(plain(root)), plain(target))))
   return t === r || t.startsWith(r + sep)
+}
+
+/** Windows long-path form "\\?\C:\x" -> "C:\x" (and "\\?\UNC\server\share" -> "\\server\share"). */
+function plain(p: string): string {
+  if (process.platform !== 'win32') return p
+  return p.replace(/^\\\\\?\\UNC\\/i, '\\\\').replace(/^\\\\\?\\/, '')
+}
+
+/** Windows paths are case-insensitive: compare them lower-cased. */
+function comparable(p: string): string {
+  return process.platform === 'win32' ? plain(p).toLowerCase() : p
 }
 
 /** realpath of the longest existing prefix, with the rest appended. */
@@ -89,6 +100,7 @@ function real(p: string): string {
   } catch {
     // A dangling symlink: realpath fails, but writing through it would land
     // wherever it points. Treat it as outside everything.
+    // (On Windows a junction also reports as a symbolic link.)
     try {
       if (lstatSync(p).isSymbolicLink()) return '\0dangling-symlink'
     } catch { /* doesn't exist: fine */ }

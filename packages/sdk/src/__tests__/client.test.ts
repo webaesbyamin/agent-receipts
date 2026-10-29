@@ -14,6 +14,7 @@ describe('AgentReceipts SDK', () => {
   })
 
   afterEach(async () => {
+    receipts.close()
     await rm(tmpDir, { recursive: true, force: true })
   })
 

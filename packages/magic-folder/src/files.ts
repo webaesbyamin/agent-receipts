@@ -56,11 +56,35 @@ export async function moveFile(from: string, to: string): Promise<void> {
   await mkdir(join(to, '..'), { recursive: true })
   if (await exists(to)) throw new Error(`Refusing to overwrite ${to}`)
   try {
-    await rename(from, to)
+    await whenUnlocked(() => rename(from, to))
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'EXDEV') throw err
     await copyFile(from, to, fsConstants.COPYFILE_EXCL)
-    await rm(from)
+    await whenUnlocked(() => rm(from))
+  }
+}
+
+/** Delete a file or folder, waiting out brief locks. */
+export async function remove(path: string): Promise<void> {
+  await rm(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+}
+
+/** Error codes for a file that's briefly open elsewhere (Windows: antivirus, indexer, sync). */
+const LOCKED = new Set(['EBUSY', 'EPERM', 'EACCES'])
+
+/**
+ * Windows can't rename or delete a file another program has open, and
+ * antivirus or a sync client often has a new file open for a moment.
+ * Retry for up to ~2 s before giving up.
+ */
+export async function whenUnlocked<T>(fn: () => Promise<T>, tries = 20, delayMs = 100): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (i >= tries || !LOCKED.has((err as NodeJS.ErrnoException).code ?? '')) throw err
+      await new Promise((r) => setTimeout(r, delayMs))
+    }
   }
 }
 

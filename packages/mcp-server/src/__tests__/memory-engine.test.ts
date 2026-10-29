@@ -11,6 +11,7 @@ import { MemoryEngine } from '../engine/memory-engine.js'
 
 describe('MemoryEngine', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let memoryEngine: MemoryEngine
   let memoryStore: MemoryStore
 
@@ -18,7 +19,7 @@ describe('MemoryEngine', () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'memory-engine-'))
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
 
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     const keyManager = new KeyManager(tmpDir)
     await keyManager.init()
@@ -32,6 +33,7 @@ describe('MemoryEngine', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })

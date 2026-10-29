@@ -14,19 +14,23 @@ import { generateKeyPair } from '@agent-receipts/crypto'
 
 const exec = promisify(execFile)
 
-// Path to the built CLI — we use tsx to run the source directly in tests
-const CLI_SRC = join(__dirname, '..', 'index.ts')
+// The built CLI (turbo builds before testing), run with this same Node on every OS
+const CLI = join(__dirname, '..', '..', 'dist', 'index.js')
 
 function runCLI(args: string[], env?: Record<string, string>) {
-  return exec('npx', ['tsx', CLI_SRC, ...args], {
+  return exec(process.execPath, [CLI, ...args], {
     env: { ...process.env, ...env },
     cwd: join(__dirname, '..', '..'),
   })
 }
 
+/** Stores opened by a test, closed before its folder is deleted (Windows can't delete an open database). */
+const openStores: ReceiptStore[] = []
+
 async function setupEngine(tmpDir: string) {
   const store = new ReceiptStore(tmpDir)
   await store.init()
+  openStores.push(store)
   const km = new KeyManager(tmpDir)
   await km.init()
   const cm = new ConfigManager(tmpDir)
@@ -43,6 +47,7 @@ describe('CLI', () => {
   })
 
   afterEach(async () => {
+    for (const store of openStores.splice(0)) store.close()
     await rm(tmpDir, { recursive: true, force: true })
   })
 

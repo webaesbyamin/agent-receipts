@@ -1,5 +1,11 @@
 # @agent-receipts/mcp-server
 
+## 0.5.2
+
+### Patch Changes
+
+- [#8](https://github.com/webaesbyamin/agent-receipts/pull/8) [`83f52c8`](https://github.com/webaesbyamin/agent-receipts/commit/83f52c8f10cd7876b5e68ed3c3b85c5dcb965555) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - New `SqliteReceiptStore.close()` and `AgentReceipts.close()`. On Windows a data folder can't be moved or deleted while its database is open.
+
 ## 0.5.1
 
 ### Patch Changes

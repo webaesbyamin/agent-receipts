@@ -1,0 +1,363 @@
+# Follows the Magic Folder install guide (packages/magic-folder/README.md and
+# receipts.webaes.com/install) on clean Mac, Windows and Linux machines.
+# The packages come from this commit, published to a throwaway local registry,
+# so the guide's own `npm install -g …` command runs unchanged.
+# Node 22 and 24 only: better-sqlite3 ships no ready-made build for Node 20 (end-of-life),
+# so on Windows without Visual Studio it can't install there.
+# Not covered here: Ollama itself (too big to run in CI), so jobs end with a
+# signed "failed" receipt that says Ollama isn't reachable.
+name: install guide
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: install-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @agent-receipts/magic-folder... build
+      - name: Pack Magic Folder and the packages it depends on
+        run: |
+          mkdir tarballs
+          for p in schema crypto mcp-server magic-folder; do (cd packages/$p && pnpm pack --pack-destination ../../tarballs); done
+          ls tarballs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: tarballs/*.tgz
+
+  mac:
+    needs: pack
+    name: Mac / ${{ matrix.node }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [homebrew, pkg, '22']
+    defaults:
+      run:
+        # An interactive zsh reads ~/.zshrc, like opening a new Terminal window; -e stops on errors
+        shell: zsh -i -e {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: tarballs, path: tarballs }
+
+      - name: 'Guide 1: Node 24 with Homebrew'
+        if: matrix.node == 'homebrew'
+        run: |
+          brew install node@24
+          echo 'export PATH="$(brew --prefix node@24)/bin:$PATH"' >> ~/.zshrc
+      - name: 'Guide 1: Node 24 with the nodejs.org .pkg'
+        if: matrix.node == 'pkg'
+        run: |
+          pkg=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -o 'node-v24[0-9.]*\.pkg' | head -1)
+          curl -fsSLO "https://nodejs.org/dist/latest-v24.x/$pkg"
+          sudo installer -pkg "$pkg" -target /
+          echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+      - uses: actions/setup-node@v4
+        if: matrix.node == '22'
+        with: { node-version: '${{ matrix.node }}' }
+      - name: Check Node
+        run: |
+          node -v
+          case "${{ matrix.node }}" in homebrew|pkg) node -v | grep -q '^v24\.' ;; *) node -v | grep -q "^v${{ matrix.node }}\." ;; esac
+
+      - name: Local registry with this commit's packages
+        run: node scripts/ci/local-registry.mjs tarballs
+
+      - name: 'Guide 3: install Magic Folder'
+        run: |
+          setopt pipefail
+          if [ "${{ matrix.node }}" = pkg ]; then
+            # The guide: "If you installed Node with the .pkg and see EACCES, run it again with sudo"
+            # (sudo -E keeps CI's local-registry setting)
+            npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder 2>&1 | tee install.log || {
+              grep -q EACCES install.log && echo "EACCES: retrying with sudo, as the guide says" && sudo -E env PATH="$PATH" npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+            }
+          else
+            npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+          fi
+          magic-folder --help | head -3
+
+      - name: 'Guide 4: init, doctor, a job and its receipt'
+        run: |
+          magic-folder init ~/"Magic Folder"
+          magic-folder doctor | tee doctor.txt
+          grep -q 'Ollama not reachable' doctor.txt
+          printf 'teh cat sat on teh mat\n' > ~/"Magic Folder/Fix typos/ci-test.txt"
+          set +e; magic-folder run ~/"Magic Folder" --once --engine ollama --issuer "CI Test"; code=$?; set -e
+          test "$code" = 2
+          job=$(ls -d ~/"Magic Folder/Done"/*/ | head -1)
+          ls "$job" "$job/original"
+          key=$(magic-folder key | sed -n 's/^Key id: *//p')
+          magic-folder verify "$job/receipt.html" --key-id "$key"
+          node -e 'const r=require(process.argv[1]); if (r.status!=="failed"||!r.error) process.exit(1); console.log("failed receipt:", r.error.message)' "$job/receipt.json"
+
+      - name: 'Keep it running: LaunchAgent (guide block)'
+        if: matrix.node == 'homebrew'
+        run: |
+          mkdir -p ~/Library/LaunchAgents
+          cat > ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>Label</key><string>com.agent-receipts.magic-folder</string>
+            <key>ProgramArguments</key>
+            <array>
+              <string>$(command -v node)</string>
+              <string>$(npm root -g)/@agent-receipts/magic-folder/dist/cli.js</string>
+              <string>run</string>
+              <string>$HOME/Magic Folder</string>
+              <string>--engine</string><string>ollama</string>
+              <string>--issuer</string><string>Your Business</string>
+            </array>
+            <key>RunAtLoad</key><true/>
+            <key>KeepAlive</key><true/>
+            <key>StandardOutPath</key><string>$HOME/Library/Logs/magic-folder.log</string>
+            <key>StandardErrorPath</key><string>$HOME/Library/Logs/magic-folder.log</string>
+          </dict>
+          </plist>
+          EOF
+          launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
+          plutil -lint ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
+          for i in $(seq 30); do grep -q Watching ~/Library/Logs/magic-folder.log 2>/dev/null && break; sleep 1; done
+          cat ~/Library/Logs/magic-folder.log
+          grep -q Watching ~/Library/Logs/magic-folder.log
+          printf 'x\n' > ~/"Magic Folder/Fix typos/second.txt"
+          for i in $(seq 60); do [ "$(ls ~/"Magic Folder/Done" | wc -l | tr -d ' ')" -ge 2 ] && break; sleep 1; done
+          ls ~/"Magic Folder/Done"; [ "$(ls ~/"Magic Folder/Done" | wc -l | tr -d ' ')" -ge 2 ]
+
+          # The Desktop launcher (guide block) must refuse a second copy
+          mkdir -p ~/Desktop
+          cat > ~/Desktop/"Start Magic Folder.command" <<EOF
+          #!/bin/sh
+          if pgrep -f "magic-folder/dist/cli.js run" >/dev/null; then echo "Already running in the background."; exit 0; fi
+          echo "Magic Folder is running. Leave this window open."
+          exec "$(command -v node)" "$(npm root -g)/@agent-receipts/magic-folder/dist/cli.js" run "\$HOME/Magic Folder" --engine ollama --issuer "Your Business"
+          EOF
+          chmod +x ~/Desktop/"Start Magic Folder.command"
+          ~/Desktop/"Start Magic Folder.command" | tee launcher.txt
+          grep -q 'Already running' launcher.txt
+
+          # Stop and remove (guide table)
+          launchctl bootout gui/$(id -u)/com.agent-receipts.magic-folder; rm ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
+          sleep 2; if pgrep -f "magic-folder/dist/cli.js run"; then echo "still running"; exit 1; fi
+
+      - name: Uninstall (guide)
+        run: |
+          if [ "${{ matrix.node }}" = pkg ] && [ ! -w "$(npm root -g)" ]; then sudo -E env PATH="$PATH" npm uninstall -g @agent-receipts/magic-folder; else npm uninstall -g @agent-receipts/magic-folder; fi
+          if command -v magic-folder; then exit 1; fi
+
+  windows:
+    needs: pack
+    name: Windows / ${{ matrix.node }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [msi, '22']
+    defaults:
+      run:
+        # Windows PowerShell 5.1, what people have by default
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: tarballs, path: tarballs }
+
+      - name: 'Guide 1: Node 24 with the nodejs.org .msi'
+        if: matrix.node == 'msi'
+        run: |
+          $html = (Invoke-WebRequest https://nodejs.org/dist/latest-v24.x/ -UseBasicParsing).Content
+          $msi = [regex]::Match($html, 'node-v24[0-9.]+-x64\.msi').Value
+          Invoke-WebRequest "https://nodejs.org/dist/latest-v24.x/$msi" -OutFile $msi -UseBasicParsing
+          Start-Process msiexec.exe -Wait -ArgumentList "/i $msi /qn"
+          # What opening a new PowerShell window does: pick up the installer's PATH entries
+          "$env:APPDATA\npm" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "C:\Program Files\nodejs" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+      - uses: actions/setup-node@v4
+        if: matrix.node != 'msi'
+        with: { node-version: '${{ matrix.node }}' }
+      - name: Check Node
+        run: |
+          node -v
+          $want = if ('${{ matrix.node }}' -eq 'msi') { 'v24.' } else { 'v${{ matrix.node }}.' }
+          if (-not (node -v).StartsWith($want)) { throw "expected $want" }
+
+      - name: Local registry with this commit's packages
+        run: node scripts/ci/local-registry.mjs tarballs
+
+      - name: 'Guide 3: install Magic Folder'
+        run: |
+          npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+          if ($LASTEXITCODE) { exit 1 }
+          magic-folder --help | Select-Object -First 3
+
+      - name: 'Guide 4: init, doctor, a job and its receipt'
+        run: |
+          magic-folder init "$HOME\Magic Folder"
+          $doctor = magic-folder doctor | Out-String
+          $doctor
+          if ($doctor -notmatch 'Ollama not reachable') { throw 'doctor should say Ollama is not reachable' }
+          Set-Content "$HOME\Magic Folder\Fix typos\ci-test.txt" "teh cat sat on teh mat"
+          magic-folder run "$HOME\Magic Folder" --once --engine ollama --issuer "CI Test"
+          if ($LASTEXITCODE -ne 2) { throw "expected exit code 2 (job failed), got $LASTEXITCODE" }
+          $job = Get-ChildItem "$HOME\Magic Folder\Done" -Directory | Select-Object -First 1
+          Get-ChildItem -Recurse $job.FullName | Select-Object -ExpandProperty FullName
+          $key = ((magic-folder key | Select-String 'Key id:').ToString() -split ':\s*')[1].Trim()
+          magic-folder verify "$($job.FullName)\receipt.html" --key-id $key
+          if ($LASTEXITCODE) { throw 'verify failed' }
+          $r = Get-Content "$($job.FullName)\receipt.json" -Raw | ConvertFrom-Json
+          if ($r.status -ne 'failed' -or -not $r.error) { throw 'expected a failed receipt with a reason' }
+          "failed receipt: $($r.error.message)"
+          exit 0
+
+      - name: 'Keep it running: Startup folder starter (guide block)'
+        if: matrix.node == 'msi'
+        run: |
+          # CI accounts may not have a Startup folder yet; everyone else does
+          New-Item -ItemType Directory -Force ([Environment]::GetFolderPath('Startup', 'Create')) | Out-Null
+
+          $startup = [Environment]::GetFolderPath('Startup')
+          Set-Content -Path "$startup\Start Magic Folder.bat" -Encoding ASCII -Value @'
+          @echo off
+          if not "%~1"=="min" (start "Magic Folder" /min "%~f0" min & exit /b)
+          powershell -NoProfile -Command "if (Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like '*magic-folder*run*' }) { exit 1 }"
+          if errorlevel 1 (echo Already running. & timeout /t 5 >nul & exit /b)
+          echo Magic Folder is running. Leave this window open.
+          magic-folder run "%USERPROFILE%\Magic Folder" --engine ollama --issuer "Your Business"
+          '@
+          Start-Process "$startup\Start Magic Folder.bat"
+
+          $running = $null
+          for ($i = 0; $i -lt 30 -and -not $running; $i++) {
+            Start-Sleep 1
+            $running = Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*magic-folder*run*' }
+          }
+          if (-not $running) { throw 'Magic Folder did not start' }
+          Set-Content "$HOME\Magic Folder\Fix typos\second.txt" "x"
+          for ($i = 0; $i -lt 60 -and (Get-ChildItem "$HOME\Magic Folder\Done" -Directory).Count -lt 2; $i++) { Start-Sleep 1 }
+          Get-ChildItem "$HOME\Magic Folder\Done" -Directory | Select-Object -ExpandProperty Name
+          if ((Get-ChildItem "$HOME\Magic Folder\Done" -Directory).Count -lt 2) { throw 'the running copy did not pick up the drop' }
+
+          # Starting it again must not make a second copy
+          $again = & "$startup\Start Magic Folder.bat" min | Out-String
+          $again
+          if ($again -notmatch 'Already running') { throw 'expected "Already running."' }
+
+          # Stop (= closing the window) and remove (guide table)
+          $running | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+          Remove-Item "$([Environment]::GetFolderPath('Startup'))\Start Magic Folder.bat"
+          exit 0
+
+      - name: Uninstall (guide)
+        run: |
+          npm uninstall -g @agent-receipts/magic-folder
+          if (Get-Command magic-folder -ErrorAction SilentlyContinue) { throw 'still installed' }
+
+  linux:
+    needs: pack
+    name: Linux / ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [nvm, '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: tarballs, path: tarballs }
+
+      - name: 'Guide 1: Node 24 with nvm'
+        if: matrix.node == 'nvm'
+        run: |
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+          # What opening a new terminal does
+          export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"
+          nvm install 24
+          dirname "$(nvm which 24)" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v4
+        if: matrix.node != 'nvm'
+        with: { node-version: '${{ matrix.node }}' }
+      - name: Check Node
+        run: |
+          node -v
+          case "${{ matrix.node }}" in nvm) node -v | grep -q '^v24\.' ;; *) node -v | grep -q "^v${{ matrix.node }}\." ;; esac
+
+      - name: Local registry with this commit's packages
+        run: node scripts/ci/local-registry.mjs tarballs
+
+      - name: 'Guide 3: install Magic Folder'
+        run: |
+          npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+          magic-folder --help | head -3
+
+      - name: 'Guide 4: init, doctor, a job and its receipt'
+        run: |
+          magic-folder init ~/"Magic Folder"
+          magic-folder doctor | tee doctor.txt
+          grep -q 'Ollama not reachable' doctor.txt
+          printf 'teh cat sat on teh mat\n' > ~/"Magic Folder/Fix typos/ci-test.txt"
+          set +e; magic-folder run ~/"Magic Folder" --once --engine ollama --issuer "CI Test"; code=$?; set -e
+          test "$code" = 2
+          job=$(ls -d ~/"Magic Folder/Done"/*/ | head -1)
+          ls "$job" "$job/original"
+          key=$(magic-folder key | sed -n 's/^Key id: *//p')
+          magic-folder verify "$job/receipt.html" --key-id "$key"
+          node -e 'const r=require(process.argv[1]); if (r.status!=="failed"||!r.error) process.exit(1); console.log("failed receipt:", r.error.message)' "$job/receipt.json"
+
+      - name: 'Keep it running: systemd user service (guide block)'
+        if: matrix.node == 'nvm'
+        run: |
+          # A CI runner has no desktop login; this gives it the user session a desktop has
+          sudo loginctl enable-linger "$USER"
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          for i in $(seq 20); do systemctl --user is-system-running >/dev/null 2>&1 && break; [ -S "$XDG_RUNTIME_DIR/bus" ] && break; sleep 1; done
+
+          mkdir -p ~/.config/systemd/user
+          cat > ~/.config/systemd/user/magic-folder.service <<EOF
+          [Unit]
+          Description=Magic Folder
+
+          [Service]
+          ExecStart=$(command -v node) $(npm root -g)/@agent-receipts/magic-folder/dist/cli.js run "%h/Magic Folder" --engine ollama --issuer "Your Business"
+          Restart=on-failure
+          RestartSec=10
+
+          [Install]
+          WantedBy=default.target
+          EOF
+          systemctl --user daemon-reload
+          systemctl --user enable --now magic-folder
+          sleep 5
+          systemctl --user status magic-folder --no-pager
+          systemctl --user is-active magic-folder
+          printf 'x\n' > ~/"Magic Folder/Fix typos/second.txt"
+          for i in $(seq 60); do [ "$(ls ~/"Magic Folder/Done" | wc -l | tr -d ' ')" -ge 2 ] && break; sleep 1; done
+          ls ~/"Magic Folder/Done"; [ "$(ls ~/"Magic Folder/Done" | wc -l | tr -d ' ')" -ge 2 ]
+          journalctl --user -u magic-folder --no-pager | tail -5 || true
+
+          # Stop, start, remove (guide table)
+          systemctl --user stop magic-folder; if systemctl --user is-active magic-folder; then exit 1; fi
+          systemctl --user start magic-folder; sleep 2; systemctl --user is-active magic-folder
+          systemctl --user disable --now magic-folder; rm ~/.config/systemd/user/magic-folder.service
+
+      - name: Uninstall (guide)
+        run: |
+          npm uninstall -g @agent-receipts/magic-folder
+          if command -v magic-folder; then exit 1; fi

@@ -36,6 +36,7 @@ describe('Invoice Generation', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })

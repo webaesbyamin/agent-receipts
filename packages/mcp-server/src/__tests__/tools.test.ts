@@ -11,6 +11,7 @@ import { registerAllTools } from '../tools/index.js'
 
 describe('MCP Tools', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let engine: ReceiptEngine
   let server: McpServer
 
@@ -18,7 +19,7 @@ describe('MCP Tools', () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'mcp-tools-'))
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
 
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     const keyManager = new KeyManager(tmpDir)
     await keyManager.init()
@@ -31,6 +32,7 @@ describe('MCP Tools', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })

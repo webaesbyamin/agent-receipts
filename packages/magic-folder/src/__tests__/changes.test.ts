@@ -18,6 +18,11 @@ describe('wordChanges', () => {
     expect(wordChanges('the the cat', 'the cat')).toEqual(['the the → the'])
   })
 
+  it('never reports a line-ending-only change (Windows \\r\\n vs \\n)', () => {
+    expect(wordChanges('one\r\ntwo\r\nthree\r\n', 'one\ntwo\nthree\n')).toEqual([])
+    expect(wordChanges('teh cat\r\nsat', 'the cat\nsat')).toEqual(['teh → the'])
+  })
+
   it('finds nothing when only whitespace differs', () => {
     expect(wordChanges('a  b\r\nc', 'a b\nc')).toEqual([])
     expect(wordChanges('same', 'same')).toEqual([])

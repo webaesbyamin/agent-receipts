@@ -116,7 +116,10 @@ const HOW_IT_WORKS = `HOW THIS FOLDER WORKS
 A job that fails says why on its receipt and costs nothing.
 
 To add your own job: duplicate a job folder, rename it, and edit the hidden
-${RECIPE_FILE} file inside (show hidden files: Cmd+Shift+. on a Mac).
+${RECIPE_FILE} file inside. To show hidden files:
+   - Mac: press Cmd+Shift+. in Finder
+   - Windows: File Explorer > View > Show > Hidden items
+   - Linux: press Ctrl+H in the file manager
 `
 
 /** Create a Magic Folder with the starter recipes. Never overwrites an existing recipe. */

@@ -1,0 +1,7 @@
+# Keep LF everywhere, also on Windows checkouts: generated files (apps/verify/index.html)
+# are compared byte for byte with what the code produces.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.db binary

@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/example-ttl",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Receipt TTL and expiration example",
   "scripts": {

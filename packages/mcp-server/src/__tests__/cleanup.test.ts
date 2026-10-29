@@ -9,13 +9,14 @@ import { ReceiptEngine } from '../engine/receipt-engine.js'
 
 describe('Receipt TTL and Cleanup', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let engine: ReceiptEngine
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'cleanup-test-'))
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
 
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     const keyManager = new KeyManager(tmpDir)
     await keyManager.init()
@@ -26,6 +27,7 @@ describe('Receipt TTL and Cleanup', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })
