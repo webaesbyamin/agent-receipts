@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
     '@agent-receipts/sdk',
   ],
   serverExternalPackages: ['better-sqlite3'],
+  // No next/image in the app. Keeps Next from ever loading sharp, which the
+  // npm dashboard package strips (its binaries are platform-specific).
+  images: { unoptimized: true },
   env: {
     PORT: '3274',
   },

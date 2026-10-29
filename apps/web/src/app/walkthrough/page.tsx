@@ -14,7 +14,7 @@ import {
   Download,
   ChevronRight,
 } from 'lucide-react'
-import { useInteractive } from '@/lib/interactive-context'
+import { useInteractive, useInteractiveSafe } from '@/lib/interactive-context'
 import { generateWalkthroughBundle, downloadBundle } from '@/lib/generate-bundle'
 
 // ─── Step Indicator ─────────────────────────────────────────────────────────
@@ -653,9 +653,25 @@ function WalkthroughContent() {
 }
 
 export default function WalkthroughPage() {
+  // The walkthrough is the hosted demo's tour. Its provider only exists in
+  // demo mode, so the installed dashboard shows a pointer instead of crashing.
+  const interactive = useInteractiveSafe()
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-start justify-center py-8">
-      <WalkthroughContent />
+      {interactive ? (
+        <WalkthroughContent />
+      ) : (
+        <div className="max-w-md text-center space-y-3">
+          <h1 className="text-xl font-semibold">The walkthrough is part of the online demo</h1>
+          <p className="text-sm text-text-secondary">
+            This dashboard shows your own receipts. To try the guided tour, open the demo at{' '}
+            <a className="underline" href="https://agent-receipts-web.vercel.app/walkthrough">agent-receipts-web.vercel.app</a>.
+          </p>
+          <Link href="/receipts" className="inline-flex items-center gap-1 text-sm underline">
+            Go to your receipts <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

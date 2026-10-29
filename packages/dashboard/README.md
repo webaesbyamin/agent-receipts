@@ -41,6 +41,10 @@ Dark mode, global search (Cmd+K), auto-refresh.
 
 ## Prerequisites
 
+Requires Node 20–24. The dashboard reads receipts with `better-sqlite3`, which has no prebuilt binary for newer Node versions yet.
+
+If npm 11 asks you to approve `better-sqlite3`'s install script, approve it (`npm install-scripts approve better-sqlite3`; with pnpm, `pnpm approve-builds`). It builds the SQLite driver the dashboard uses to read your receipts.
+
 Requires receipts to exist in `~/.agent-receipts/`. Create them via:
 
 - **MCP Server:** `npx @agent-receipts/mcp-server` (add to Claude Desktop, Cursor, etc.)
