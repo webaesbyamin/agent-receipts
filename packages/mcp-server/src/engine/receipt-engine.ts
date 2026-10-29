@@ -57,6 +57,8 @@ export interface CreateParams {
   expires_at?: string
   ttl_ms?: number
   files?: FileManifestEntry[]
+  /** When the action actually started (ISO 8601). Becomes `timestamp`; defaults to now. */
+  started_at?: string
   _rawOutput?: unknown
 }
 
@@ -102,6 +104,7 @@ export class ReceiptEngine {
     const receiptId = `rcpt_${nanoid(12)}`
     const chainId = params.chain_id ?? `chain_${nanoid(8)}`
     const now = new Date().toISOString()
+    const startedAt = params.started_at ? new Date(params.started_at).toISOString() : now
 
     const constraintDefs = params.constraints && params.constraints.length > 0
       ? params.constraints
@@ -147,7 +150,7 @@ export class ReceiptEngine {
       cost_usd: params.cost_usd ?? null,
       latency_ms: params.latency_ms ?? null,
       tool_calls: params.tool_calls ?? null,
-      timestamp: now,
+      timestamp: startedAt,
       completed_at: status === 'pending' ? null : now,
       status,
       error: null,

@@ -203,6 +203,17 @@ describe('browser verifier (same bytes as the Node signer)', () => {
     expect(() => renderVerifyPage({ trustedKeys: [{ name: 'X', publicKey: 'nothex' }] })).toThrow('Not a public key')
   })
 
+  it('a branded verify page has no key box; the generic page keeps it', () => {
+    const branded = renderVerifyPage({ trustedKeys: [{ name: 'Webaes', publicKey }] })
+    expect(branded).not.toContain('id="expected"')
+    expect(branded).not.toContain("Signer's key ID or public key")
+    expect(branded).not.toContain('or one you entered above')
+    expect(branded).toContain("'This page confirms receipts signed by '")
+    const generic = renderVerifyPage()
+    expect(generic).toContain('<input type="text" id="expected"')
+    expect(generic).toContain("Signer's key ID or public key")
+  })
+
   it('receipt.html is locked to the light theme and mobile-safe', () => {
     const html = renderReceiptHtml(receipt, { publicKey })
     expect(html).toContain('<meta name="color-scheme" content="light only">')

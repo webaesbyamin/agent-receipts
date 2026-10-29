@@ -1,5 +1,11 @@
 # @agent-receipts/schema
 
+## 0.5.1
+
+### Patch Changes
+
+- [`3e65f05`](https://github.com/webaesbyamin/agent-receipts/commit/3e65f051befd049eccb8ac35bae776c972f3fb20) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - Receipts show the real start time: `ReceiptEngine.create()` takes an optional `started_at` that becomes the signed `timestamp`, and Magic Folder passes the job's start, so Started and Finished are as far apart as "Time taken".
+
 ## 0.5.0
 
 ### Minor Changes

@@ -36,12 +36,13 @@ tools: Read, Write
 max_minutes: 5
 max_cost_usd: 0.40
 needs_approval: false
+changes_report: true
 ---
 Fix spelling, grammar and punctuation in each input file. Keep the author's wording, tone and formatting; do not rewrite sentences that are already correct.
 
-Works on plain text formats: .txt, .md, .html, .csv. For each one, write the corrected copy with the same name plus " (fixed)" before the extension, and a file "changes.md" listing every change as "before -> after". Before finishing, compare the corrected copy with the original line by line and make sure changes.md lists every single change, and nothing you didn't change.
+Works on plain text formats: .txt, .md, .html, .csv. For each one, write only the corrected copy, with the same name plus " (fixed)" before the extension. Don't write changes.md: Magic Folder compares your corrected copy with the original and lists the changes itself.
 
-If a file is not plain text (for example .docx or .pdf), don't change it. Instead add a line to changes.md saying it needs to be saved as .txt or .md first.
+If a file is not plain text (for example .docx or .pdf), don't change it and don't write a copy of it.
 `,
   'Meeting notes to tasks': `---
 credits: 1

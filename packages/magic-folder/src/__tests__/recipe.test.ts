@@ -23,6 +23,7 @@ Keep the tone.
       maxMinutes: 3,
       maxCostUsd: 0.25,
       needsApproval: true,
+      changesReport: false,
       model: 'claude-test',
     })
   })
@@ -64,5 +65,11 @@ Keep the tone.
       expect(r.tools).not.toContain('Bash')
     }
     expect(parseRecipe('Draft a client email', STARTER_RECIPES['Draft a client email']!).needsApproval).toBe(true)
+    expect(parseRecipe('Fix typos', STARTER_RECIPES['Fix typos']!).changesReport).toBe(true)
+  })
+
+  it('reads changes_report and rejects non-booleans', () => {
+    expect(parseRecipe('X', '---\nchanges_report: true\n---\nx').changesReport).toBe(true)
+    expect(() => parseRecipe('X', '---\nchanges_report: sometimes\n---\nx')).toThrow('changes_report must be true or false')
   })
 })

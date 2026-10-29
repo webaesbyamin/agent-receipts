@@ -55,6 +55,19 @@ describe('ReceiptEngine', () => {
       expect(receipt.completed_at).not.toBeNull()
     })
 
+    it('signs started_at as the timestamp', async () => {
+      const startedAt = new Date(Date.now() - 110_000).toISOString()
+      const receipt = await engine.create({
+        action: 'slow_action',
+        input_hash: 'sha256:def',
+        status: 'completed',
+        started_at: startedAt,
+      })
+      expect(receipt.timestamp).toBe(startedAt)
+      expect(Date.parse(receipt.completed_at!) - Date.parse(receipt.timestamp)).toBeGreaterThanOrEqual(110_000)
+      expect((await engine.verify(receipt.receipt_id)).verified).toBe(true)
+    })
+
     it('uses provided chain_id', async () => {
       const receipt = await engine.create({
         action: 'test',

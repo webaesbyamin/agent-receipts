@@ -90,11 +90,12 @@ describe('MagicFolder runner', () => {
   })
 
   it('waits for a drop to settle before starting', async () => {
-    const folder = open(describeEach, { settleMs: 50 })
+    // Wide enough that a slow second scan (a busy CI box) still lands inside it
+    const folder = open(describeEach, { settleMs: 400 })
     await writeFile(join(root, 'Fix typos', 'notes.txt'), 'teh cat')
     expect(await folder.scanOnce()).toHaveLength(0) // first sighting
     expect(await folder.scanOnce()).toHaveLength(0) // not settled long enough
-    await new Promise((r) => setTimeout(r, 70))
+    await new Promise((r) => setTimeout(r, 450))
     expect(await folder.scanOnce()).toHaveLength(1)
   })
 
@@ -147,7 +148,7 @@ describe('MagicFolder runner', () => {
 
   it('an agent that claims success but writes nothing is a failure', async () => {
     const folder = open(new FakeExecutor(async () => okResult()))
-    await writeFile(join(root, 'Fix typos', 'x.txt'), 'x')
+    await writeFile(join(root, 'Write product descriptions', 'x.txt'), 'x')
     const [o] = await folder.scanOnce({ settle: false })
     expect(o!.ok).toBe(false)
     expect(o!.receipt.error).toEqual({ message: 'The agent finished but produced no files.' })
@@ -193,7 +194,7 @@ describe('MagicFolder runner', () => {
       return okResult()
     })
     const folder = open(exec)
-    await writeFile(join(root, 'Fix typos', 'x.txt'), 'USER ORIGINAL')
+    await writeFile(join(root, 'Write product descriptions', 'x.txt'), 'USER ORIGINAL')
     const [o] = await folder.scanOnce({ settle: false })
     expect(o!.ok).toBe(true)
     expect(await readFile(join(o!.destination, 'original', 'x.txt'), 'utf-8')).toBe('USER ORIGINAL')
@@ -213,15 +214,15 @@ describe('MagicFolder runner', () => {
     const work = join(root, STATE_DIR, 'jobs', '2026-01-01 0000 lost')
     await mkdir(join(work, 'input'), { recursive: true })
     await writeFile(join(work, 'input', 'lost.txt'), 'precious')
-    await writeFile(join(root, 'Fix typos', 'lost.txt - working.txt'), 'working')
-    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: '2026-01-01 0000 lost', recipe: 'Fix typos', dropped: ['lost.txt'] }))
+    await writeFile(join(root, 'Write product descriptions', 'lost.txt - working.txt'), 'working')
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: '2026-01-01 0000 lost', recipe: 'Write product descriptions', dropped: ['lost.txt'] }))
 
     const events: string[] = []
     const again = open(describeEach, { onEvent: (e: { type: string }) => events.push(e.type) })
     await again.init()
     expect(events).toContain('recovered')
-    expect(await readFile(join(root, 'Fix typos', 'lost.txt'), 'utf-8')).toBe('precious')
-    expect(await readdir(join(root, 'Fix typos'))).not.toContain('lost.txt - working.txt')
+    expect(await readFile(join(root, 'Write product descriptions', 'lost.txt'), 'utf-8')).toBe('precious')
+    expect(await readdir(join(root, 'Write product descriptions'))).not.toContain('lost.txt - working.txt')
     expect(await readdir(join(root, STATE_DIR, 'jobs'))).toEqual([])
     const [o] = await again.scanOnce({ settle: false })
     expect(o!.ok).toBe(true)
@@ -391,5 +392,92 @@ describe('MagicFolder runner', () => {
     expect(data.publicKey).toBe(folder.publicKey)
     expect((data.receipt.metadata as Record<string, unknown>)['issuer']).toEqual({ name: 'Webaes', key_url: 'https://webaes.com/.well-known/agent-receipts.json' })
     expect(verifyAnyReceipt(data.receipt, data.publicKey, { requireV2: true }).valid).toBe(true)
+  })
+
+  it('signs the real job start: completed_at - timestamp matches latency_ms', async () => {
+    const slow = new FakeExecutor(async (job) => {
+      await new Promise((done) => setTimeout(done, 400))
+      await writeFile(join(job.outputDir, 'x (fixed).txt'), 'x')
+      return okResult()
+    })
+    const folder = open(slow)
+    await writeFile(join(root, 'Fix typos', 'x.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    const r = o!.receipt
+    const span = Date.parse(r.completed_at!) - Date.parse(r.timestamp)
+    expect(r.latency_ms!).toBeGreaterThanOrEqual(400)
+    expect(Math.abs(span - r.latency_ms!)).toBeLessThan(100)
+    expect(verifyAnyReceipt(r, folder.publicKey, { requireV2: true }).valid).toBe(true)
+  })
+
+  it('strips the job folder layout from the signed summary', async () => {
+    const chatty = new FakeExecutor(async (job) => {
+      await writeFile(join(job.outputDir, 'notes (fixed).txt'), 'x')
+      return okResult({ summary: `Fixed input/notes.txt, saved as output/notes (fixed).txt and ${job.workDir}/output/changes.md ("./input/notes.txt").` })
+    })
+    const folder = open(chatty)
+    await writeFile(join(root, 'Fix typos', 'notes.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(o!.receipt.output_summary).toBe('Fixed notes.txt, saved as notes (fixed).txt and changes.md ("notes.txt").')
+    expect(verifyAnyReceipt(o!.receipt, folder.publicKey, { requireV2: true }).valid).toBe(true)
+  })
+
+  const changesWriter = new FakeExecutor(async (job) => {
+    await writeFile(join(job.outputDir, 'note (fixed).txt'), 'fixed')
+    await writeFile(join(job.outputDir, 'changes.md'), '- before -> after\n- recieve -> receive\n- "two days." → "two days."\n- teh -> the\n')
+    return okResult()
+  })
+
+  /** Copies each input to "(fixed)" with `fix` applied, and writes a changes.md with an invented line. */
+  const fixer = (fix: (s: string) => string) => new FakeExecutor(async (job) => {
+    for (const name of job.inputFiles) {
+      const text = await readFile(join(job.inputDir, name), 'utf-8')
+      await writeFile(join(job.outputDir, name.replace(/(\.[^.]+)$/, ' (fixed)$1')), fix(text))
+    }
+    await writeFile(join(job.outputDir, 'changes.md'), '- added comma after "day"\n')
+    return okResult()
+  })
+
+  it('Fix typos (changes_report): the runner writes changes.md from the real differences', async () => {
+    const folder = open(fixer((s) => s.replace('grate', 'great').replace('definately', 'definitely').replace('mesage', 'message')))
+    await writeFile(join(root, 'Fix typos', 'message.txt'), 'Sites that look grate. We will definately reply to every mesage within one business day.\n')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(o!.ok).toBe(true)
+    const delivered = await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')
+    expect(delivered).toBe('- grate. → great.\n- definately → definitely\n- mesage → message\n')
+    expect(o!.receipt.files!.find((f) => f.name === 'changes.md')!.sha256).toBe(sha(delivered))
+  })
+
+  it('Fix typos (changes_report): an unchanged file gets "No changes were needed."', async () => {
+    const folder = open(fixer((s) => s))
+    await writeFile(join(root, 'Fix typos', 'message.txt'), 'All correct here.\n')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')).toBe('No changes were needed.\n')
+  })
+
+  it('Fix typos (changes_report): no corrected copy fails the job and costs nothing', async () => {
+    const folder = open(changesWriter)
+    await writeFile(join(root, 'Fix typos', 'report.docx'), 'binary')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(o!.ok).toBe(false)
+    expect(o!.receipt.error).toEqual({ message: 'No corrected copy was made.' })
+    expect((o!.receipt.metadata as Record<string, unknown>)['credits']).toBe(0)
+  })
+
+  it('Fix typos without changes_report: drops before -> after lines that change nothing, then hashes what is left', async () => {
+    await writeFile(join(root, 'Fix typos', RECIPE_FILE), '---\ntools: Read, Write\n---\nFix the typos and list them in changes.md.\n')
+    const folder = open(changesWriter)
+    await writeFile(join(root, 'Fix typos', 'note.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    const delivered = await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')
+    expect(delivered).toBe('- recieve -> receive\n- teh -> the\n')
+    expect(o!.receipt.files!.find((f) => f.name === 'changes.md')!.sha256).toBe(sha(delivered))
+  })
+
+  it('leaves changes.md alone in other recipes', async () => {
+    const folder = open(changesWriter)
+    await writeFile(join(root, 'Ask anything', 'note.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')).toContain('"two days." → "two days."')
   })
 })
