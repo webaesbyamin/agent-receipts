@@ -95,7 +95,7 @@ describe('v2 signatures', () => {
     ['files', []],
     ['parent_receipt_id', 'rcpt_other'],
     ['tags', null],
-  ])('rejects a receipt whose %s was changed', (field, value) => {
+  ])('rejects a receipt whose %s was changed', (field: string, value: unknown) => {
     const r = signed(privateKey, publicKey)
     r[field] = value
     expect(verifyReceiptV2(r, publicKey)).toBe(false)

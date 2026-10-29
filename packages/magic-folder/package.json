@@ -1,0 +1,68 @@
+{
+  "name": "@agent-receipts/magic-folder",
+  "version": "0.1.0",
+  "description": "Drop a file in a folder, get the work back with a signed receipt anyone can verify",
+  "license": "MIT",
+  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webaesbyamin/agent-receipts",
+    "directory": "packages/magic-folder"
+  },
+  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "bugs": {
+    "url": "https://github.com/webaesbyamin/agent-receipts/issues"
+  },
+  "keywords": [
+    "agent-receipts",
+    "magic-folder",
+    "ai-agents",
+    "receipts",
+    "verification",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "magic-folder": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agent-receipts/crypto": "workspace:*",
+    "@agent-receipts/mcp-server": "workspace:*",
+    "@agent-receipts/schema": "workspace:*"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "*"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/claude-agent-sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.2.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

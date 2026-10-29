@@ -159,8 +159,19 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 - **14 CLI commands + 9 memory subcommands** — terminal-first
 - **18 dashboard pages** — receipts, memory graph, chains, agents, constraints, judgments, invoices
 - **492 tests** — zero TypeScript `any`, zero ESLint warnings
-- **Ed25519 + SHA-256** — via `@noble/ed25519` (audited, pure JS)
+- **Ed25519 + SHA-256** — via `@noble/ed25519` (audited, pure JS); receipt format v2 signs every field
 - **SQLite + FTS5** — local-first with full-text memory search
+
+## Magic Folder: receipts for people who don't code
+
+Drop a file into a folder named after a job ("Write product descriptions", "Fix typos"). An agent does the work, and the result comes back in `Done/` with your untouched original and a one-page `receipt.html` that anyone can check, plus an approval step for anything client-facing.
+
+```bash
+npx @agent-receipts/magic-folder init ~/"Magic Folder"
+npx @agent-receipts/magic-folder run ~/"Magic Folder" --issuer "Your Studio"
+```
+
+The runner writes the receipt, not the agent: it hashes the real files and reads cost from the API. See [packages/magic-folder](packages/magic-folder) and the static [verify page](apps/verify).
 
 ## Portable Memory Bundles
 
@@ -311,6 +322,7 @@ The bundle includes every entity, observation, relationship, the receipts that c
 | [`@agent-receipts/sdk`](packages/sdk) | TypeScript SDK (21 methods) |
 | [`@agent-receipts/cli`](packages/cli) | Command-line interface |
 | [`@agent-receipts/dashboard`](packages/dashboard) | Mission Control web UI |
+| [`@agent-receipts/magic-folder`](packages/magic-folder) | Drop-a-file job runner with signed, self-checking receipts |
 
 ## Roadmap
 
