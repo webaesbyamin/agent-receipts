@@ -33,6 +33,10 @@ export interface ExecResult {
   costUsd: number | null
   toolCalls: string[]
   error?: string
+  /** Which engine actually ran the job (recorded on the receipt) */
+  engine?: string
+  /** Ran on this computer: no API cost */
+  local?: boolean
 }
 
 export interface Executor {
