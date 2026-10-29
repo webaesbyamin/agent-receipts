@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir, stat, rm } from 'node:fs/promises'
+import { readdir, readFile, writeFile, mkdir, stat, rm, realpath } from 'node:fs/promises'
 import { join, basename } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { ActionReceipt, FileManifestEntry } from '@agent-receipts/schema'
@@ -8,6 +8,7 @@ import type { Recipe } from './recipe.js'
 import type { Executor, ExecResult, JobContext } from './executor.js'
 import { listFiles, manifestEntry, moveFile, exists, slug } from './files.js'
 import { renderReceiptHtml } from './render.js'
+import { cleanSummary, dropNoOpChanges } from './tidy.js'
 import type { Issuer } from './render.js'
 
 export const DONE_DIR = 'Done'
@@ -17,6 +18,9 @@ export const NOTE_FILE = 'note.txt'
 const WORKING_SUFFIX = ' - working.txt'
 const PROBLEM_FILE = 'Recipe problem.txt'
 const JOURNAL_FILE = '.job.json'
+/** The recipe whose changes.md lists "before -> after" lines. */
+const FIX_TYPOS = 'Fix typos'
+const CHANGES_FILE = 'changes.md'
 
 /** Names that are never treated as a dropped file. */
 const IGNORE = [
@@ -273,6 +277,14 @@ export class MagicFolder {
 
     // 3. The harness hashes what actually came out, not what the agent claims.
     const outNames = await listFiles(outputDir)
+    if (exec.ok && recipe.name === FIX_TYPOS) {
+      for (const name of outNames.filter((n) => basename(n) === CHANGES_FILE)) {
+        const path = join(outputDir, name)
+        const text = await readFile(path, 'utf-8')
+        const tidy = dropNoOpChanges(text)
+        if (tidy !== text) await writeFile(path, tidy)
+      }
+    }
     const outputs: FileManifestEntry[] = []
     for (const name of outNames) outputs.push(await manifestEntry(join(outputDir, name), name, 'output'))
     let ok = exec.ok
@@ -283,6 +295,7 @@ export class MagicFolder {
     }
 
     // 4. Sign the receipt.
+    const summary = exec.summary ? cleanSummary(exec.summary, [workDir, await realpath(workDir)]) : exec.summary
     const state = await this.readState()
     const recipeHash = `sha256:${createHash('sha256').update(recipe.instruction).digest('hex')}`
     const created = await engine.create({
@@ -290,8 +303,8 @@ export class MagicFolder {
       // Failed jobs start pending so complete() can sign the failure reason.
       status: ok ? 'completed' : 'pending',
       input_hash: hashData({ recipe: recipe.name, recipe_sha256: recipeHash, inputs }),
-      output_hash: ok ? hashData({ outputs, summary: exec.summary }) : null,
-      output_summary: ok ? (exec.summary || `Produced ${outputs.length} file${outputs.length === 1 ? '' : 's'}.`) : null,
+      output_hash: ok ? hashData({ outputs, summary }) : null,
+      output_summary: ok ? (summary || `Produced ${outputs.length} file${outputs.length === 1 ? '' : 's'}.`) : null,
       model: exec.model,
       tokens_in: exec.tokensIn,
       tokens_out: exec.tokensOut,
@@ -300,6 +313,7 @@ export class MagicFolder {
       tool_calls: exec.toolCalls.length ? exec.toolCalls : null,
       tags: ['magic-folder'],
       files: ok ? [...inputs, ...outputs] : inputs,
+      started_at: new Date(started).toISOString(),
       metadata: {
         kind: 'magic_folder_job',
         job_id: jobId,

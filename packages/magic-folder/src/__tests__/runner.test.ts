@@ -392,4 +392,54 @@ describe('MagicFolder runner', () => {
     expect((data.receipt.metadata as Record<string, unknown>)['issuer']).toEqual({ name: 'Webaes', key_url: 'https://webaes.com/.well-known/agent-receipts.json' })
     expect(verifyAnyReceipt(data.receipt, data.publicKey, { requireV2: true }).valid).toBe(true)
   })
+
+  it('signs the real job start: completed_at - timestamp matches latency_ms', async () => {
+    const slow = new FakeExecutor(async (job) => {
+      await new Promise((done) => setTimeout(done, 400))
+      await writeFile(join(job.outputDir, 'x (fixed).txt'), 'x')
+      return okResult()
+    })
+    const folder = open(slow)
+    await writeFile(join(root, 'Fix typos', 'x.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    const r = o!.receipt
+    const span = Date.parse(r.completed_at!) - Date.parse(r.timestamp)
+    expect(r.latency_ms!).toBeGreaterThanOrEqual(400)
+    expect(Math.abs(span - r.latency_ms!)).toBeLessThan(100)
+    expect(verifyAnyReceipt(r, folder.publicKey, { requireV2: true }).valid).toBe(true)
+  })
+
+  it('strips the job folder layout from the signed summary', async () => {
+    const chatty = new FakeExecutor(async (job) => {
+      await writeFile(join(job.outputDir, 'notes (fixed).txt'), 'x')
+      return okResult({ summary: `Fixed input/notes.txt, saved as output/notes (fixed).txt and ${job.workDir}/output/changes.md ("./input/notes.txt").` })
+    })
+    const folder = open(chatty)
+    await writeFile(join(root, 'Fix typos', 'notes.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(o!.receipt.output_summary).toBe('Fixed notes.txt, saved as notes (fixed).txt and changes.md ("notes.txt").')
+    expect(verifyAnyReceipt(o!.receipt, folder.publicKey, { requireV2: true }).valid).toBe(true)
+  })
+
+  const changesWriter = new FakeExecutor(async (job) => {
+    await writeFile(join(job.outputDir, 'note (fixed).txt'), 'fixed')
+    await writeFile(join(job.outputDir, 'changes.md'), '- before -> after\n- recieve -> receive\n- "two days." → "two days."\n- teh -> the\n')
+    return okResult()
+  })
+
+  it('Fix typos: drops before -> after lines that change nothing, then hashes what is left', async () => {
+    const folder = open(changesWriter)
+    await writeFile(join(root, 'Fix typos', 'note.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    const delivered = await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')
+    expect(delivered).toBe('- recieve -> receive\n- teh -> the\n')
+    expect(o!.receipt.files!.find((f) => f.name === 'changes.md')!.sha256).toBe(sha(delivered))
+  })
+
+  it('leaves changes.md alone in other recipes', async () => {
+    const folder = open(changesWriter)
+    await writeFile(join(root, 'Ask anything', 'note.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(await readFile(join(o!.destination, 'result', 'changes.md'), 'utf-8')).toContain('"two days." → "two days."')
+  })
 })

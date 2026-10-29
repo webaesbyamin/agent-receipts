@@ -47,6 +47,11 @@ export function renderVerifyPage(options: VerifyPageOptions = {}): string {
     return { name: k.name, keyId, publicKey: publicKey ?? null }
   })
   const safeTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  // A page with built-in keys only ever trusts those, so it has no key box.
+  const keyInput = trusted.length ? '' : `  <label class="k" for="expected">Signer's key ID or public key</label>
+  <input type="text" id="expected" placeholder="key_… or 64-character public key" autocomplete="off" spellcheck="false">
+`
+  const trustedBy = trusted.length ? 'one this page vouches for' : 'one this page vouches for, or one you entered above'
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -93,9 +98,7 @@ input[type=text]{width:100%;font:13px ui-monospace,SFMono-Regular,Menlo,monospac
   <input type="file" id="file" accept=".html,.htm,.json,application/json,text/html">
 
   <p class="trusted" id="trusted-note" hidden></p>
-  <label class="k" for="expected">Signer's key ID or public key</label>
-  <input type="text" id="expected" placeholder="key_… or 64-character public key" autocomplete="off" spellcheck="false">
-
+${keyInput}
   <section class="result" id="result" aria-live="polite">
     <h2 id="r-title"></h2>
     <p id="r-sub"></p>
@@ -104,7 +107,7 @@ input[type=text]{width:100%;font:13px ui-monospace,SFMono-Regular,Menlo,monospac
 
   <div class="sheet" id="shown" hidden></div>
 
-  <p class="fine">Receipts are signed with Ed25519. A valid signature proves the receipt is exactly as it was signed. It proves who signed it only when the signing key is one you trust: one this page vouches for, or one you entered above.</p>
+  <p class="fine">Receipts are signed with Ed25519. A valid signature proves the receipt is exactly as it was signed. It proves who signed it only when the signing key is one you trust: ${trustedBy}.</p>
 </main>
 <script type="application/json" id="trusted-keys">${jsonForScript(trusted)}</script>
 <script>
@@ -112,6 +115,7 @@ ${BROWSER_VERIFY_JS}
 ${BROWSER_RENDER_JS}
 var TRUSTED = JSON.parse(document.getElementById('trusted-keys').textContent);
 var lastFile = null;
+var expectedInput = document.getElementById('expected');
 (function () {
   // No ?key= parameter on purpose: a link could otherwise carry an attacker's
   // key and turn a forged receipt green.
@@ -153,11 +157,16 @@ async function check(text) {
   showReceipt(null, null);
   var data;
   try { data = arExtract(text); } catch (e) { show('bad', 'Not a receipt', 'This file has no receipt data in it.'); return; }
-  var expected = document.getElementById('expected').value.trim();
+  var expected = expectedInput ? expectedInput.value.trim() : '';
   // A receipt.json carries no key: use the trusted key it names, or a typed public key.
   var named = null;
   for (var t = 0; t < TRUSTED.length; t++) if (TRUSTED[t].publicKey && TRUSTED[t].keyId === data.receipt.key_id) named = TRUSTED[t].publicKey;
   var key = data.publicKey || named || (/^[0-9a-f]{64}$/i.test(expected) ? expected : null);
+  if (!key && TRUSTED.length) {
+    var known = TRUSTED.map(function (k) { return k.name; }).join(' or ');
+    show('bad', 'Not signed by ' + known, 'This receipt was signed by ' + (data.receipt.key_id || 'an unknown key') + ', which is not ' + known + '\\'s key. Treat it as not genuine.');
+    return;
+  }
   if (!key) { show('bad', 'Need a public key', 'This receipt file has no key in it. Paste the signer\\'s 64-character public key above.'); return; }
   var r = await arVerify(data.receipt, key, { requireV2: false });
   var signedRows = [['Action', data.receipt.action], ['Status', data.receipt.status], ['Receipt', data.receipt.receipt_id, true], ['Signed by key', r.key_id || '\\u2014', true]];
@@ -202,7 +211,7 @@ function readFile(f) { lastFile = f; var fr = new FileReader(); fr.onload = func
 var drop = document.getElementById('drop');
 document.getElementById('file').addEventListener('change', function (e) { if (e.target.files[0]) readFile(e.target.files[0]); });
 document.getElementById('file').addEventListener('click', function (e) { e.target.value = ''; });
-document.getElementById('expected').addEventListener('input', function () { if (lastFile) readFile(lastFile); });
+if (expectedInput) expectedInput.addEventListener('input', function () { if (lastFile) readFile(lastFile); });
 ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
 drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readFile(f); });

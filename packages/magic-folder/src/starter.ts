@@ -39,7 +39,7 @@ needs_approval: false
 ---
 Fix spelling, grammar and punctuation in each input file. Keep the author's wording, tone and formatting; do not rewrite sentences that are already correct.
 
-Works on plain text formats: .txt, .md, .html, .csv. For each one, write the corrected copy with the same name plus " (fixed)" before the extension, and a file "changes.md" listing every change as "before -> after". Before finishing, compare the corrected copy with the original line by line and make sure changes.md lists every single change, and nothing you didn't change.
+Works on plain text formats: .txt, .md, .html, .csv. For each one, write the corrected copy with the same name plus " (fixed)" before the extension, and a file "changes.md" listing every change, one per line, as "before -> after" (no heading line). Never list a line whose before and after are the same: that is not a change. Before finishing, compare the corrected copy with the original line by line and make sure changes.md lists every single change, and nothing you didn't change.
 
 If a file is not plain text (for example .docx or .pdf), don't change it. Instead add a line to changes.md saying it needs to be saved as .txt or .md first.
 `,
