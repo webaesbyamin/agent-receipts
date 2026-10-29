@@ -15,7 +15,7 @@ export interface VerifyPageOptions {
    * Keys this page vouches for. An issuer hosts a copy of this page with its
    * own key baked in; receipts signed by that key show "Verified — signed by
    * <name>". With no trusted keys (the generic page), a receipt is only shown
-   * as verified when the visitor enters the key or opens a link with ?key=.
+   * as verified when the visitor enters the key (there is no ?key= link option).
    */
   trustedKeys?: TrustedKey[]
 }
