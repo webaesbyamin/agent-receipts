@@ -195,6 +195,14 @@ describe('browser verifier (same bytes as the Node signer)', () => {
     }
   })
 
+  it('a verify page can trust a public key (so receipt.json works) and rejects mismatches', () => {
+    const page = renderVerifyPage({ trustedKeys: [{ name: 'Webaes', publicKey }] })
+    const trusted = JSON.parse(page.match(/<script type="application\/json" id="trusted-keys">([\s\S]*?)<\/script>/)![1]!)
+    expect(trusted).toEqual([{ name: 'Webaes', keyId: receipt.key_id, publicKey }])
+    expect(() => renderVerifyPage({ trustedKeys: [{ name: 'X', keyId: 'key_0000000000000000', publicKey }] })).toThrow('does not match')
+    expect(() => renderVerifyPage({ trustedKeys: [{ name: 'X', publicKey: 'nothex' }] })).toThrow('Not a public key')
+  })
+
   it('receipt.html is locked to the light theme and mobile-safe', () => {
     const html = renderReceiptHtml(receipt, { publicKey })
     expect(html).toContain('<meta name="color-scheme" content="light only">')

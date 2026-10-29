@@ -34,7 +34,7 @@ Usage:
   magic-folder verify <receipt.html|json> [--key-id <key_…> | --key <hex>]
                                              Check a receipt. Without a key it can only say
                                              "unchanged", not who signed it.
-  magic-folder verify-page [out.html] [--trust-key <key_…> --trust-name <name>] [--title <t>]
+  magic-folder verify-page [out.html] [--trust-key <key_… or public key> --trust-name <name>] [--title <t>]
                                              Write the static verify page (with your key baked in)
 
 Running jobs needs ANTHROPIC_API_KEY and: npm install @anthropic-ai/claude-agent-sdk
@@ -176,9 +176,13 @@ async function main(argv: string[]): Promise<number> {
       const trustName = flag(argv, '--trust-name')
       if (trustKey && !trustName) { console.error('--trust-key needs --trust-name'); return 1 }
       const pageTitle = flag(argv, '--title')
+      // --trust-key takes a key id (key_…) or the 64-hex public key; the public key also lets the page check receipt.json
+      const trusted = trustKey && trustName
+        ? [/^[0-9a-f]{64}$/i.test(trustKey) ? { publicKey: trustKey, name: trustName } : { keyId: trustKey, name: trustName }]
+        : undefined
       const html = renderVerifyPage({
         ...(pageTitle ? { title: pageTitle } : {}),
-        ...(trustKey && trustName ? { trustedKeys: [{ keyId: trustKey, name: trustName }] } : {}),
+        ...(trusted ? { trustedKeys: trusted } : {}),
       })
       const out = target && !target.startsWith('--') ? target : undefined
       if (out) { await writeFile(out, html); console.log(`Wrote ${out}`) } else process.stdout.write(html)

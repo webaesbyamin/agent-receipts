@@ -158,7 +158,7 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 - **21 SDK methods** — full TypeScript API
 - **15 CLI commands + 9 memory subcommands** — terminal-first
 - **18 dashboard pages** — receipts, memory graph, chains, agents, constraints, judgments, invoices
-- **604 tests** — zero TypeScript `any`, zero ESLint warnings
+- **604 tests** — zero TypeScript `any` in package source
 - **Ed25519 + SHA-256** — via `@noble/ed25519` (audited, pure JS); receipt format v2 signs every field
 - **SQLite + FTS5** — local-first with full-text memory search
 

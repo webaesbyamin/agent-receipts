@@ -311,6 +311,7 @@ export class MagicFolder {
         cost_is_estimate: !exec.local,
         executor: exec.engine ?? this.options.executor.name,
         ...(exec.local ? { local: true } : {}),
+        ...(exec.mode ? { engine_mode: exec.mode } : {}),
         ...(this.options.issuer
           ? { issuer: { name: this.options.issuer.name, ...(this.options.issuer.keyUrl ? { key_url: this.options.issuer.keyUrl } : {}) } }
           : {}),

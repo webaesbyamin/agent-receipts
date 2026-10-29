@@ -1,12 +1,18 @@
 import { BROWSER_VERIFY_JS } from './browser-verify.js'
 import { BROWSER_RENDER_JS, RECEIPT_CSS } from './browser-render.js'
+import { computeKeyId } from '@agent-receipts/crypto'
 import { jsonForScript } from './render.js'
 
 export interface TrustedKey {
   /** Who this key belongs to, e.g. "Webaes" */
   name: string
-  /** key_… id (from `magic-folder key`) */
-  keyId: string
+  /** key_… id (from `magic-folder key`). Optional when publicKey is given. */
+  keyId?: string
+  /**
+   * The 64-hex public key. With it, the page can also check receipt.json
+   * files (which carry no key of their own).
+   */
+  publicKey?: string
 }
 
 export interface VerifyPageOptions {
@@ -33,8 +39,12 @@ export interface VerifyPageOptions {
 export function renderVerifyPage(options: VerifyPageOptions = {}): string {
   const title = options.title ?? 'Verify a receipt'
   const trusted = (options.trustedKeys ?? []).map((k) => {
-    if (!/^key_[0-9a-f]{16}$/.test(k.keyId)) throw new Error(`Not a key id: ${k.keyId}`)
-    return { name: k.name, keyId: k.keyId }
+    const publicKey = k.publicKey?.toLowerCase()
+    if (publicKey !== undefined && !/^[0-9a-f]{64}$/.test(publicKey)) throw new Error(`Not a public key: ${k.publicKey}`)
+    const keyId = k.keyId ?? (publicKey ? computeKeyId(publicKey) : undefined)
+    if (!keyId || !/^key_[0-9a-f]{16}$/.test(keyId)) throw new Error(`Not a key id: ${k.keyId}`)
+    if (publicKey && computeKeyId(publicKey) !== keyId) throw new Error(`Public key does not match ${keyId}`)
+    return { name: k.name, keyId, publicKey: publicKey ?? null }
   })
   const safeTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;')
   return `<!doctype html>
@@ -144,7 +154,10 @@ async function check(text) {
   var data;
   try { data = arExtract(text); } catch (e) { show('bad', 'Not a receipt', 'This file has no receipt data in it.'); return; }
   var expected = document.getElementById('expected').value.trim();
-  var key = data.publicKey || (/^[0-9a-f]{64}$/i.test(expected) ? expected : null);
+  // A receipt.json carries no key: use the trusted key it names, or a typed public key.
+  var named = null;
+  for (var t = 0; t < TRUSTED.length; t++) if (TRUSTED[t].publicKey && TRUSTED[t].keyId === data.receipt.key_id) named = TRUSTED[t].publicKey;
+  var key = data.publicKey || named || (/^[0-9a-f]{64}$/i.test(expected) ? expected : null);
   if (!key) { show('bad', 'Need a public key', 'This receipt file has no key in it. Paste the signer\\'s 64-character public key above.'); return; }
   var r = await arVerify(data.receipt, key, { requireV2: false });
   var signedRows = [['Action', data.receipt.action], ['Status', data.receipt.status], ['Receipt', data.receipt.receipt_id, true], ['Signed by key', r.key_id || '\\u2014', true]];

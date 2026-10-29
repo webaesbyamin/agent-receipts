@@ -95,6 +95,8 @@ describe('OllamaExecutor', () => {
     expect(r.costUsd).toBe(0)
     expect(r.tokensIn).toBe(100)
     expect(r.summary).toBe('Wrote one description.')
+    expect(r.mode).toBe('json')
+    expect(r.toolCalls).toEqual([]) // JSON mode calls no tools
     expect((await readdir(job.outputDir)).sort()).toEqual(['escape.md', 'sofa - description (2).md', 'sofa - description.md'])
     expect(await readdir(work)).toEqual(['input', 'output']) // nothing escaped
     const chat = s.requests.find((q) => q.path === '/api/chat')!.body
@@ -129,6 +131,7 @@ describe('OllamaExecutor', () => {
     expect(r.summary).toBe('Wrote a description for the sofa.')
     expect(r.toolCalls).toEqual(['Read', 'Write'])
     expect(r.tokensIn).toBe(400)
+    expect(r.mode).toBe('tools')
     expect(await readFile(join(job.outputDir, 'sofa - description.md'), 'utf-8')).toBe('# Linen Sofa')
     expect(await readFile(join(job.inputDir, 'sofa.txt'), 'utf-8')).toBe('Linen sofa, oak legs, 210 cm.')
 
@@ -260,6 +263,7 @@ describe('a Magic Folder job on the local engine', () => {
       expect(meta['local']).toBe(true)
       expect(meta['cost_is_estimate']).toBe(false)
       expect(meta['credits']).toBe(0)
+      expect(meta['engine_mode']).toBe('json')
       expect(o!.receipt.cost_usd).toBe(0)
       expect(o!.receipt.model).toBe('test-model')
       expect(await readFile(join(o!.destination, 'result', 'notes (fixed).txt'), 'utf-8')).toBe('the cat')

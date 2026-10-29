@@ -37,6 +37,8 @@ export interface ExecResult {
   engine?: string
   /** Ran on this computer: no API cost */
   local?: boolean
+  /** How the engine ran it, e.g. Ollama "tools" or "json" (recorded on the receipt) */
+  mode?: string
 }
 
 export interface Executor {

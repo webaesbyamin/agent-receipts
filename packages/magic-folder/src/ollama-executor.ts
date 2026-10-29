@@ -101,6 +101,7 @@ export class OllamaExecutor implements Executor {
     const usage = { in: 0, out: 0 }
     const toolCalls: string[] = []
     let model = job.recipe.model ?? this.options.model ?? null
+    let mode: 'tools' | 'json' | undefined
     try {
       model ??= await this.firstInstalledModel(job.signal)
       const capabilities = await this.capabilities(model, job.signal)
@@ -108,7 +109,7 @@ export class OllamaExecutor implements Executor {
       if (inputs.images.length && !capabilities.includes('vision')) {
         throw new OllamaError(`${model} can't see images. Use a vision model (for example one with "vision" in \`ollama show\`), or drop text files.`)
       }
-      const mode = this.options.mode === 'json' || this.options.mode === 'tools'
+      mode = this.options.mode === 'json' || this.options.mode === 'tools'
         ? this.options.mode
         : capabilities.includes('tools') ? 'tools' : 'json'
       if (mode === 'tools' && !capabilities.includes('tools')) {
@@ -121,12 +122,12 @@ export class OllamaExecutor implements Executor {
 
       return {
         ok: true, summary: oneParagraph(summary), model, tokensIn: usage.in, tokensOut: usage.out,
-        costUsd: 0, toolCalls: [...new Set(toolCalls)], engine: 'ollama', local: true,
+        costUsd: 0, toolCalls: [...new Set(toolCalls)], engine: 'ollama', local: true, mode,
       }
     } catch (err) {
       return {
         ok: false, summary: '', model, tokensIn: usage.in || null, tokensOut: usage.out || null,
-        costUsd: 0, toolCalls: [...new Set(toolCalls)], engine: 'ollama', local: true,
+        costUsd: 0, toolCalls: [...new Set(toolCalls)], engine: 'ollama', local: true, ...(mode ? { mode } : {}),
         error: job.signal.aborted ? 'Stopped: the job ran past its time limit.' : describe(err, this.host),
       }
     }
@@ -180,7 +181,6 @@ export class OllamaExecutor implements Executor {
       await writeFile(target, content)
       written++
     }
-    if (written) toolCalls.push('Write')
     return typeof parsed.summary === 'string' && parsed.summary.trim()
       ? parsed.summary
       : `Produced ${written} file${written === 1 ? '' : 's'}.`

@@ -18,6 +18,8 @@ Magic Folder/
 
 ## Quick start
 
+Needs Node 20–24. (On Node 25+ the SQLite driver, better-sqlite3, may have no prebuilt binary yet and has to compile from source, which needs current Xcode Command Line Tools on a Mac.)
+
 ```bash
 npm install -g @agent-receipts/magic-folder @anthropic-ai/claude-agent-sdk
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -49,10 +51,10 @@ A receipt file carries its own public key, so on its own it can only prove it ha
 
 ```bash
 magic-folder key                       # prints your key id + public key to publish
-magic-folder verify-page verify.html --trust-key key_… --trust-name "Your Studio" --title "Verify a Your Studio receipt"
+magic-folder verify-page verify.html --trust-key <your public key> --trust-name "Your Studio" --title "Verify a Your Studio receipt"
 ```
 
-Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
+Pass the public key (not just the `key_…` id) so the page can also check `receipt.json` files, which carry no key of their own. Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
 
 ## Run free on your own computer (Ollama)
 
