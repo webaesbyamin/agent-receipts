@@ -106,6 +106,8 @@ describe('MagicFolder runner', () => {
     await writeFile(join(dir, '.DS_Store'), 'x')
     await writeFile(join(dir, '~$draft.docx'), 'x')
     await writeFile(join(dir, 'x.txt - working.txt'), 'x')
+    // Windows: Office and Explorer temp files
+    for (const name of ['~$report.xlsx', '~WRL0001.tmp', 'Thumbs.db', 'desktop.ini', 'ehthumbs.db', 'download.temp']) await writeFile(join(dir, name), 'x')
     expect(await folder.scanOnce({ settle: false })).toHaveLength(0)
   })
 

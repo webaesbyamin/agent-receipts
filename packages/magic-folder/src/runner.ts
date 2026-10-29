@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir, stat, rm, realpath } from 'node:fs/promises'
+import { readdir, readFile, writeFile, mkdir, stat, realpath } from 'node:fs/promises'
 import { join, basename } from 'node:path'
 import { createHash } from 'node:crypto'
 import type { ActionReceipt, FileManifestEntry } from '@agent-receipts/schema'
@@ -6,7 +6,7 @@ import { SqliteReceiptStore, KeyManager, ConfigManager, ReceiptEngine, hashData 
 import { parseRecipe, RECIPE_FILE, RecipeError } from './recipe.js'
 import type { Recipe } from './recipe.js'
 import type { Executor, ExecResult, JobContext } from './executor.js'
-import { listFiles, manifestEntry, moveFile, exists, slug } from './files.js'
+import { listFiles, manifestEntry, moveFile, exists, slug, remove } from './files.js'
 import { renderReceiptHtml } from './render.js'
 import { cleanSummary, dropNoOpChanges } from './tidy.js'
 import { writeChangesReport, CHANGES_FILE } from './changes.js'
@@ -24,8 +24,12 @@ const FIX_TYPOS = 'Fix typos'
 
 /** Names that are never treated as a dropped file. */
 const IGNORE = [
-  /^\./, /^~\$/, /^Icon\r?$/, /^desktop\.ini$/i, /^Thumbs\.db$/i,
-  /\.(crdownload|part|partial|download|tmp)$/i, new RegExp(`${WORKING_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
+  // Hidden files, Office lock files (~$report.docx), macOS and Windows folder files
+  /^\./, /^~\$/, /^Icon\r?$/, /^desktop\.ini$/i, /^Thumbs\.db$/i, /^ehthumbs(_vista)?\.db$/i,
+  // Partial downloads and temp files (browsers, Office's ~WRL0001.tmp)
+  /\.(crdownload|part|partial|download|tmp|temp)$/i,
+  // Windows "downloaded from the internet" markers copied over from WSL or a network share
+  /:Zone\.Identifier$/i, new RegExp(`${WORKING_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
   new RegExp(`^${PROBLEM_FILE}$`),
 ]
 
@@ -190,7 +194,7 @@ export class MagicFolder {
       let recipe: Recipe
       try {
         recipe = parseRecipe(folder, await readFile(join(dir, RECIPE_FILE), 'utf-8'))
-        await rm(join(dir, PROBLEM_FILE), { force: true })
+        await remove(join(dir, PROBLEM_FILE))
       } catch (err) {
         const message = err instanceof RecipeError ? err.message : `${folder}: ${String(err)}`
         await writeFile(join(dir, PROBLEM_FILE), `This folder's recipe has a problem, so files here are not being processed.\n\n${message}\n`)
@@ -280,7 +284,7 @@ export class MagicFolder {
     let error = exec.error
     if (ok && recipe.changesReport) {
       // The runner lists the changes from the files themselves, never the agent.
-      await rm(join(outputDir, CHANGES_FILE), { force: true })
+      await remove(join(outputDir, CHANGES_FILE))
       if (!(await writeChangesReport(inputDir, outputDir, dropped.filter((n) => n !== NOTE_FILE)))) {
         ok = false
         error = 'No corrected copy was made.'
@@ -407,8 +411,8 @@ export class MagicFolder {
       await moveFile(join(workDir, 'input', name), join(destination, ORIGINAL_DIR, name))
     }
     await this.writeReceiptFiles(destination, receipt, null)
-    if (statusFile) await rm(statusFile, { force: true })
-    await rm(workDir, { recursive: true, force: true })
+    if (statusFile) await remove(statusFile)
+    await remove(workDir)
   }
 
   /** Finish or roll back jobs a crash left in .magic/jobs. */
@@ -443,8 +447,8 @@ export class MagicFolder {
         for (const name of await listFiles(join(workDir, 'input'))) {
           await moveFile(join(workDir, 'input', name), await freeName(join(recipeDir, basename(name))))
         }
-        if (statusFile) await rm(statusFile, { force: true })
-        await rm(workDir, { recursive: true, force: true })
+        if (statusFile) await remove(statusFile)
+        await remove(workDir)
         this.emit({ type: 'recovered', jobId, action: 'returned' })
       } catch (err) {
         this.emit({ type: 'error', message: `Recovering ${jobId}: ${err instanceof Error ? err.message : String(err)}` })

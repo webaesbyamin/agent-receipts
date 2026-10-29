@@ -14,11 +14,11 @@ import { generateKeyPair } from '@agent-receipts/crypto'
 
 const exec = promisify(execFile)
 
-// Path to the built CLI — we use tsx to run the source directly in tests
-const CLI_SRC = join(__dirname, '..', 'index.ts')
+// The built CLI (turbo builds before testing), run with this same Node on every OS
+const CLI = join(__dirname, '..', '..', 'dist', 'index.js')
 
 function runCLI(args: string[], env?: Record<string, string>) {
-  return exec('npx', ['tsx', CLI_SRC, ...args], {
+  return exec(process.execPath, [CLI, ...args], {
     env: { ...process.env, ...env },
     cwd: join(__dirname, '..', '..'),
   })

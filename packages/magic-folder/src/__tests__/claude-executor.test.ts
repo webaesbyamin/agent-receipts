@@ -43,6 +43,15 @@ describe('isInside', () => {
     expect(isInside('/a/job', '/a/job2/x')).toBe(false)
     expect(isInside('/a/job', '/a/job')).toBe(true)
   })
+
+  it.runIf(process.platform === 'win32')('Windows: ignores case, accepts \\\\?\\ long paths and either slash', () => {
+    expect(isInside('C:\\Users\\a\\Job', 'c:\\users\\A\\job\\output\\x.md')).toBe(true)
+    expect(isInside('C:\\Users\\a\\Job', '\\\\?\\C:\\Users\\a\\Job\\output\\x.md')).toBe(true)
+    expect(isInside('C:\\Users\\a\\Job', 'C:/Users/a/Job/output/x.md')).toBe(true)
+    expect(isInside('C:\\Users\\a\\Job', 'D:\\Users\\a\\Job\\x.md')).toBe(false)
+    expect(isInside('C:\\Users\\a\\Job', '\\\\?\\C:\\Users\\a\\Job2\\x.md')).toBe(false)
+    expect(isInside('C:\\Users\\a\\Job', '\\\\server\\share\\x.md')).toBe(false)
+  })
 })
 
 describe('buildPrompt', () => {
@@ -73,7 +82,8 @@ describe('ClaudeExecutor without the SDK or key', () => {
 })
 
 describe('sandbox details', () => {
-  it('denies a symlink inside the job folder that points outside it', async () => {
+  // Symlinks need admin rights or Developer Mode on Windows; the junction test below covers Windows.
+  it.skipIf(process.platform === 'win32')('denies a symlink inside the job folder that points outside it', async () => {
     const { mkdtemp, mkdir, symlink, rm } = await import('node:fs/promises')
     const { tmpdir } = await import('node:os')
     const dir = await mkdtemp(join(tmpdir(), 'mf-link-'))
@@ -90,7 +100,7 @@ describe('sandbox details', () => {
     }
   })
 
-  it('denies a dangling symlink that would write outside', async () => {
+  it.skipIf(process.platform === 'win32')('denies a dangling symlink that would write outside', async () => {
     const { mkdtemp, mkdir, symlink, rm } = await import('node:fs/promises')
     const { tmpdir } = await import('node:os')
     const dir = await mkdtemp(join(tmpdir(), 'mf-dangle-'))
@@ -101,6 +111,34 @@ describe('sandbox details', () => {
       expect(checkToolUse(j, 'Write', { file_path: join(dir, 'output', 'link') }).behavior).toBe('deny')
     } finally {
       await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('denies a directory junction that points outside (any user can make one on Windows)', async () => {
+    const { mkdtemp, mkdir, symlink, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const dir = await mkdtemp(join(tmpdir(), 'mf-junction-'))
+    const outside = await mkdtemp(join(tmpdir(), 'mf-outside-'))
+    try {
+      await mkdir(join(dir, 'input'), { recursive: true })
+      await mkdir(join(dir, 'output'), { recursive: true })
+      // 'junction' makes a real junction on Windows; elsewhere it's a plain directory symlink
+      await symlink(outside, join(dir, 'output', 'jump'), 'junction')
+      await symlink(outside, join(dir, 'input', 'peek'), 'junction')
+      const j = { ...job, workDir: dir, outputDir: join(dir, 'output') }
+      expect(checkToolUse(j, 'Write', { file_path: join(dir, 'output', 'jump', 'x.md') }).behavior).toBe('deny')
+      expect(checkToolUse(j, 'Read', { file_path: join(dir, 'input', 'peek', 'secret.txt') }).behavior).toBe('deny')
+      expect(checkToolUse(j, 'Write', { file_path: join(dir, 'output', 'fine.md') }).behavior).toBe('allow')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+      await rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('denies Windows-style absolute and UNC paths in search patterns', () => {
+    const g = { ...job, recipe: parseRecipe('Search', '---\ntools: Read, Glob, Grep\n---\nFind.') }
+    for (const pattern of ['C:\\Users\\**', 'C:/Users/**', '\\\\server\\share\\**', '\\\\?\\C:\\**', '..\\other\\*']) {
+      expect(checkToolUse(g, 'Glob', { pattern }).behavior).toBe('deny')
     }
   })
 
