@@ -9,6 +9,7 @@ import type { Executor, ExecResult, JobContext } from './executor.js'
 import { listFiles, manifestEntry, moveFile, exists, slug } from './files.js'
 import { renderReceiptHtml } from './render.js'
 import { cleanSummary, dropNoOpChanges } from './tidy.js'
+import { writeChangesReport, CHANGES_FILE } from './changes.js'
 import type { Issuer } from './render.js'
 
 export const DONE_DIR = 'Done'
@@ -18,9 +19,8 @@ export const NOTE_FILE = 'note.txt'
 const WORKING_SUFFIX = ' - working.txt'
 const PROBLEM_FILE = 'Recipe problem.txt'
 const JOURNAL_FILE = '.job.json'
-/** The recipe whose changes.md lists "before -> after" lines. */
+/** The recipe whose agent-written changes.md lists "before -> after" lines (recipes without changes_report). */
 const FIX_TYPOS = 'Fix typos'
-const CHANGES_FILE = 'changes.md'
 
 /** Names that are never treated as a dropped file. */
 const IGNORE = [
@@ -276,19 +276,27 @@ export class MagicFolder {
     })
 
     // 3. The harness hashes what actually came out, not what the agent claims.
-    const outNames = await listFiles(outputDir)
-    if (exec.ok && recipe.name === FIX_TYPOS) {
-      for (const name of outNames.filter((n) => basename(n) === CHANGES_FILE)) {
+    let ok = exec.ok
+    let error = exec.error
+    if (ok && recipe.changesReport) {
+      // The runner lists the changes from the files themselves, never the agent.
+      await rm(join(outputDir, CHANGES_FILE), { force: true })
+      if (!(await writeChangesReport(inputDir, outputDir, dropped.filter((n) => n !== NOTE_FILE)))) {
+        ok = false
+        error = 'No corrected copy was made.'
+      }
+    } else if (ok && recipe.name === FIX_TYPOS) {
+      // Older Fix typos recipes still have the agent write changes.md.
+      for (const name of (await listFiles(outputDir)).filter((n) => basename(n) === CHANGES_FILE)) {
         const path = join(outputDir, name)
         const text = await readFile(path, 'utf-8')
         const tidy = dropNoOpChanges(text)
         if (tidy !== text) await writeFile(path, tidy)
       }
     }
+    const outNames = await listFiles(outputDir)
     const outputs: FileManifestEntry[] = []
     for (const name of outNames) outputs.push(await manifestEntry(join(outputDir, name), name, 'output'))
-    let ok = exec.ok
-    let error = exec.error
     if (ok && outputs.length === 0) {
       ok = false
       error = 'The agent finished but produced no files.'

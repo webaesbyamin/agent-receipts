@@ -10,6 +10,7 @@
  *   needs_approval: false
  *   engine: ollama                  (optional: claude or ollama)
  *   model: qwen3:8b                 (optional: model id for that engine)
+ *   changes_report: true            (optional: the runner writes changes.md)
  *   ---
  *   Write a product description for the item in the dropped file...
  *
@@ -39,6 +40,11 @@ export interface Recipe {
   model?: string
   /** Which engine runs it; omitted = the runner's default */
   engine?: Engine
+  /**
+   * The runner compares each input with its "<name> (fixed).<ext>" output and
+   * writes changes.md itself, replacing anything the agent wrote there.
+   */
+  changesReport: boolean
 }
 
 export const ENGINES = ['claude', 'ollama'] as const
@@ -50,6 +56,7 @@ export const RECIPE_DEFAULTS = {
   maxMinutes: 5,
   maxCostUsd: 0.5,
   needsApproval: false,
+  changesReport: false,
 }
 
 export class RecipeError extends Error {}
@@ -76,7 +83,8 @@ export function parseRecipe(name: string, source: string): Recipe {
     tools: tools(name, front['tools']),
     maxMinutes: number(name, front, 'max_minutes', RECIPE_DEFAULTS.maxMinutes, 0.1, 120),
     maxCostUsd: number(name, front, 'max_cost_usd', RECIPE_DEFAULTS.maxCostUsd, 0, 100),
-    needsApproval: bool(name, front['needs_approval'], RECIPE_DEFAULTS.needsApproval),
+    needsApproval: bool(name, 'needs_approval', front['needs_approval'], RECIPE_DEFAULTS.needsApproval),
+    changesReport: bool(name, 'changes_report', front['changes_report'], RECIPE_DEFAULTS.changesReport),
   }
   if (front['model']) recipe.model = front['model']
   if (front['engine']) {
@@ -113,12 +121,12 @@ function number(name: string, front: Record<string, string>, key: string, fallba
   return n
 }
 
-function bool(name: string, raw: string | undefined, fallback: boolean): boolean {
+function bool(name: string, key: string, raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined || raw === '') return fallback
   const v = raw.toLowerCase()
   if (['true', 'yes', '1'].includes(v)) return true
   if (['false', 'no', '0'].includes(v)) return false
-  throw new RecipeError(`${name}: needs_approval must be true or false (got "${raw}")`)
+  throw new RecipeError(`${name}: ${key} must be true or false (got "${raw}")`)
 }
 
 function tools(name: string, raw: string | undefined): RecipeTool[] {
