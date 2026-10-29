@@ -162,8 +162,8 @@ export default function VerifyPage() {
                 This demo uses placeholder signatures. In a real installation, this receipt would be verified by:
               </p>
               <ol className="text-sm text-blue-700 dark:text-blue-300 space-y-2 list-decimal list-inside">
-                <li>Extracting 12 fields from the receipt into a signable payload</li>
-                <li>Canonicalizing the payload (alphabetical key sort &rarr; JSON)</li>
+                <li>Taking every field of the receipt except the signature (format v2; legacy v1 receipts sign 12 core fields)</li>
+                <li>Canonicalizing it (keys sorted at every depth &rarr; JSON)</li>
                 <li>Verifying the Ed25519 signature against your public key</li>
                 <li>Confirming the result: &check; Valid or &cross; Tampered</li>
               </ol>
@@ -178,7 +178,7 @@ export default function VerifyPage() {
                   Agent: <span className="font-mono">{parsedReceipt.agent_id as string}</span>
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                  Signed fields: action, agent_id, chain_id, completed_at, environment, input_hash, org_id, output_hash, receipt_id, receipt_type, status, timestamp
+                  Signed fields: every field except signature and verify_url (v2), including summary, cost, model, metadata, files and the chain link
                 </p>
               </div>
             </div>

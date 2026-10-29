@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStore, getKeyManager } from '@/lib/storage'
-import { verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
+import { verifyAnyReceipt } from '@agent-receipts/crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +21,7 @@ export async function GET(
     let verified = false
     try {
       const km = await getKeyManager()
-      const signable = getSignablePayload(receipt)
-      verified = verifyReceipt(signable, receipt.signature, km.getPublicKey())
+      verified = verifyAnyReceipt(receipt as Record<string, unknown>, km.getPublicKey()).valid
     } catch {}
 
     // Get chain receipts

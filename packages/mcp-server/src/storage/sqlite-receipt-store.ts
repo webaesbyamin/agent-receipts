@@ -1,7 +1,9 @@
-import { readdir, readFile, mkdir } from 'node:fs/promises'
+import { readdir, mkdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import type { ActionReceipt } from '@agent-receipts/schema'
+import { hashReceipt } from '@agent-receipts/crypto'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
 
 const SORTABLE_COLUMNS = new Set([
@@ -61,6 +63,18 @@ export class SqliteReceiptStore {
       CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
       CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
       CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
+
+      -- Receipts removed by TTL cleanup leave their hash behind, so chains
+      -- that link to them still verify (as "expired"), while a receipt
+      -- deleted any other way shows up as a broken link.
+      CREATE TABLE IF NOT EXISTS receipt_tombstones (
+        receipt_hash TEXT PRIMARY KEY,
+        receipt_id TEXT NOT NULL,
+        chain_id TEXT NOT NULL,
+        expired_at TEXT NOT NULL,
+        deleted_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
     `)
 
     await this.migrateJsonFiles()
@@ -94,8 +108,7 @@ export class SqliteReceiptStore {
       for (const file of jsonFiles) {
         try {
           // Synchronous read for transaction performance
-          const fs = require('node:fs')
-          const raw = fs.readFileSync(join(this.receiptsDir, file), 'utf-8')
+          const raw = readFileSync(join(this.receiptsDir, file), 'utf-8')
           const receipt = JSON.parse(raw) as ActionReceipt
           insert.run(this.toRow(receipt))
           migrated++
@@ -143,7 +156,21 @@ export class SqliteReceiptStore {
     return this.db
   }
 
+  /**
+   * Save a receipt. Append-only once finalized: a receipt that is stored with
+   * any status other than `pending` can never be overwritten. Pending
+   * receipts may be replaced (that is how `complete()` finalizes them).
+   */
   async save(receipt: ActionReceipt): Promise<void> {
+    this.saveSync(receipt)
+  }
+
+  private saveSync(receipt: ActionReceipt): void {
+    const existing = this.db.prepare('SELECT status FROM receipts WHERE receipt_id = ?')
+      .get(receipt.receipt_id) as { status: string } | undefined
+    if (existing && existing.status !== 'pending') {
+      throw new Error(`RECEIPT_IMMUTABLE: receipt ${receipt.receipt_id} is ${existing.status} and cannot be overwritten`)
+    }
     const row = this.toRow(receipt)
     this.db.prepare(`INSERT OR REPLACE INTO receipts (
       receipt_id, chain_id, parent_receipt_id, receipt_type, agent_id, org_id,
@@ -210,9 +237,42 @@ export class SqliteReceiptStore {
     }
   }
 
+  /**
+   * Finalize a receipt at the current tip of its chain, atomically: read the
+   * tip, let `build` produce the signed receipt that links to it, and insert
+   * it — all in one synchronous IMMEDIATE transaction, so neither concurrent
+   * calls in this process nor other processes sharing the database can fork
+   * the chain. `build` must be synchronous.
+   */
+  finalizeAtTip(chainId: string, build: (tip: ActionReceipt | null) => ActionReceipt): ActionReceipt {
+    const run = this.db.transaction(() => {
+      const row = this.db.prepare(
+        `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending' ORDER BY rowid DESC LIMIT 1`
+      ).get(chainId) as { data: string } | undefined
+      const receipt = build(row ? (JSON.parse(row.data) as ActionReceipt) : null)
+      this.saveSync(receipt)
+      return receipt
+    })
+    return run.immediate()
+  }
+
+  /**
+   * The receipt the next finalized receipt in this chain should link to:
+   * the most recently finalized one. Finalizing always (re)inserts the row,
+   * so rowid order is finalization order, with no timestamp ties.
+   */
+  async getChainTip(chainId: string): Promise<ActionReceipt | null> {
+    const row = this.db.prepare(
+      `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending'
+       ORDER BY rowid DESC LIMIT 1`
+    ).get(chainId) as { data: string } | undefined
+    return row ? (JSON.parse(row.data) as ActionReceipt) : null
+  }
+
   async getChain(chainId: string): Promise<ActionReceipt[]> {
-    const result = await this.list({ chain_id: chainId }, 1, 1000, 'timestamp:asc')
-    return result.data
+    const rows = this.db.prepare('SELECT data FROM receipts WHERE chain_id = ? ORDER BY timestamp ASC, rowid ASC')
+      .all(chainId) as { data: string }[]
+    return rows.map(r => JSON.parse(r.data) as ActionReceipt)
   }
 
   async count(filter?: ReceiptFilter): Promise<number> {
@@ -231,11 +291,29 @@ export class SqliteReceiptStore {
     const totalRow = this.db.prepare('SELECT COUNT(*) as cnt FROM receipts').get() as { cnt: number }
     const total = totalRow.cnt
 
-    const result = this.db.prepare(
-      'DELETE FROM receipts WHERE expires_at IS NOT NULL AND expires_at < ?'
-    ).run(now)
+    const expired = this.db.prepare(
+      'SELECT data, expires_at FROM receipts WHERE expires_at IS NOT NULL AND expires_at < ?'
+    ).all(now) as { data: string; expires_at: string }[]
+    const tombstone = this.db.prepare(
+      'INSERT OR IGNORE INTO receipt_tombstones (receipt_hash, receipt_id, chain_id, expired_at, deleted_at) VALUES (?, ?, ?, ?, ?)'
+    )
+    const remove = this.db.prepare('DELETE FROM receipts WHERE receipt_id = ?')
+    let deleted = 0
+    this.db.transaction(() => {
+      for (const row of expired) {
+        const r = JSON.parse(row.data) as ActionReceipt
+        tombstone.run(hashReceipt(r as Record<string, unknown>), r.receipt_id, r.chain_id, row.expires_at, now)
+        deleted += remove.run(r.receipt_id).changes
+      }
+    })()
 
-    return { deleted: result.changes, total }
+    return { deleted, total }
+  }
+
+  /** Hashes of receipts in this chain that TTL cleanup removed. */
+  getTombstoneHashes(chainId: string): Set<string> {
+    const rows = this.db.prepare('SELECT receipt_hash FROM receipt_tombstones WHERE chain_id = ?').all(chainId) as { receipt_hash: string }[]
+    return new Set(rows.map(r => r.receipt_hash))
   }
 
   private buildWhere(filter?: ReceiptFilter): { where: string; params: unknown[] } {

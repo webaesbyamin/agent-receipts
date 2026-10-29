@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/example-judge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "AI Judge example — reading judgments via SDK",
   "scripts": {

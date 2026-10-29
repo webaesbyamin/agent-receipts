@@ -7,7 +7,7 @@ import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'
 import { ReceiptEngine } from '../engine/receipt-engine.js'
 import { seedDemoData } from '../engine/seed.js'
-import { verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
+import { verifyAnyReceipt } from '@agent-receipts/crypto'
 
 describe('seedDemoData', () => {
   let tmpDir: string
@@ -129,9 +129,8 @@ describe('seedDemoData', () => {
 
     const all = await store.list(undefined, 1, 10000)
     for (const receipt of all.data) {
-      const signable = getSignablePayload(receipt)
-      const valid = verifyReceipt(signable, receipt.signature, publicKey)
-      expect(valid).toBe(true)
+      const result = verifyAnyReceipt(receipt, publicKey, { requireV2: true })
+      expect(result.valid).toBe(true)
     }
   })
 

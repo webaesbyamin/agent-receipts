@@ -23,9 +23,35 @@ export const SignablePayload = z.object({
 export type SignablePayload = z.infer<typeof SignablePayload>
 
 /**
+ * One file touched by a job, recorded by the harness (never by the agent).
+ */
+export const FileManifestEntry = z.object({
+  name: z.string().min(1),
+  sha256: z.string().regex(/^sha256:[0-9a-f]{64}$/),
+  bytes: z.number().int().nonnegative(),
+  role: z.enum(['input', 'output']),
+})
+export type FileManifestEntry = z.infer<typeof FileManifestEntry>
+
+/**
  * The complete receipt object as returned by the API.
+ *
+ * Signature versions:
+ * - v1 (sig_version absent): only the 12 SignablePayload fields are signed.
+ * - v2 (sig_version = 2): every field except `signature` and `verify_url` is
+ *   signed, using deep canonical JSON. Summary, cost, model, metadata, files
+ *   and the chain link are all covered.
  */
 export const ActionReceipt = z.object({
+  // Signature format (absent = legacy v1)
+  sig_version: z.literal(2).optional(),
+  // First 16 hex chars of sha256(public key) — names the key that signed it
+  key_id: z.string().nullable().optional(),
+  // sha256 of the previous finalized receipt in the same chain (null = first)
+  prev_receipt_hash: z.string().nullable().optional(),
+  // Files the harness hashed for this action
+  files: z.array(FileManifestEntry).nullable().optional(),
+
   // Identity
   receipt_id: z.string(),
   parent_receipt_id: z.string().nullable(),

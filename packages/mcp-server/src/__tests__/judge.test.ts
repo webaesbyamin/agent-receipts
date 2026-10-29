@@ -7,7 +7,7 @@ import { KeyManager } from '../storage/key-manager.js'
 import { ConfigManager } from '../storage/config-manager.js'
 import { ReceiptEngine } from '../engine/receipt-engine.js'
 import { hashData } from '../hash.js'
-import { verifyReceipt, getSignablePayload } from '@agent-receipts/crypto'
+import { verifyAnyReceipt } from '@agent-receipts/crypto'
 
 describe('AI Judge', () => {
   let tmpDir: string
@@ -197,9 +197,9 @@ describe('AI Judge', () => {
       expect(completed.signature).not.toBe(pending.signature)
 
       // Verify new signature is valid
-      const signable = getSignablePayload(completed)
-      const verified = verifyReceipt(signable, completed.signature, keyManager.getPublicKey())
-      expect(verified).toBe(true)
+      const result = verifyAnyReceipt(completed, keyManager.getPublicKey())
+      expect(result.valid).toBe(true)
+      expect(result.sig_version).toBe(2)
     })
   })
 

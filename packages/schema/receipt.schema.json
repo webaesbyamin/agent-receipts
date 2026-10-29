@@ -4,6 +4,63 @@
     "ActionReceipt": {
       "type": "object",
       "properties": {
+        "sig_version": {
+          "type": "number",
+          "const": 2
+        },
+        "key_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prev_receipt_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "files": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "input",
+                      "output"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "sha256",
+                  "bytes",
+                  "role"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "receipt_id": {
           "type": "string"
         },
