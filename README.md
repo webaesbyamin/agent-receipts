@@ -1,17 +1,17 @@
 # Agent Receipts
 
-Agent Receipts by [Webaes](https://webaes.com) · Site and live demo: [receipts.webaes.com](https://receipts.webaes.com) · A real issuer's verify page: [verify.webaes.com](https://verify.webaes.com)
+Agent Receipts by [Webaes](https://webaes.com) · Magic Folder and install guide: [receipts.webaes.com](https://receipts.webaes.com) · Live demo: [demo.receipts.webaes.com](https://demo.receipts.webaes.com) · A real issuer's verify page: [verify.webaes.com](https://verify.webaes.com)
 
 **Your AI agent remembers everything — and you can prove it.**
 
 Persistent memory for AI agents, backed by cryptographic receipts. Every fact your agent learns is signed, traceable, and independently verifiable. No cloud required.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://receipts.webaes.com/)
-[![Interactive Walkthrough](https://img.shields.io/badge/Walkthrough-60_Seconds-green)](https://receipts.webaes.com/walkthrough)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://demo.receipts.webaes.com/)
+[![Interactive Walkthrough](https://img.shields.io/badge/Walkthrough-60_Seconds-green)](https://demo.receipts.webaes.com/walkthrough)
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Try the Interactive Demo](https://receipts.webaes.com/walkthrough) · [Install in 30 Seconds](#get-started) · [How It's Different](#how-its-different)
+[Try the Interactive Demo](https://demo.receipts.webaes.com/walkthrough) · [Install in 30 Seconds](#get-started) · [How It's Different](#how-its-different)
 
 ---
 
@@ -152,7 +152,7 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 
 ### 5. Try Before Installing
 
-[Run the interactive demo →](https://receipts.webaes.com/walkthrough) — experience memory, verification, and bundle export in 60 seconds. No install required.
+[Run the interactive demo →](https://demo.receipts.webaes.com/walkthrough) — experience memory, verification, and bundle export in 60 seconds. No install required.
 
 ## What's Inside
 
@@ -169,9 +169,12 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 Drop a file into a folder named after a job ("Write product descriptions", "Fix typos"). An agent does the work, and the result comes back in `Done/` with your untouched original and a one-page `receipt.html` that anyone can check, plus an approval step for anything client-facing.
 
 ```bash
-npx @agent-receipts/magic-folder init ~/"Magic Folder"
-npx @agent-receipts/magic-folder run ~/"Magic Folder" --issuer "Your Studio"
+npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+magic-folder init ~/"Magic Folder"
+magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Studio"
 ```
+
+Needs Node 22 or 24 and, for free local jobs, [Ollama](https://ollama.com). Step-by-step for Mac, Windows and Linux: [receipts.webaes.com/install](https://receipts.webaes.com/install).
 
 The runner writes the receipt, not the agent: it hashes the real files and reads cost from the API. See [packages/magic-folder](packages/magic-folder) and the static [verify page](apps/verify).
 
@@ -189,9 +192,9 @@ The bundle includes every entity, observation, relationship, the receipts that c
 
 | | |
 |---|---|
-| [Interactive Demo](https://receipts.webaes.com/walkthrough) | Try it in your browser — 60 seconds |
-| [Live Dashboard](https://receipts.webaes.com) | See the full dashboard with sample data |
-| [How It Works](https://receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, ModQuote story |
+| [Interactive Demo](https://demo.receipts.webaes.com/walkthrough) | Try it in your browser — 60 seconds |
+| [Live Dashboard](https://demo.receipts.webaes.com) | See the full dashboard with sample data |
+| [How It Works](https://demo.receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, ModQuote story |
 | [npm](https://www.npmjs.com/org/agent-receipts) | All 6 packages |
 
 <details>
