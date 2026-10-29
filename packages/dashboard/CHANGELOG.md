@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Fix: the installed dashboard started in demo mode (demo banner and demo data instead of your own receipts). The package build now forces demo mode off and no longer ships `.env` files. The hosted demo on Vercel is unchanged.
+- Fix: the installed dashboard started in demo mode (demo banner and demo data instead of your own receipts). Earlier releases only ever showed demo data. 0.5.1 is the first where the installed dashboard reads your own receipts from ~/.agent-receipts. The package build now forces demo mode off and no longer ships `.env` files, and `better-sqlite3` is now a dependency so the receipt store loads. Requires Node 20–24. The hosted demo on Vercel is unchanged.
 
 ## 0.5.0
 

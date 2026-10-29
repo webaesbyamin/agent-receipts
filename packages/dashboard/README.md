@@ -41,6 +41,8 @@ Dark mode, global search (Cmd+K), auto-refresh.
 
 ## Prerequisites
 
+Requires Node 20–24. The dashboard reads receipts with `better-sqlite3`, which has no prebuilt binary for newer Node versions yet.
+
 Requires receipts to exist in `~/.agent-receipts/`. Create them via:
 
 - **MCP Server:** `npx @agent-receipts/mcp-server` (add to Claude Desktop, Cursor, etc.)
