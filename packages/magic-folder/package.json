@@ -51,14 +51,6 @@
     "@agent-receipts/mcp-server": "workspace:*",
     "@agent-receipts/schema": "workspace:*"
   },
-  "peerDependencies": {
-    "@anthropic-ai/claude-agent-sdk": "*"
-  },
-  "peerDependenciesMeta": {
-    "@anthropic-ai/claude-agent-sdk": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsup": "^8.2.0",
