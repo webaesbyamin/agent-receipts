@@ -58,6 +58,8 @@ export class ClaudeExecutor implements Executor {
           // Nothing is pre-approved (allow rules would skip canUseTool).
           // The PreToolUse hook runs before any permission rule and fences
           // every call; canUseTool repeats the check as a second layer.
+          // `tools` limits what the model is even offered; it approves nothing.
+          tools: [...job.recipe.tools],
           disallowedTools: DISALLOWED_TOOLS.filter((t) => !(job.recipe.tools as string[]).includes(t)),
           hooks: { PreToolUse: [{ hooks: [gate] }] },
           canUseTool: async (toolName: string, input: Record<string, unknown>) =>
