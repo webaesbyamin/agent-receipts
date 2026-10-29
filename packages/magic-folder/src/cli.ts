@@ -1,11 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { verifyAnyReceipt } from '@agent-receipts/crypto'
+import { resolve, join } from 'node:path'
+import { verifyAnyReceipt, computeKeyId } from '@agent-receipts/crypto'
+import { KeyManager, ConfigManager } from '@agent-receipts/mcp-server'
 import { MagicFolder } from './runner.js'
 import type { MagicFolderEvent } from './runner.js'
 import { ClaudeExecutor } from './claude-executor.js'
 import { initMagicFolder } from './starter.js'
 import { extractReceiptData } from './render.js'
+import { isApprovalOf } from './runner.js'
 import { renderVerifyPage } from './verify-page.js'
 
 const HELP = `magic-folder — drop a file in a folder, get the work back with a signed receipt
@@ -14,14 +16,17 @@ Usage:
   magic-folder init <folder>                 Create a Magic Folder with starter recipes
   magic-folder run <folder> [options]        Watch the folder and run jobs
       --once                                 Process what's there now, then exit
-      --data-dir <dir>                       Receipts + signing key (default ~/.agent-receipts)
+      --data-dir <dir>                       Receipts + signing key (default ~/.agent-receipts/magic-folder)
       --issuer <name>                        Name printed on receipts (e.g. "Webaes")
       --key-url <url>                        Where you publish your public key
       --verify-url <url>                     Link to a hosted verify page
       --model <id>                           Default model for recipes without one
-  magic-folder verify <receipt.html|json> [--key <hex>]
-                                             Check a receipt's seal
-  magic-folder verify-page [out.html]        Write the static public verify page
+  magic-folder key [--data-dir <dir>]        Print your key id and public key (publish these)
+  magic-folder verify <receipt.html|json> [--key-id <key_…> | --key <hex>]
+                                             Check a receipt. Without a key it can only say
+                                             "unchanged", not who signed it.
+  magic-folder verify-page [out.html] [--trust-key <key_…> --trust-name <name>] [--title <t>]
+                                             Write the static verify page (with your key baked in)
 
 Running jobs needs ANTHROPIC_API_KEY and: npm install @anthropic-ai/claude-agent-sdk
 `
@@ -38,6 +43,7 @@ function log(e: MagicFolderEvent): void {
     case 'job-finished': console.log(`${t}  ${e.ok ? '✓' : '✗'} ${e.recipe} → ${e.destination}  (${e.receiptId})`); break
     case 'approved': console.log(`${t}  ✓ approved ${e.jobId}  (${e.receiptId})`); break
     case 'recipe-error': console.error(`${t}  ! ${e.message}`); break
+    case 'recovered': console.log(`${t}  ↺ ${e.jobId}: ${e.action === 'delivered' ? 'finished delivering an interrupted job' : 'interrupted before signing; files put back to run again'}`); break
     case 'error': console.error(`${t}  ! ${e.message}`); break
   }
 }
@@ -76,28 +82,61 @@ async function main(argv: string[]): Promise<number> {
       await new Promise<void>((done) => process.once('SIGINT', () => { mf.close(); done() }))
       return 0
     }
+    case 'key': {
+      const dataDir = flag(argv, '--data-dir') ?? join(ConfigManager.getDefaultDataDir(), 'magic-folder')
+      const km = new KeyManager(dataDir)
+      await km.init()
+      const publicKey = km.getPublicKey()
+      const keyId = computeKeyId(publicKey)
+      console.log(`Key id:     ${keyId}`)
+      console.log(`Public key: ${publicKey}`)
+      console.log('')
+      console.log('Publish this (e.g. at https://yourdomain/.well-known/agent-receipts.json):')
+      console.log(JSON.stringify({ keys: [{ key_id: keyId, public_key: publicKey, alg: 'ed25519' }] }, null, 2))
+      return 0
+    }
     case 'verify': {
-      if (!target) { console.error('Usage: magic-folder verify <receipt.html|json> [--key <hex>]'); return 1 }
+      if (!target) { console.error('Usage: magic-folder verify <receipt.html|json> [--key-id <key_…> | --key <hex>]'); return 1 }
       const text = await readFile(target, 'utf-8')
       const data = text.trimStart().startsWith('{')
         ? { receipt: JSON.parse(text), approval: null, publicKey: null as string | null }
         : extractReceiptData(text)
       if (!data) { console.error('No receipt data found in that file.'); return 1 }
-      const key = flag(rest, '--key') ?? data.publicKey
+      const pinnedKey = flag(rest, '--key')
+      const pinnedId = flag(rest, '--key-id') ?? (pinnedKey ? computeKeyId(pinnedKey) : undefined)
+      const key = pinnedKey ?? data.publicKey
       if (!key) { console.error('This file has no public key; pass --key <hex>.'); return 1 }
       const r = verifyAnyReceipt(data.receipt as Record<string, unknown>, key)
-      const a = data.approval ? verifyAnyReceipt(data.approval as Record<string, unknown>, key, { requireV2: true }) : null
-      if (r.valid && (!a || a.valid)) {
-        console.log(`Verified: ${data.receipt.receipt_id} (${r.covers_all_fields ? 'every field signed' : 'v1: 12 core fields signed'})${a ? ' + approval' : ''}`)
-        console.log(`Key: ${data.receipt.key_id ?? key}`)
-        return 0
+      const signedBy = computeKeyId(key)
+      if (!r.valid) { console.error(`NOT verified: ${data.receipt.receipt_id} (changed after signing, or wrong key)`); return 1 }
+      if (data.approval) {
+        const a = verifyAnyReceipt(data.approval as Record<string, unknown>, key, { requireV2: true })
+        if (!a.valid || !isApprovalOf(data.receipt)(data.approval)) { console.error(`NOT verified: the approval on ${data.receipt.receipt_id} is not valid`); return 1 }
       }
-      console.error(`NOT verified: ${data.receipt.receipt_id}${r.valid ? ' (approval failed)' : ''}`)
-      return 1
+      if (!r.covers_all_fields) {
+        console.log(`Older format: ${data.receipt.receipt_id} only signs 12 core fields; its summary, cost and files are not covered.`)
+        return 3
+      }
+      if (pinnedId && pinnedId !== signedBy) { console.error(`NOT verified: signed by ${signedBy}, not ${pinnedId}`); return 1 }
+      if (!pinnedId) {
+        console.log(`Unchanged since signing: ${data.receipt.receipt_id}${data.approval ? ' + approval' : ''}, signed by ${signedBy}.`)
+        console.log('Signer not confirmed: pass --key-id <the issuer\'s key id> to confirm who signed it.')
+        return 3
+      }
+      console.log(`Verified: ${data.receipt.receipt_id}${data.approval ? ' + approval' : ''}, signed by ${signedBy} (every field signed)`)
+      return 0
     }
     case 'verify-page': {
-      const html = renderVerifyPage()
-      if (target) { await writeFile(target, html); console.log(`Wrote ${target}`) } else process.stdout.write(html)
+      const trustKey = flag(argv, '--trust-key')
+      const trustName = flag(argv, '--trust-name')
+      if (trustKey && !trustName) { console.error('--trust-key needs --trust-name'); return 1 }
+      const pageTitle = flag(argv, '--title')
+      const html = renderVerifyPage({
+        ...(pageTitle ? { title: pageTitle } : {}),
+        ...(trustKey && trustName ? { trustedKeys: [{ keyId: trustKey, name: trustName }] } : {}),
+      })
+      const out = target && !target.startsWith('--') ? target : undefined
+      if (out) { await writeFile(out, html); console.log(`Wrote ${out}`) } else process.stdout.write(html)
       return 0
     }
     default:

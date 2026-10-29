@@ -26,7 +26,9 @@ export function canonicalizeDeep(value: unknown): string {
 function sortDeep(value: unknown): unknown {
   if (value === null || typeof value !== 'object') return value
   if (Array.isArray(value)) return value.map(sortDeep)
-  const out: Record<string, unknown> = {}
+  // Null-prototype object: a "__proto__" key stays an ordinary key (and so is
+  // signed) instead of silently becoming the prototype and vanishing.
+  const out: Record<string, unknown> = Object.create(null)
   for (const key of Object.keys(value as Record<string, unknown>).sort()) {
     const v = (value as Record<string, unknown>)[key]
     if (v !== undefined) out[key] = sortDeep(v)
@@ -36,7 +38,7 @@ function sortDeep(value: unknown): unknown {
 
 /** Everything in the receipt except the signature and verify_url. */
 export function getSignablePayloadV2(receipt: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {}
+  const out: Record<string, unknown> = Object.create(null)
   for (const [key, value] of Object.entries(receipt)) {
     if ((V2_UNSIGNED_FIELDS as readonly string[]).includes(key)) continue
     if (value !== undefined) out[key] = value
@@ -79,9 +81,11 @@ export interface VerifyResult {
 /**
  * Verify any receipt, v1 or v2.
  *
- * Downgrade note: stripping `sig_version` from a v2 receipt turns it into a
- * v1 receipt whose 12 core fields still verify. Verifiers that show summary,
- * cost or files to people must pass `{ requireV2: true }`.
+ * A v1 receipt only signs 12 core fields: its summary, cost, files and
+ * metadata can be edited without breaking the signature. Verifiers that show
+ * those fields to people must pass `{ requireV2: true }` (stripping
+ * `sig_version` from a v2 receipt does not help an attacker: v1 signs
+ * different bytes, so it fails either way).
  */
 export function verifyAnyReceipt(
   receipt: Record<string, unknown>,

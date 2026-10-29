@@ -149,6 +149,10 @@ export class SqliteReceiptStore {
    * receipts may be replaced (that is how `complete()` finalizes them).
    */
   async save(receipt: ActionReceipt): Promise<void> {
+    this.saveSync(receipt)
+  }
+
+  private saveSync(receipt: ActionReceipt): void {
     const existing = this.db.prepare('SELECT status FROM receipts WHERE receipt_id = ?')
       .get(receipt.receipt_id) as { status: string } | undefined
     if (existing && existing.status !== 'pending') {
@@ -221,6 +225,25 @@ export class SqliteReceiptStore {
   }
 
   /**
+   * Finalize a receipt at the current tip of its chain, atomically: read the
+   * tip, let `build` produce the signed receipt that links to it, and insert
+   * it — all in one synchronous IMMEDIATE transaction, so neither concurrent
+   * calls in this process nor other processes sharing the database can fork
+   * the chain. `build` must be synchronous.
+   */
+  finalizeAtTip(chainId: string, build: (tip: ActionReceipt | null) => ActionReceipt): ActionReceipt {
+    const run = this.db.transaction(() => {
+      const row = this.db.prepare(
+        `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending' ORDER BY rowid DESC LIMIT 1`
+      ).get(chainId) as { data: string } | undefined
+      const receipt = build(row ? (JSON.parse(row.data) as ActionReceipt) : null)
+      this.saveSync(receipt)
+      return receipt
+    })
+    return run.immediate()
+  }
+
+  /**
    * The receipt the next finalized receipt in this chain should link to:
    * the most recently finalized one. Finalizing always (re)inserts the row,
    * so rowid order is finalization order, with no timestamp ties.
@@ -234,8 +257,9 @@ export class SqliteReceiptStore {
   }
 
   async getChain(chainId: string): Promise<ActionReceipt[]> {
-    const result = await this.list({ chain_id: chainId }, 1, 1000, 'timestamp:asc')
-    return result.data
+    const rows = this.db.prepare('SELECT data FROM receipts WHERE chain_id = ? ORDER BY timestamp ASC, rowid ASC')
+      .all(chainId) as { data: string }[]
+    return rows.map(r => JSON.parse(r.data) as ActionReceipt)
   }
 
   async count(filter?: ReceiptFilter): Promise<number> {

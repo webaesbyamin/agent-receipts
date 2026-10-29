@@ -37,10 +37,22 @@ The point of a receipt is that the agent doesn't write it.
 - **The runner writes the receipt, not the agent.** The runner moves the drop into an isolated job folder, runs the agent, then hashes the input and output files itself. Token counts and cost come from the API's result message, not from the agent.
 - **Every field is signed** (receipt format v2): the summary, cost, model, file fingerprints, recipe, credits, the issuer and the failure reason. Change one character and the seal breaks.
 - **Every job links to the one before it** (`prev_receipt_hash`), so removing or editing a receipt in the middle of a folder's history is detectable with `agent-receipts verify-chain`.
-- **The agent is fenced in.** It gets only the recipe's tools (read, write, edit, search; never a shell or the web). Every file path must be inside its job folder, writes only into `output/`, and inputs are read-only. There's a hard time limit and a spend cap per recipe.
-- **What you read is what was signed.** `receipt.html` renders every visible word from the signed record in the browser. For an independent check, drop the file on the public [verify page](../../apps/verify), or run `magic-folder verify receipt.html`.
+- **The agent is fenced in.** A PreToolUse hook checks every tool call before any permission rule: only the recipe's tools (read, write, edit, search; never a shell or the web), every path inside its job folder after resolving symlinks, search patterns can't climb out, and writes go only into `output/`. Nothing is pre-approved. There's a hard time limit and a spend cap per recipe.
+- **Its own key.** Magic Folder signs with `~/.agent-receipts/magic-folder`, separate from the MCP server's key, so agents using the MCP tools can't mint receipts that look like jobs.
+- **What you read is what was signed.** `receipt.html` renders every visible word from the signed record in the browser.
 
-A valid seal proves the receipt wasn't changed. To know **who** signed it, compare the key ID on the receipt with the one the issuer publishes (`--key-url`).
+### Who signed it
+
+A receipt file carries its own public key, so on its own it can only prove it hasn't been changed. Anyone could sign a fake with their own key. So the file's seal says **"Unchanged since signing"**, never "Verified".
+
+**Verified** comes from a verify page that knows your key:
+
+```bash
+magic-folder key                       # prints your key id + public key to publish
+magic-folder verify-page verify.html --trust-key key_… --trust-name "Your Studio" --title "Verify a Your Studio receipt"
+```
+
+Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until someone enters a key (or opens it as `…/verify?key=key_…`). On the command line: `magic-folder verify receipt.html --key-id key_…`.
 
 ## Recipes
 
@@ -70,10 +82,12 @@ A broken recipe never runs: the folder gets a `Recipe problem.txt` explaining wh
 
 ## How a job runs
 
+Results land in `Done/<job>/result/`, your original in `Done/<job>/original/`. Nothing is ever overwritten. A job journal lets a crash finish delivery (or put the drop back to run again) on the next start.
+
 1. Files in a job folder are picked up once they stop changing (3 s by default), so a batch dropped together is one job. Partial downloads, hidden files and Office lock files are ignored.
 2. They move into `.magic/jobs/<job>/input/` at once, so nothing runs twice.
 3. The agent works in that folder and writes into `output/`.
-4. The runner hashes outputs, signs the receipt, and delivers results, the original (in `original/`), `receipt.json` and `receipt.html`.
+4. The runner hashes outputs, signs the receipt, and delivers `result/`, `original/`, `receipt.json` and `receipt.html`.
 5. A failed job (error, time limit, spend cap, or no files produced) still gets a signed receipt that says why, delivers only the original, and costs nothing.
 
 ## About cost
@@ -82,7 +96,7 @@ A broken recipe never runs: the folder gets a `Recipe problem.txt` explaining wh
 
 ## Keys
 
-Receipts and the signing key live in `~/.agent-receipts` (change with `--data-dir`). Keep that directory **off** shared or synced drives: the folder can live on Google Drive or Dropbox, but the key must not.
+Receipts and the signing key live in `~/.agent-receipts/magic-folder` (change with `--data-dir`). Keep that directory **off** shared or synced drives: the folder can live on Google Drive or Dropbox, but the key must not.
 
 ## Library use
 

@@ -49,9 +49,9 @@ describe('MagicFolder runner', () => {
     const jobs = await doneJobs()
     expect(jobs).toHaveLength(1)
     const dir = join(root, DONE_DIR, jobs[0]!)
-    expect((await readdir(dir)).sort()).toEqual(['original', 'receipt.html', 'receipt.json', 'sofa.txt - description.md'])
+    expect((await readdir(dir)).sort()).toEqual(['original', 'receipt.html', 'receipt.json', 'result'])
     expect(await readFile(join(dir, 'original', 'sofa.txt'), 'utf-8')).toBe('linen sofa, oak legs')
-    expect(await readFile(join(dir, 'sofa.txt - description.md'), 'utf-8')).toContain('LINEN SOFA')
+    expect(await readFile(join(dir, 'result', 'sofa.txt - description.md'), 'utf-8')).toContain('LINEN SOFA')
 
     // The drop left the recipe folder, and no status file is left behind
     expect((await readdir(join(root, 'Write product descriptions'))).filter((n) => !n.startsWith('.'))).toEqual([])
@@ -76,7 +76,7 @@ describe('MagicFolder runner', () => {
     const input = files.find((f) => f.role === 'input')!
     const output = files.find((f) => f.role === 'output')!
     expect(input).toEqual({ name: 'lamp.txt', sha256: sha('brass lamp'), bytes: 10, role: 'input' })
-    const produced = await readFile(join(outcome!.destination, output.name), 'utf-8')
+    const produced = await readFile(join(outcome!.destination, 'result', output.name), 'utf-8')
     expect(output.sha256).toBe(sha(produced))
   })
 
@@ -118,7 +118,7 @@ describe('MagicFolder runner', () => {
     await writeFile(join(root, 'Ask anything', 'note.txt'), 'Sum column b please')
     const [o] = await folder.scanOnce({ settle: false })
     expect(exec.calls[0]!.note).toBe('Sum column b please')
-    expect(await readFile(join(o!.destination, 'answer.md'), 'utf-8')).toBe('Sum column b please')
+    expect(await readFile(join(o!.destination, 'result', 'answer.md'), 'utf-8')).toBe('Sum column b please')
     expect((await readdir(join(o!.destination, 'original'))).sort()).toEqual(['data.csv', 'note.txt'])
   })
 
@@ -174,6 +174,95 @@ describe('MagicFolder runner', () => {
     expect(o.ok).toBe(false)
   })
 
+  it('a hard stop cuts off an executor that ignores the time limit', async () => {
+    const stubborn = new FakeExecutor(() => new Promise(() => { /* never resolves */ }))
+    const folder = open(stubborn, { hardStopGraceMs: 20 })
+    await folder.init()
+    const recipe = { ...parseRecipe('Fix typos', 'Fix.'), maxMinutes: 0.0005 }
+    await writeFile(join(root, 'Fix typos', 'x.txt'), 'x')
+    const o = await folder.runJob(recipe, join(root, 'Fix typos'), ['x.txt'])
+    expect(o.ok).toBe(false)
+    expect(o.receipt.error).toEqual({ message: 'Stopped: the job ran past its time limit.' })
+  })
+
+  it("agent output can't collide with the original, the receipt or each other", async () => {
+    const exec = new FakeExecutor(async (job) => {
+      await writeFile(join(job.outputDir, 'original'), 'agent file named original')
+      await writeFile(join(job.outputDir, 'receipt.html'), 'fake receipt')
+      await writeFile(join(job.outputDir, 'x.txt'), 'agent copy')
+      return okResult()
+    })
+    const folder = open(exec)
+    await writeFile(join(root, 'Fix typos', 'x.txt'), 'USER ORIGINAL')
+    const [o] = await folder.scanOnce({ settle: false })
+    expect(o!.ok).toBe(true)
+    expect(await readFile(join(o!.destination, 'original', 'x.txt'), 'utf-8')).toBe('USER ORIGINAL')
+    expect(await readFile(join(o!.destination, 'result', 'x.txt'), 'utf-8')).toBe('agent copy')
+    expect(await readFile(join(o!.destination, 'result', 'receipt.html'), 'utf-8')).toBe('fake receipt')
+    expect(extractReceiptData(await readFile(join(o!.destination, 'receipt.html'), 'utf-8'))).not.toBeNull()
+    for (const f of o!.receipt.files!.filter((x) => x.role === 'output')) {
+      expect(sha(await readFile(join(o!.destination, 'result', f.name), 'utf-8'))).toBe(f.sha256)
+    }
+  })
+
+  it('recovers a job interrupted before signing: the drop goes back to run again', async () => {
+    const folder = open(describeEach)
+    await folder.init()
+    folder.close()
+    mf = null
+    const work = join(root, STATE_DIR, 'jobs', '2026-01-01 0000 lost')
+    await mkdir(join(work, 'input'), { recursive: true })
+    await writeFile(join(work, 'input', 'lost.txt'), 'precious')
+    await writeFile(join(root, 'Fix typos', 'lost.txt - working.txt'), 'working')
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: '2026-01-01 0000 lost', recipeDir: join(root, 'Fix typos'), dropped: ['lost.txt'], statusFile: join(root, 'Fix typos', 'lost.txt - working.txt'), phase: 'running' }))
+
+    const events: string[] = []
+    const again = open(describeEach, { onEvent: (e: { type: string }) => events.push(e.type) })
+    await again.init()
+    expect(events).toContain('recovered')
+    expect(await readFile(join(root, 'Fix typos', 'lost.txt'), 'utf-8')).toBe('precious')
+    expect(await readdir(join(root, 'Fix typos'))).not.toContain('lost.txt - working.txt')
+    expect(await readdir(join(root, STATE_DIR, 'jobs'))).toEqual([])
+    const [o] = await again.scanOnce({ settle: false })
+    expect(o!.ok).toBe(true)
+  })
+
+  it('recovers a job interrupted after signing: delivery is finished', async () => {
+    const folder = open(describeEach)
+    await folder.init()
+    const receipt = await folder.receipts.create({ action: 'magic_folder.fix-typos', status: 'completed', input_hash: 'sha256:1', metadata: { kind: 'magic_folder_job', job_id: 'j1', recipe: 'Fix typos', credits: 1 } })
+    folder.close()
+    mf = null
+    const work = join(root, STATE_DIR, 'jobs', 'j1')
+    await mkdir(join(work, 'input'), { recursive: true })
+    await mkdir(join(work, 'output'), { recursive: true })
+    await writeFile(join(work, 'input', 'a.txt'), 'in')
+    await writeFile(join(work, 'output', 'a-fixed.txt'), 'out')
+    const destination = join(root, DONE_DIR, 'j1')
+    await writeFile(join(work, '.job.json'), JSON.stringify({ jobId: 'j1', recipeDir: join(root, 'Fix typos'), dropped: ['a.txt'], statusFile: join(root, 'Fix typos', 'a.txt - working.txt'), phase: 'signed', receiptId: receipt.receipt_id, destination }))
+
+    const again = open(describeEach)
+    await again.init()
+    expect(await readFile(join(destination, 'original', 'a.txt'), 'utf-8')).toBe('in')
+    expect(await readFile(join(destination, 'result', 'a-fixed.txt'), 'utf-8')).toBe('out')
+    expect(JSON.parse(await readFile(join(destination, 'receipt.json'), 'utf-8')).receipt_id).toBe(receipt.receipt_id)
+    expect(await readdir(join(root, STATE_DIR, 'jobs'))).toEqual([])
+  })
+
+  it('editing receipt.json cannot conjure an approval, and approvals are never duplicated', async () => {
+    const folder = open(describeEach)
+    await writeFile(join(root, 'Fix typos', 'x.txt'), 'x')
+    const [o] = await folder.scanOnce({ settle: false })
+    // Flip needs_approval in the editable copy of a job that never needed it
+    const path = join(o!.destination, 'receipt.json')
+    const edited = JSON.parse(await readFile(path, 'utf-8'))
+    edited.metadata.needs_approval = true
+    await writeFile(path, JSON.stringify(edited))
+    await folder.scanOnce({ settle: false })
+    const children = await folder.receipts.list({ parent_receipt_id: o!.receipt.receipt_id })
+    expect(children.data).toHaveLength(0)
+  })
+
   it('approval: job waits in "Needs your OK", moving it to Done signs an approval', async () => {
     const exec = new FakeExecutor(async (job) => {
       await writeFile(join(job.outputDir, 'email.md'), 'Subject: Update')
@@ -199,7 +288,8 @@ describe('MagicFolder runner', () => {
     html = await readFile(join(dir, 'receipt.html'), 'utf-8')
     expect(extractReceiptData(html)!.approval!.receipt_id).toBe(approval.receipt_id)
 
-    // only once
+    // only once, even if the folder's state file is lost
+    await rm(join(root, STATE_DIR, 'state.json'), { force: true })
     await folder.scanOnce({ settle: false })
     const chain = await folder.receipts.getChain(o!.receipt.chain_id)
     expect(chain.filter((r) => r.action === 'magic_folder.approved')).toHaveLength(1)

@@ -25,6 +25,7 @@ function browserVerifier() {
       }>,
     keyId: (k: string) => runInContext('arKeyId', ctx)(k) as Promise<string>,
     render: (d: unknown, seal: unknown) => runInContext('arRenderReceipt', ctx)(JSON.parse(JSON.stringify(d)), seal) as string,
+    isApprovalOf: (a: unknown, r: unknown) => runInContext('arIsApprovalOf', ctx)(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(r))) as boolean,
   }
 }
 
@@ -88,6 +89,22 @@ describe('browser verifier (same bytes as the Node signer)', () => {
     const r = await v.verify(receipt, other.publicKey)
     expect(r.valid).toBe(false)
     expect(r.key_id_matches).toBe(false)
+  })
+
+  it('rejects a __proto__ key smuggled into a signed receipt', async () => {
+    const v = browserVerifier()
+    const tampered = JSON.parse(JSON.stringify(receipt).replace('{', '{"__proto__":{"x":1},'))
+    expect((await v.verify(tampered, publicKey)).valid).toBe(false)
+  })
+
+  it('only a genuine approval of this job counts as an approval', async () => {
+    const v = browserVerifier()
+    const real = await engine.track({ action: 'magic_folder.approved', input: 1, parent_receipt_id: receipt.receipt_id, metadata: { kind: 'magic_folder_approval' } })
+    expect(v.isApprovalOf(real, receipt)).toBe(true)
+    const anyChild = await engine.track({ action: 'some_tool', input: 2, parent_receipt_id: receipt.receipt_id })
+    expect(v.isApprovalOf(anyChild, receipt)).toBe(false)
+    const otherJob = await engine.track({ action: 'magic_folder.approved', input: 3, parent_receipt_id: 'rcpt_other', metadata: { kind: 'magic_folder_approval' } })
+    expect(v.isApprovalOf(otherJob, receipt)).toBe(false)
   })
 
   it('verifies legacy v1 receipts unless requireV2', async () => {
@@ -166,6 +183,16 @@ describe('browser verifier (same bytes as the Node signer)', () => {
     const html = renderReceiptHtml(evil, { publicKey })
     expect(html.match(/<\/script>/g)!.length).toBe(2) // only the two real closing tags
     expect(extractReceiptData(html)!.receipt.output_summary).toBe('</script><script>alert(1)</script>')
+  })
+
+  it('every inline script in receipt.html and the verify page parses', async () => {
+    const { Script } = await import('node:vm')
+    const pages = [renderReceiptHtml(receipt, { publicKey, verifyPageUrl: 'https://example.com/verify' }), renderVerifyPage(), renderVerifyPage({ trustedKeys: [{ name: "O'Brien & Co", keyId: receipt.key_id! }] })]
+    for (const html of pages) {
+      const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]!)
+      expect(scripts.length).toBeGreaterThan(0)
+      for (const src of scripts) expect(() => new Script(src)).not.toThrow()
+    }
   })
 
   it('receipt.html is locked to the light theme and mobile-safe', () => {

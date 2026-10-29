@@ -17,12 +17,17 @@ import type { Executor, ExecResult, JobContext } from './executor.js'
 export class ClaudeExecutor implements Executor {
   readonly name = 'claude-agent-sdk'
 
-  constructor(private readonly options: { model?: string; maxTurns?: number } = {}) {}
+  constructor(private readonly options: {
+    model?: string
+    maxTurns?: number
+    /** For tests: supply the SDK module instead of importing it */
+    loadSdk?: () => Promise<unknown>
+  } = {}) {}
 
   async run(job: JobContext): Promise<ExecResult> {
     let sdk: ClaudeAgentSdk
     try {
-      sdk = (await import('@anthropic-ai/claude-agent-sdk' as string)) as ClaudeAgentSdk
+      sdk = (await (this.options.loadSdk ? this.options.loadSdk() : import('@anthropic-ai/claude-agent-sdk' as string))) as ClaudeAgentSdk
     } catch {
       return failure('The Claude Agent SDK is not installed. Run: npm install @anthropic-ai/claude-agent-sdk')
     }
@@ -39,19 +44,29 @@ export class ClaudeExecutor implements Executor {
     let model: string | null = job.recipe.model ?? this.options.model ?? null
 
     try {
+      const gate = async (hookInput: { tool_name?: unknown; tool_input?: unknown }) => {
+        const decision = checkToolUse(job, String(hookInput.tool_name ?? ''), (hookInput.tool_input ?? {}) as Record<string, unknown>)
+        return decision.behavior === 'deny'
+          ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: decision.message } }
+          : {}
+      }
       const stream = sdk.query({
         prompt: buildPrompt(job),
         options: {
           cwd: job.workDir,
           model: job.recipe.model ?? this.options.model,
-          allowedTools: [...job.recipe.tools],
+          // Nothing is pre-approved (allow rules would skip canUseTool).
+          // The PreToolUse hook runs before any permission rule and fences
+          // every call; canUseTool repeats the check as a second layer.
+          disallowedTools: DISALLOWED_TOOLS.filter((t) => !(job.recipe.tools as string[]).includes(t)),
+          hooks: { PreToolUse: [{ hooks: [gate] }] },
+          canUseTool: async (toolName: string, input: Record<string, unknown>) =>
+            checkToolUse(job, toolName, input),
           permissionMode: 'default',
           maxTurns: this.options.maxTurns ?? 20,
           maxBudgetUsd: job.recipe.maxCostUsd,
           settingSources: [],
           abortController,
-          canUseTool: async (toolName: string, input: Record<string, unknown>) =>
-            checkToolUse(job, toolName, input),
         },
       })
 
@@ -90,6 +105,13 @@ export class ClaudeExecutor implements Executor {
   }
 }
 
+/** Built-in tools a job never gets unless its recipe names them (and recipes can only name file tools). */
+export const DISALLOWED_TOOLS = [
+  'Bash', 'BashOutput', 'KillShell', 'KillBash', 'WebFetch', 'WebSearch', 'Task', 'Agent',
+  'NotebookEdit', 'NotebookRead', 'TodoWrite', 'ExitPlanMode', 'SlashCommand', 'Skill',
+  'Edit', 'MultiEdit', 'Write', 'Read', 'Glob', 'Grep', 'LS',
+]
+
 /** Permission gate: only the recipe's tools, only inside the job folder, writes only to output/. */
 export function checkToolUse(
   job: Pick<JobContext, 'recipe' | 'workDir' | 'outputDir'>,
@@ -107,6 +129,14 @@ export function checkToolUse(
       return { behavior: 'deny', message: 'Only files inside this job folder can be used.' }
     }
   }
+  // Glob patterns are paths too: no absolute patterns, no climbing out with ..
+  const patterns = toolName === 'Glob' ? [input['pattern']] : toolName === 'Grep' ? [input['glob']] : []
+  for (const pat of patterns) {
+    if (pat === undefined) continue
+    if (typeof pat !== 'string' || escapesFolder(pat)) {
+      return { behavior: 'deny', message: 'Search patterns must stay inside this job folder.' }
+    }
+  }
   if (toolName === 'Write' || toolName === 'Edit') {
     for (const p of paths) {
       if (!isInside(job.outputDir, isAbsoluteLike(p) ? p : `${job.workDir}/${p}`)) {
@@ -115,6 +145,10 @@ export function checkToolUse(
     }
   }
   return { behavior: 'allow', updatedInput: input }
+}
+
+function escapesFolder(pattern: string): boolean {
+  return isAbsoluteLike(pattern) || pattern.startsWith('~') || pattern.split(/[\\/]/).includes('..')
 }
 
 function isAbsoluteLike(p: string): boolean {

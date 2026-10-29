@@ -5,7 +5,7 @@ import type { ActionReceipt, FileManifestEntry } from '@agent-receipts/schema'
 import { SqliteReceiptStore, KeyManager, ConfigManager, ReceiptEngine, hashData } from '@agent-receipts/mcp-server'
 import { parseRecipe, RECIPE_FILE, RecipeError } from './recipe.js'
 import type { Recipe } from './recipe.js'
-import type { Executor, ExecResult } from './executor.js'
+import type { Executor, ExecResult, JobContext } from './executor.js'
 import { listFiles, manifestEntry, moveFile, exists, slug } from './files.js'
 import { renderReceiptHtml } from './render.js'
 import type { Issuer } from './render.js'
@@ -16,6 +16,7 @@ export const STATE_DIR = '.magic'
 export const NOTE_FILE = 'note.txt'
 const WORKING_SUFFIX = ' - working.txt'
 const PROBLEM_FILE = 'Recipe problem.txt'
+const JOURNAL_FILE = '.job.json'
 
 /** Names that are never treated as a dropped file. */
 const IGNORE = [
@@ -26,7 +27,7 @@ const IGNORE = [
 
 export interface MagicFolderOptions {
   executor: Executor
-  /** Where receipts and the signing key live. Default ~/.agent-receipts (keep it OFF shared drives). */
+  /** Where receipts and the signing key live. Default ~/.agent-receipts/magic-folder (keep it OFF shared drives). */
   dataDir?: string
   issuer?: Issuer
   verifyPageUrl?: string
@@ -36,6 +37,8 @@ export interface MagicFolderOptions {
   pollMs?: number
   timeZone?: string
   onEvent?: (event: MagicFolderEvent) => void
+  /** How long past the time limit to wait for an executor that ignores the abort signal. Default 5000 ms. */
+  hardStopGraceMs?: number
 }
 
 export type MagicFolderEvent =
@@ -43,6 +46,7 @@ export type MagicFolderEvent =
   | { type: 'job-finished'; jobId: string; recipe: string; ok: boolean; receiptId: string; destination: string }
   | { type: 'approved'; jobId: string; receiptId: string }
   | { type: 'recipe-error'; recipe: string; message: string }
+  | { type: 'recovered'; jobId: string; action: 'delivered' | 'returned' }
   | { type: 'error'; message: string }
 
 export interface JobOutcome {
@@ -54,7 +58,41 @@ export interface JobOutcome {
 
 interface FolderState {
   chain_id: string | null
-  approved: string[]
+}
+
+interface JobJournal {
+  jobId: string
+  recipeDir: string
+  dropped: string[]
+  statusFile: string
+  phase: 'running' | 'signed'
+  receiptId?: string
+  destination?: string
+}
+
+export const RESULT_DIR = 'result'
+export const ORIGINAL_DIR = 'original'
+export const APPROVAL_ACTION = 'magic_folder.approved'
+const HARD_STOP_GRACE_MS = 5_000
+
+/** True for a genuine Magic Folder approval of `job`. */
+export function isApprovalOf(job: ActionReceipt): (r: ActionReceipt) => boolean {
+  return (r) => r.parent_receipt_id === job.receipt_id
+    && r.action === APPROVAL_ACTION
+    && r.status === 'completed'
+    && (r.metadata as { kind?: string }).kind === 'magic_folder_approval'
+}
+
+/** "a.txt" -> "a (2).txt" if taken. */
+async function freeName(path: string): Promise<string> {
+  if (!(await exists(path))) return path
+  const dot = path.lastIndexOf('.')
+  const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  const [stem, ext] = dot > slash + 1 ? [path.slice(0, dot), path.slice(dot)] : [path, '']
+  for (let i = 2; ; i++) {
+    const candidate = `${stem} (${i})${ext}`
+    if (!(await exists(candidate))) return candidate
+  }
 }
 
 interface Seen { size: number; mtimeMs: number; since: number }
@@ -72,7 +110,9 @@ export class MagicFolder {
   /** Open the receipt store and make sure the folder has its Done / Needs your OK / .magic parts. */
   async init(): Promise<void> {
     if (this.engine) return
-    const dataDir = this.options.dataDir ?? ConfigManager.getDefaultDataDir()
+    // Its own key by default: agents using the Agent Receipts MCP server can't
+    // sign with it, so they can't mint receipts that look like Magic Folder jobs.
+    const dataDir = this.options.dataDir ?? join(ConfigManager.getDefaultDataDir(), 'magic-folder')
     this.store = new SqliteReceiptStore(dataDir)
     await this.store.init()
     this.keyManager = new KeyManager(dataDir)
@@ -83,6 +123,7 @@ export class MagicFolder {
     for (const d of [DONE_DIR, APPROVAL_DIR, join(STATE_DIR, 'jobs')]) {
       await mkdir(join(this.root, d), { recursive: true })
     }
+    await this.recoverJobs()
   }
 
   get publicKey(): string {
@@ -206,10 +247,12 @@ export class MagicFolder {
     const outputDir = join(workDir, 'output')
     await mkdir(inputDir, { recursive: true })
     await mkdir(outputDir, { recursive: true })
+    const statusFile = join(recipeDir, `${dropped.find((n) => n !== NOTE_FILE) ?? dropped[0]}${WORKING_SUFFIX}`)
+    const journal: JobJournal = { jobId, recipeDir, dropped, statusFile, phase: 'running' }
+    await this.writeJournal(workDir, journal)
 
     // 1. Take the drop out of the recipe folder at once, so it can't run twice.
     for (const name of dropped) await moveFile(join(recipeDir, name), join(inputDir, name))
-    const statusFile = join(recipeDir, `${dropped.find((n) => n !== NOTE_FILE) ?? dropped[0]}${WORKING_SUFFIX}`)
     await writeFile(statusFile, `Working on this now. The result will appear in "${recipe.needsApproval ? APPROVAL_DIR : DONE_DIR}".\n`)
     this.emit({ type: 'job-started', jobId, recipe: recipe.name, files: dropped })
 
@@ -217,28 +260,13 @@ export class MagicFolder {
     for (const name of dropped) inputs.push(await manifestEntry(join(inputDir, name), name, 'input'))
     const noteText = dropped.includes(NOTE_FILE) ? (await readFile(join(inputDir, NOTE_FILE), 'utf-8')).trim() : null
 
-    // 2. Run the agent with a hard time limit.
-    const controller = new AbortController()
-    const limit = setTimeout(() => controller.abort(), recipe.maxMinutes * 60_000)
-    let exec: ExecResult
-    try {
-      exec = await this.options.executor.run({
-        jobId, recipe, workDir, inputDir, outputDir,
-        inputFiles: dropped, note: noteText, signal: controller.signal,
-      })
-    } catch (err) {
-      exec = {
-        ok: false, summary: '', model: null, tokensIn: null, tokensOut: null, costUsd: null, toolCalls: [],
-        error: err instanceof Error ? err.message : String(err),
-      }
-    } finally {
-      clearTimeout(limit)
-    }
-    if (controller.signal.aborted && exec.ok) {
-      exec = { ...exec, ok: false, error: 'Stopped: the job ran past its time limit.' }
-    }
+    // 2. Run the agent with a hard time limit: the abort signal fires at the
+    //    limit, and if the executor ignores it the job is cut off shortly after.
+    const exec = await this.runWithLimit(recipe, {
+      jobId, recipe, workDir, inputDir, outputDir, inputFiles: dropped, note: noteText,
+    })
 
-    // 3. The harness hashes what actually came out — not what the agent claims.
+    // 3. The harness hashes what actually came out, not what the agent claims.
     const outNames = await listFiles(outputDir)
     const outputs: FileManifestEntry[] = []
     for (const name of outNames) outputs.push(await manifestEntry(join(outputDir, name), name, 'output'))
@@ -282,7 +310,7 @@ export class MagicFolder {
       },
       ...(state.chain_id ? { chain_id: state.chain_id } : {}),
     })
-    const finalReceipt = ok
+    const receipt = ok
       ? created
       : await engine.complete(created.receipt_id, {
         status: 'failed',
@@ -290,61 +318,144 @@ export class MagicFolder {
         latency_ms: Date.now() - started,
       })
     if (!state.chain_id) {
-      state.chain_id = finalReceipt.chain_id
+      state.chain_id = receipt.chain_id
       await this.writeState(state)
     }
 
-    // 5. Deliver: results + untouched originals + receipt.
-    const destBase = ok && recipe.needsApproval ? APPROVAL_DIR : DONE_DIR
-    const destination = join(this.root, destBase, jobId)
-    await mkdir(destination, { recursive: true })
-    if (ok) for (const name of outNames) await moveFile(join(outputDir, name), join(destination, name))
-    for (const name of dropped) await moveFile(join(inputDir, name), join(destination, 'original', name))
-    await this.writeReceiptFiles(destination, finalReceipt, null)
-    await rm(statusFile, { force: true })
-    await rm(workDir, { recursive: true, force: true })
+    // 5. Deliver. The journal records the signed receipt first, so a crash
+    //    mid-delivery is finished on the next start instead of losing files.
+    const destination = join(this.root, ok && recipe.needsApproval ? APPROVAL_DIR : DONE_DIR, jobId)
+    await this.writeJournal(workDir, { ...journal, phase: 'signed', receiptId: receipt.receipt_id, destination })
+    await this.deliver(workDir, receipt, destination, journal)
 
-    this.emit({ type: 'job-finished', jobId, recipe: recipe.name, ok, receiptId: finalReceipt.receipt_id, destination })
-    return { jobId, ok, receipt: finalReceipt, destination }
+    this.emit({ type: 'job-finished', jobId, recipe: recipe.name, ok, receiptId: receipt.receipt_id, destination })
+    return { jobId, ok, receipt, destination }
   }
 
-  /** Jobs moved from "Needs your OK" into "Done" get a signed approval receipt. */
+  private async runWithLimit(recipe: Recipe, job: Omit<JobContext, 'signal'>): Promise<ExecResult> {
+    const controller = new AbortController()
+    const limitMs = recipe.maxMinutes * 60_000
+    const failure = (error: string): ExecResult => ({
+      ok: false, summary: '', model: null, tokensIn: null, tokensOut: null, costUsd: null, toolCalls: [], error,
+    })
+    let abortTimer: NodeJS.Timeout | undefined
+    let hardTimer: NodeJS.Timeout | undefined
+    const hardStop = new Promise<ExecResult>((done) => {
+      abortTimer = setTimeout(() => controller.abort(), limitMs)
+      hardTimer = setTimeout(() => done(failure('Stopped: the job ran past its time limit.')), limitMs + (this.options.hardStopGraceMs ?? HARD_STOP_GRACE_MS))
+    })
+    try {
+      const exec = await Promise.race([
+        this.options.executor.run({ ...job, signal: controller.signal }).catch((err: unknown) =>
+          failure(err instanceof Error ? err.message : String(err))),
+        hardStop,
+      ])
+      return controller.signal.aborted && exec.ok ? { ...exec, ok: false, error: 'Stopped: the job ran past its time limit.' } : exec
+    } finally {
+      clearTimeout(abortTimer)
+      clearTimeout(hardTimer)
+    }
+  }
+
+  /**
+   * Move results into result/, originals into original/, write the receipt.
+   * Safe to run again after a crash: it only moves what is still in the job
+   * workspace and never overwrites a file.
+   */
+  private async deliver(workDir: string, receipt: ActionReceipt, destination: string, journal: JobJournal): Promise<void> {
+    await mkdir(destination, { recursive: true })
+    if (receipt.status === 'completed') {
+      for (const name of await listFiles(join(workDir, 'output'))) {
+        await moveFile(join(workDir, 'output', name), join(destination, RESULT_DIR, name))
+      }
+    }
+    for (const name of await listFiles(join(workDir, 'input'))) {
+      await moveFile(join(workDir, 'input', name), join(destination, ORIGINAL_DIR, name))
+    }
+    await this.writeReceiptFiles(destination, receipt, null)
+    await rm(journal.statusFile, { force: true })
+    await rm(workDir, { recursive: true, force: true })
+  }
+
+  /** Finish or roll back jobs a crash left in .magic/jobs. */
+  private async recoverJobs(): Promise<void> {
+    const jobsDir = join(this.root, STATE_DIR, 'jobs')
+    for (const e of await readdir(jobsDir, { withFileTypes: true })) {
+      if (!e.isDirectory()) continue
+      const workDir = join(jobsDir, e.name)
+      const journal = await this.readJournal(workDir)
+      try {
+        if (journal?.phase === 'signed' && journal.receiptId && journal.destination) {
+          const receipt = await this.receipts.get(journal.receiptId)
+          if (receipt) {
+            await this.deliver(workDir, receipt, journal.destination, journal)
+            this.emit({ type: 'recovered', jobId: e.name, action: 'delivered' })
+            continue
+          }
+        }
+        // Never signed: put the drop back where it came from so it runs again.
+        const back = journal?.recipeDir
+        if (!back || !(await exists(back))) {
+          this.emit({ type: 'error', message: `Interrupted job ${e.name} could not be returned; its files are in ${workDir}` })
+          continue
+        }
+        for (const name of await listFiles(join(workDir, 'input'))) {
+          await moveFile(join(workDir, 'input', name), await freeName(join(back, name)))
+        }
+        if (journal?.statusFile) await rm(journal.statusFile, { force: true })
+        await rm(workDir, { recursive: true, force: true })
+        this.emit({ type: 'recovered', jobId: e.name, action: 'returned' })
+      } catch (err) {
+        this.emit({ type: 'error', message: `Recovering ${e.name}: ${err instanceof Error ? err.message : String(err)}` })
+      }
+    }
+  }
+
+  /**
+   * Jobs moved from "Needs your OK" into "Done" get a signed approval receipt.
+   * Decided from the stored receipt (not the editable receipt.json), and only
+   * once per job: the database is checked for an existing approval.
+   */
   private async recordApprovals(): Promise<void> {
-    const state = await this.readState()
     const doneRoot = join(this.root, DONE_DIR)
-    let changed = false
     for (const e of await readdir(doneRoot, { withFileTypes: true })) {
       if (!e.isDirectory()) continue
       const dir = join(doneRoot, e.name)
       const raw = await readFile(join(dir, 'receipt.json'), 'utf-8').catch(() => null)
       if (!raw) continue
-      let receipt: ActionReceipt
+      let receiptId: unknown
       try {
-        receipt = JSON.parse(raw) as ActionReceipt
+        receiptId = (JSON.parse(raw) as { receipt_id?: unknown }).receipt_id
       } catch {
         continue
       }
-      const meta = receipt.metadata as { needs_approval?: boolean; job_id?: string }
-      if (!meta.needs_approval || state.approved.includes(receipt.receipt_id)) continue
-      const stored = await this.receipts.get(receipt.receipt_id)
+      if (typeof receiptId !== 'string') continue
+      const stored = await this.receipts.get(receiptId)
       if (!stored) continue // not one of ours
+      const meta = stored.metadata as { kind?: string; needs_approval?: boolean; job_id?: string }
+      if (meta.kind !== 'magic_folder_job' || meta.needs_approval !== true || stored.status !== 'completed') continue
+      if (meta.job_id !== e.name) continue // the folder must be this job's own folder
+
+      const children = await this.receipts.list({ parent_receipt_id: stored.receipt_id }, 1, 100)
+      const existing = children.data.find(isApprovalOf(stored))
+      if (existing) {
+        if (!(await exists(join(dir, 'approval-receipt.json')))) await this.writeReceiptFiles(dir, stored, existing)
+        continue
+      }
 
       const approval = await this.receipts.create({
-        action: 'magic_folder.approved',
+        action: APPROVAL_ACTION,
         status: 'completed',
         input_hash: hashData({ approved_receipt_id: stored.receipt_id }),
         output_summary: `Approved by moving the job into ${DONE_DIR}.`,
         parent_receipt_id: stored.receipt_id,
         chain_id: stored.chain_id,
         tags: ['magic-folder'],
-        metadata: { kind: 'magic_folder_approval', job_id: meta.job_id },
+        metadata: { kind: 'magic_folder_approval', job_id: meta.job_id, approved_receipt_id: stored.receipt_id },
       })
       await this.writeReceiptFiles(dir, stored, approval)
-      state.approved.push(stored.receipt_id)
-      changed = true
-      this.emit({ type: 'approved', jobId: meta.job_id ?? e.name, receiptId: approval.receipt_id })
+      this.emit({ type: 'approved', jobId: meta.job_id, receiptId: approval.receipt_id })
     }
-    if (changed) await this.writeState(state)
   }
 
   private async writeReceiptFiles(dir: string, receipt: ActionReceipt, approval: ActionReceipt | null): Promise<void> {
@@ -379,15 +490,27 @@ export class MagicFolder {
   private async readState(): Promise<FolderState> {
     try {
       const s = JSON.parse(await readFile(join(this.root, STATE_DIR, 'state.json'), 'utf-8')) as Partial<FolderState>
-      return { chain_id: s.chain_id ?? null, approved: Array.isArray(s.approved) ? s.approved : [] }
+      return { chain_id: s.chain_id ?? null }
     } catch {
-      return { chain_id: null, approved: [] }
+      return { chain_id: null }
     }
   }
 
   private async writeState(state: FolderState): Promise<void> {
     await mkdir(join(this.root, STATE_DIR), { recursive: true })
     await writeFile(join(this.root, STATE_DIR, 'state.json'), `${JSON.stringify(state, null, 2)}\n`)
+  }
+
+  private async writeJournal(workDir: string, journal: JobJournal): Promise<void> {
+    await writeFile(join(workDir, JOURNAL_FILE), `${JSON.stringify(journal, null, 2)}\n`)
+  }
+
+  private async readJournal(workDir: string): Promise<JobJournal | null> {
+    try {
+      return JSON.parse(await readFile(join(workDir, JOURNAL_FILE), 'utf-8')) as JobJournal
+    } catch {
+      return null
+    }
   }
 
   private emit(event: MagicFolderEvent): void {

@@ -123,14 +123,13 @@ export class ReceiptEngine {
 
     const publicKey = this.keyManager.getPublicKey()
     const status = params.status ?? 'pending'
-    // Finalized receipts link to the chain's current tip; pending ones get
-    // their link when complete() finalizes them.
-    const prevReceiptHash = status === 'pending' ? null : await this.linkFor(chainId)
 
     const receiptData = {
       sig_version: 2 as const,
       key_id: computeKeyId(publicKey),
-      prev_receipt_hash: prevReceiptHash,
+      // Finalized receipts link to the chain tip (set atomically below);
+      // pending ones get their link when complete() finalizes them.
+      prev_receipt_hash: null as string | null,
       files: params.files ?? null,
       receipt_id: receiptId,
       parent_receipt_id: params.parent_receipt_id ?? null,
@@ -172,16 +171,20 @@ export class ReceiptEngine {
       )
     }
 
-    // Sign the receipt (v2: every field except signature + verify_url)
-    receiptData.signature = signReceiptV2(receiptData, this.keyManager.getPrivateKey())
+    const privateKey = this.keyManager.getPrivateKey()
+    const seal = (tip: ActionReceipt | null): ActionReceipt => {
+      receiptData.prev_receipt_hash = status === 'pending' ? null : tip ? hashReceipt(tip as Record<string, unknown>) : null
+      // Sign (v2: every field except signature + verify_url), then validate
+      receiptData.signature = signReceiptV2(receiptData, privateKey)
+      return ActionReceipt.parse(receiptData)
+    }
 
-    // Validate against ActionReceipt schema
-    const receipt = ActionReceipt.parse(receiptData)
-
-    // Persist
-    await this.store.save(receipt)
-
-    return receipt
+    if (status === 'pending') {
+      const receipt = seal(null)
+      await this.store.save(receipt)
+      return receipt
+    }
+    return this.store.finalizeAtTip(chainId, seal)
   }
 
   async complete(receiptId: string, params: CompleteParams): Promise<ActionReceipt> {
@@ -200,7 +203,7 @@ export class ReceiptEngine {
       ...existing,
       sig_version: 2 as const,
       key_id: computeKeyId(publicKey),
-      prev_receipt_hash: await this.linkFor(existing.chain_id),
+      prev_receipt_hash: null as string | null, // set atomically at the chain tip below
       files: params.files ?? existing.files ?? null,
       status: params.status,
       completed_at: now,
@@ -229,13 +232,13 @@ export class ReceiptEngine {
       )
     }
 
-    // Re-sign with updated data (always as v2)
-    updated.signature = signReceiptV2(updated as Record<string, unknown>, this.keyManager.getPrivateKey())
-
-    const receipt = ActionReceipt.parse(updated)
-    await this.store.save(receipt)
-
-    return receipt
+    const privateKey = this.keyManager.getPrivateKey()
+    return this.store.finalizeAtTip(existing.chain_id, (tip) => {
+      updated.prev_receipt_hash = tip ? hashReceipt(tip as Record<string, unknown>) : null
+      // Re-sign with updated data (always as v2)
+      updated.signature = signReceiptV2(updated as Record<string, unknown>, privateKey)
+      return ActionReceipt.parse(updated)
+    })
   }
 
   async track(params: TrackParams): Promise<ActionReceipt> {
@@ -320,11 +323,6 @@ export class ReceiptEngine {
     if (genesisCount > 1) problems.push(`chain has ${genesisCount} starting receipts (expected 1)`)
 
     return { chain_id: chainId, valid: problems.length === 0, receipts: rows, problems }
-  }
-
-  private async linkFor(chainId: string): Promise<string | null> {
-    const tip = await this.store.getChainTip(chainId)
-    return tip ? hashReceipt(tip as Record<string, unknown>) : null
   }
 
   async get(receiptId: string): Promise<ActionReceipt | null> {

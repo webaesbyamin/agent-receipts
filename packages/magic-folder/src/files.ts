@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { createReadStream } from 'node:fs'
+import { createReadStream, constants as fsConstants } from 'node:fs'
 import { readdir, stat, mkdir, rename, copyFile, rm } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import type { FileManifestEntry } from '@agent-receipts/schema'
@@ -47,14 +47,19 @@ export async function listFiles(dir: string): Promise<string[]> {
   return out.sort()
 }
 
-/** Move a file, falling back to copy + delete across devices (e.g. a synced Drive folder). */
+/**
+ * Move a file, falling back to copy + delete across devices (e.g. a synced
+ * Drive folder). Never overwrites: if `to` exists it throws, so nobody's file
+ * is silently replaced.
+ */
 export async function moveFile(from: string, to: string): Promise<void> {
   await mkdir(join(to, '..'), { recursive: true })
+  if (await exists(to)) throw new Error(`Refusing to overwrite ${to}`)
   try {
     await rename(from, to)
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'EXDEV') throw err
-    await copyFile(from, to)
+    await copyFile(from, to, fsConstants.COPYFILE_EXCL)
     await rm(from)
   }
 }

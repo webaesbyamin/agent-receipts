@@ -166,3 +166,22 @@ describe('computeKeyId / hashReceipt', () => {
     expect(hashReceipt({ ...r })).toBe(h1)
   })
 })
+
+describe('prototype keys', () => {
+  it('a __proto__ key added to a signed receipt breaks the signature', () => {
+    const { privateKey, publicKey } = generateKeyPair()
+    const r = baseReceipt()
+    r['signature'] = signReceiptV2(r, privateKey)
+    const tampered = JSON.parse(JSON.stringify(r).replace('{', '{"__proto__":{"injected":true},'))
+    expect(Object.keys(tampered)).toContain('__proto__')
+    expect(verifyReceiptV2(tampered, publicKey)).toBe(false)
+    const nested = JSON.parse(JSON.stringify(r).replace('"metadata":{', '"metadata":{"__proto__":{"x":1},'))
+    expect(verifyReceiptV2(nested, publicKey)).toBe(false)
+  })
+
+  it('hashReceipt distinguishes a receipt with an extra __proto__ key', () => {
+    const r = baseReceipt()
+    const withProto = JSON.parse(JSON.stringify(r).replace('{', '{"__proto__":{"a":1},'))
+    expect(hashReceipt(withProto)).not.toBe(hashReceipt(r))
+  })
+})

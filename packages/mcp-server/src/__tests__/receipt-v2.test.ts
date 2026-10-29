@@ -98,6 +98,27 @@ describe('Receipt v2 in the engine', () => {
     expect(chain.problems.join(' ')).toContain(c.receipt_id)
   })
 
+  it('parallel finalizations never fork the chain', async () => {
+    const first = await engine.track({ action: 'start', input: 0 })
+    const pendings = await Promise.all([1, 2, 3].map((i) => engine.create({ action: `p${i}`, input_hash: `sha256:${i}`, chain_id: first.chain_id })))
+    await Promise.all([
+      ...Array.from({ length: 12 }, (_, i) => engine.track({ action: `t${i}`, input: i, chain_id: first.chain_id })),
+      ...pendings.map((p) => engine.complete(p.receipt_id, { status: 'completed' })),
+    ])
+    const chain = await engine.verifyChain(first.chain_id)
+    expect(chain.receipts).toHaveLength(16)
+    expect(chain.problems).toEqual([])
+    expect(chain.valid).toBe(true)
+  })
+
+  it('verifies chains longer than 1000 receipts in full', async () => {
+    const first = await engine.track({ action: 'start', input: 0 })
+    for (let i = 1; i < 1005; i++) await engine.track({ action: 'n', input: i, chain_id: first.chain_id })
+    const chain = await engine.verifyChain(first.chain_id)
+    expect(chain.receipts).toHaveLength(1005)
+    expect(chain.valid).toBe(true)
+  })
+
   it('verifyChain catches a fork', async () => {
     const a = await engine.track({ action: 'one', input: 1 })
     await engine.track({ action: 'two', input: 2, chain_id: a.chain_id })

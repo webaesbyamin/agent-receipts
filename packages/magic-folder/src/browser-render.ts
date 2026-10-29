@@ -39,6 +39,10 @@ function arFiles(title, files) {
   return '<section class="block"><h2>' + arEsc(title) + '</h2><div class="scroll" tabindex="0" aria-label="' + arEsc(title) + '"><table><thead><tr><th>File</th><th class="num">Size</th><th>Fingerprint</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="hint">Swipe to see fingerprints →</p></section>';
 }
 function arRecipeName(r) { var m = r.metadata || {}; return m.recipe || r.action; }
+function arIsApprovalOf(a, r) {
+  return !!a && !!r && a.parent_receipt_id === r.receipt_id && a.action === 'magic_folder.approved'
+    && a.status === 'completed' && !!a.metadata && a.metadata.kind === 'magic_folder_approval' && a.key_id === r.key_id;
+}
 function arRenderReceipt(d, seal) {
   var r = d.receipt, a = d.approval, m = r.metadata || {}, tz = d.timeZone;
   var files = r.files || [];
@@ -64,7 +68,6 @@ function arRenderReceipt(d, seal) {
     ['Model cost', typeof r.cost_usd === 'number' ? arUsd(r.cost_usd) + (m.cost_is_estimate ? ' (estimate)' : '') : '—'],
   ];
   if (a) details.push(['Approved', arTime(a.timestamp, tz)]);
-  var keyUrl = m.issuer ? arUrl(m.issuer.key_url) : null;
   var verifyUrl = arUrl(d.verifyPageUrl);
   return ''
     + '<header class="top"><span class="issuer">' + arEsc(issuer) + '</span><span class="kind">Receipt</span></header>'
@@ -81,8 +84,8 @@ function arRenderReceipt(d, seal) {
     + (d.publicKey ? '<div class="cell"><dt>Public key</dt><dd class="mono wrap">' + arEsc(d.publicKey) + '</dd></div>' : '')
     + (r.prev_receipt_hash ? '<div class="cell"><dt>Follows</dt><dd class="mono wrap">' + arEsc(arShort(r.prev_receipt_hash)) + '</dd></div>' : '')
     + '</dl>'
-    + (keyUrl ? '<p>Compare the key with the one ' + arEsc(issuer) + ' publishes at <a href="' + arEsc(keyUrl) + '" rel="noopener">' + arEsc(keyUrl) + '</a>.</p>' : '')
-    + (verifyUrl ? '<p>For an independent check, drop this file on the <a href="' + arEsc(verifyUrl) + '" rel="noopener">verify page</a>.</p>' : '<p>For an independent check, drop this file on any copy of the Agent Receipts verify page.</p>')
+    + '<p>A file can\'t prove who made it. To confirm this came from ' + arEsc(issuer) + ', drop it on ' + arEsc(issuer) + '\'s own verify page'
+    + (verifyUrl ? ' (<a href="' + arEsc(verifyUrl) + '" rel="noopener">this one</a>, if you got the link from them)' : '') + ', which checks the key for you.</p>'
     + '</section>'
     + '<footer class="foot">Agent Receipts · Ed25519 · receipt format v' + (r.sig_version === 2 ? 2 : 1) + '</footer>';
 }
@@ -131,6 +134,9 @@ dd{margin:2px 0 0;overflow-wrap:anywhere}
 .seal[data-state=ok] .seal-mark{border-color:var(--good);background:var(--good)}
 .seal[data-state=ok] .seal-mark::after{content:"";position:absolute;left:13px;top:8px;width:9px;height:16px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 .seal[data-state=ok] .seal-title{color:var(--good)}
+.seal[data-state=warn]{border-color:#eadbb5;background:var(--wait-bg)}
+.seal[data-state=warn] .seal-mark{border-color:var(--wait)}
+.seal[data-state=warn] .seal-title{color:var(--wait)}
 .seal[data-state=bad]{border-color:#e8c9c2;background:var(--bad-bg)}
 .seal[data-state=bad] .seal-mark{border-color:var(--bad)}
 .seal[data-state=bad] .seal-title{color:var(--bad)}

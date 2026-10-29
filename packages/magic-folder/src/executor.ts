@@ -1,4 +1,5 @@
-import { resolve, sep } from 'node:path'
+import { resolve, sep, dirname, basename, join } from 'node:path'
+import { realpathSync } from 'node:fs'
 import type { Recipe } from './recipe.js'
 
 /** What the runner hands an executor for one job. */
@@ -64,9 +65,24 @@ export function buildPrompt(job: JobContext): string {
   return lines.join('\n')
 }
 
-/** True when `target` is inside `root` (after resolving . and ..). */
+/**
+ * True when `target` is inside `root`, after resolving `.`/`..` and symlinks
+ * (for whatever part of the path already exists), so a symlink inside the
+ * job folder can't point the agent somewhere else.
+ */
 export function isInside(root: string, target: string): boolean {
-  const r = resolve(root)
-  const t = resolve(r, target)
+  const r = real(resolve(root))
+  const t = real(resolve(resolve(root), target))
   return t === r || t.startsWith(r + sep)
+}
+
+/** realpath of the longest existing prefix, with the rest appended. */
+function real(p: string): string {
+  try {
+    return realpathSync(p)
+  } catch {
+    const parent = dirname(p)
+    if (parent === p) return p
+    return join(real(parent), basename(p))
+  }
 }

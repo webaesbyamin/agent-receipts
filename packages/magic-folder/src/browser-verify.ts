@@ -17,7 +17,7 @@ var AR_UNSIGNED = ['signature','verify_url'];
 function arSortDeep(v) {
   if (v === null || typeof v !== 'object') return v;
   if (Array.isArray(v)) return v.map(arSortDeep);
-  var out = {}; var keys = Object.keys(v).sort();
+  var out = Object.create(null); var keys = Object.keys(v).sort();
   for (var i = 0; i < keys.length; i++) { var x = v[keys[i]]; if (x !== undefined) out[keys[i]] = arSortDeep(x); }
   return out;
 }
@@ -31,7 +31,7 @@ function arToHex(buf) { return Array.prototype.map.call(new Uint8Array(buf), fun
 function arB64(s) { var bin = atob(s); var b = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; }
 function arMessage(r) {
   if (r.sig_version === 2) {
-    var p = {}; Object.keys(r).forEach(function (k) { if (AR_UNSIGNED.indexOf(k) === -1 && r[k] !== undefined) p[k] = r[k]; });
+    var p = Object.create(null); Object.keys(r).forEach(function (k) { if (AR_UNSIGNED.indexOf(k) === -1 && r[k] !== undefined) p[k] = r[k]; });
     return JSON.stringify(arSortDeep(p));
   }
   var f = {}; AR_V1_FIELDS.forEach(function (k) { f[k] = r[k]; });

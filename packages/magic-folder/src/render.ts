@@ -70,10 +70,12 @@ ${BROWSER_RENDER_JS}
   app.innerHTML = arRenderReceipt(d, { state: 'checking', title: 'Checking the seal…', sub: 'This page checks its own signature. Nothing is sent anywhere.' });
   var r = await arVerify(d.receipt, d.publicKey, { requireV2: true });
   var a = d.approval ? await arVerify(d.approval, d.publicKey, { requireV2: true }) : null;
-  var linked = !d.approval || d.approval.parent_receipt_id === d.receipt.receipt_id;
-  var seal = (r.valid && (!a || a.valid) && linked)
-    ? { state: 'ok', title: 'Verified', sub: 'Signed by ' + r.key_id + '. Nothing on this page has changed since it was signed' + (a ? ', including the approval.' : '.') }
-    : { state: 'bad', title: 'Not verified', sub: (!r.valid ? r.reason : !linked ? 'The approval belongs to a different receipt.' : a.reason) || 'This receipt could not be verified.' };
+  var genuine = !d.approval || arIsApprovalOf(d.approval, d.receipt);
+  // A page can only show it hasn't been changed. Who signed it is confirmed
+  // by the issuer's own verify page, which knows the issuer's key.
+  var seal = (r.valid && (!a || a.valid) && genuine)
+    ? { state: 'ok', title: 'Unchanged since signing', sub: 'Signed by ' + r.key_id + (a ? ', approval included' : '') + '. Confirm the signer on the issuer\\'s verify page.' }
+    : { state: 'bad', title: 'Not verified', sub: (!r.valid ? r.reason : !genuine ? 'The approval on this page is not a valid approval of this job.' : a.reason) || 'This receipt could not be verified.' };
   app.innerHTML = arRenderReceipt(d, seal);
 })();
 </script>

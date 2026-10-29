@@ -71,3 +71,94 @@ describe('ClaudeExecutor without the SDK or key', () => {
     expect(r.error).toMatch(/Claude Agent SDK is not installed|ANTHROPIC_API_KEY/)
   })
 })
+
+describe('sandbox details', () => {
+  it('denies a symlink inside the job folder that points outside it', async () => {
+    const { mkdtemp, mkdir, symlink, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const dir = await mkdtemp(join(tmpdir(), 'mf-link-'))
+    try {
+      await mkdir(join(dir, 'input'), { recursive: true })
+      await mkdir(join(dir, 'output'), { recursive: true })
+      await symlink('/etc', join(dir, 'input', 'sneaky'))
+      const j = { ...job, workDir: dir, outputDir: join(dir, 'output') }
+      expect(checkToolUse(j, 'Read', { file_path: join(dir, 'input', 'sneaky', 'passwd') }).behavior).toBe('deny')
+      await symlink(dir.replace(/[^/]+$/, ''), join(dir, 'output', 'up'))
+      expect(checkToolUse(j, 'Write', { file_path: join(dir, 'output', 'up', 'x.md') }).behavior).toBe('deny')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('denies Glob and Grep patterns that climb out or are absolute', () => {
+    const g = { ...job, recipe: parseRecipe('Search', '---\ntools: Read, Glob, Grep\n---\nFind.') }
+    expect(checkToolUse(g, 'Glob', { pattern: '**/*.md' }).behavior).toBe('allow')
+    expect(checkToolUse(g, 'Glob', { pattern: '/home/**/*.pem' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: '../../../**' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: 'input/../../x' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Glob', { pattern: '~/.ssh/*' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Grep', { pattern: 'secret', glob: '../../**' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Grep', { pattern: 'secret', path: '/' }).behavior).toBe('deny')
+    expect(checkToolUse(g, 'Grep', { pattern: 'price', glob: '*.csv' }).behavior).toBe('allow')
+  })
+})
+
+describe('ClaudeExecutor with an SDK', () => {
+  const ctx = (signal = new AbortController().signal) => ({
+    jobId: 'j', recipe: job.recipe, workDir, inputDir: join(workDir, 'input'), outputDir: job.outputDir,
+    inputFiles: ['sofa.jpg'], note: null, signal,
+  })
+
+  function fakeSdk(messages: unknown[], capture: { options?: Record<string, unknown> }) {
+    return async () => ({
+      query: ({ options }: { options: Record<string, unknown> }) => {
+        capture.options = options
+        return (async function* () { for (const m of messages) yield m })()
+      },
+    })
+  }
+
+  it('fences tools with a PreToolUse hook and pre-approves nothing', async () => {
+    process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] ?? 'test'
+    const capture: { options?: Record<string, unknown> } = {}
+    await new ClaudeExecutor({ loadSdk: fakeSdk([{ type: 'result', subtype: 'success', is_error: false, result: 'ok' }], capture) }).run(ctx())
+    const o = capture.options!
+    expect(o['allowedTools']).toBeUndefined()
+    expect(o['settingSources']).toEqual([])
+    expect(o['cwd']).toBe(workDir)
+    expect(o['maxBudgetUsd']).toBe(job.recipe.maxCostUsd)
+    const disallowed = o['disallowedTools'] as string[]
+    expect(disallowed).toContain('Bash')
+    expect(disallowed).toContain('WebFetch')
+    expect(disallowed).not.toContain('Read')
+    expect(disallowed).not.toContain('Write')
+    const hooks = o['hooks'] as { PreToolUse: Array<{ hooks: Array<(i: unknown) => Promise<Record<string, unknown>>> }> }
+    const gate = hooks.PreToolUse[0]!.hooks[0]!
+    const denied = await gate({ hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: '/etc/passwd' } })
+    expect(denied).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'Only files inside this job folder can be used.' } })
+    expect(await gate({ tool_name: 'Bash', tool_input: { command: 'ls' } })).toHaveProperty('hookSpecificOutput')
+    expect(await gate({ tool_name: 'Read', tool_input: { file_path: join(workDir, 'input', 'sofa.jpg') } })).toEqual({})
+  })
+
+  it('maps the result message: model, tokens, estimated cost, tools, summary', async () => {
+    process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] ?? 'test'
+    const r = await new ClaudeExecutor({
+      loadSdk: fakeSdk([
+        { type: 'system', subtype: 'init', model: 'claude-x' },
+        { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read' }, { type: 'tool_use', name: 'Write' }, { type: 'tool_use', name: 'Read' }] } },
+        { type: 'result', subtype: 'success', is_error: false, result: 'Wrote   one\ndescription.', total_cost_usd: 0.031, usage: { input_tokens: 900, output_tokens: 120 } },
+      ], {}),
+    }).run(ctx())
+    expect(r).toEqual({ ok: true, summary: 'Wrote one description.', model: 'claude-x', tokensIn: 900, tokensOut: 120, costUsd: 0.031, toolCalls: ['Read', 'Write'] })
+  })
+
+  it('turns SDK error results into plain reasons', async () => {
+    process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] ?? 'test'
+    const run = (subtype: string) => new ClaudeExecutor({ loadSdk: fakeSdk([{ type: 'result', subtype, is_error: true, total_cost_usd: 0.5 }], {}) }).run(ctx())
+    expect((await run('error_max_budget_usd')).error).toBe('Stopped: the job hit its cost limit.')
+    expect((await run('error_max_turns')).error).toBe('Stopped: the job took too many steps.')
+    const r = await run('error_during_execution')
+    expect(r.ok).toBe(false)
+    expect(r.costUsd).toBe(0.5)
+  })
+})
