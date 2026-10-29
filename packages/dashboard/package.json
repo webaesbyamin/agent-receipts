@@ -3,12 +3,14 @@
   "version": "0.5.1",
   "description": "Mission Control dashboard for Agent Receipts — local web UI for AI agent accountability",
   "license": "MIT",
-  "author": "Amin <amin@webaes.com>",
+  "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
   "repository": {
     "type": "git",
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "directory": "packages/dashboard"
   },
+  "homepage": "https://receipts.webaes.com",
+  "bugs": "https://github.com/webaesbyamin/agent-receipts/issues",
   "keywords": [
     "agent-receipts",
     "dashboard",

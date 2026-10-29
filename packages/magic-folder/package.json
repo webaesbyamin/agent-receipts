@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "description": "Drop a file in a folder, get the work back with a signed receipt anyone can verify",
   "license": "MIT",
-  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
   "repository": {
     "type": "git",
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "directory": "packages/magic-folder"
   },
-  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "homepage": "https://receipts.webaes.com",
   "bugs": {
     "url": "https://github.com/webaesbyamin/agent-receipts/issues"
   },
