@@ -16,19 +16,262 @@ Magic Folder/
   Needs your OK/                drafts waiting for approval
 ```
 
-## Quick start
+## Install
 
-Needs Node 20–24. (On Node 25+ the SQLite driver, better-sqlite3, may have no prebuilt binary yet and has to compile from source, which needs current Xcode Command Line Tools on a Mac.)
+Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 20 to 24** (Node 24 recommended). Don't use Node 25 or newer yet: the database driver it uses (better-sqlite3) may have no ready-made build for it and would try to compile from source. Note that nodejs.org's "LTS" download is now Node 26, so pick 24 explicitly.
+
+For free local jobs you also need [Ollama](https://ollama.com) with a model (`qwen3:8b`, about 5 GB). For Claude instead, see [Use Claude](#use-claude-optional).
+
+How this is tested: every step below runs automatically on Mac, Windows and Linux on each change (install, `init`, `doctor`, a job and its receipt, and keeping it running). Ollama itself can't run in that test, so jobs on Ollama are tested by hand on a Mac.
+
+### Mac
+
+1. **Install Node 24.** With [Homebrew](https://brew.sh):
+
+   ```bash
+   brew install node@24
+   echo 'export PATH="$(brew --prefix node@24)/bin:$PATH"' >> ~/.zshrc
+   ```
+
+   Close Terminal and open it again. Check: `node -v` prints `v24.…`.
+   Without Homebrew: download the `.pkg` from [nodejs.org/dist/latest-v24.x](https://nodejs.org/dist/latest-v24.x/) and open it.
+
+2. **Install Ollama** (free local AI). Download [Ollama for Mac](https://ollama.com/download/mac), open it and move it to Applications, then start it. Then get the model:
+
+   ```bash
+   ollama pull qwen3:8b
+   ```
+
+   Check: `ollama list` shows `qwen3:8b`.
+
+3. **Install Magic Folder.**
+
+   ```bash
+   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   ```
+
+   If you installed Node with the `.pkg` and see `EACCES`, run it again with `sudo ` in front. Check: `magic-folder --help` prints the commands.
+
+4. **Create your folder, check, and start.**
+
+   ```bash
+   magic-folder init ~/"Magic Folder"
+   magic-folder doctor
+   magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Business"
+   ```
+
+   `doctor` should show Node, Ollama and `qwen3:8b` with a ✓. Leave the window open while it runs.
+
+### Windows
+
+1. **Install Node 24.** Download the Windows installer (`node-v24.…-x64.msi`) from [nodejs.org/dist/latest-v24.x](https://nodejs.org/dist/latest-v24.x/), run it and keep the defaults. Open a **new** PowerShell window (Start menu → type "PowerShell"). Check: `node -v` prints `v24.…`.
+
+2. **Install Ollama.** Download [Ollama for Windows](https://ollama.com/download/windows) and run `OllamaSetup.exe`, or in PowerShell:
+
+   ```powershell
+   irm https://ollama.com/install.ps1 | iex
+   ollama pull qwen3:8b
+   ```
+
+   Check: `ollama list` shows `qwen3:8b`.
+
+3. **Install Magic Folder.**
+
+   ```powershell
+   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   ```
+
+   If PowerShell says *running scripts is disabled on this system*, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, answer `Y`, and try again. Check: `magic-folder --help` prints the commands.
+
+4. **Create your folder, check, and start.**
+
+   ```powershell
+   magic-folder init "$HOME\Magic Folder"
+   magic-folder doctor
+   magic-folder run "$HOME\Magic Folder" --engine ollama --issuer "Your Business"
+   ```
+
+### Linux
+
+1. **Install Node 24** with [nvm](https://github.com/nvm-sh/nvm):
+
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
+   ```
+
+   Close the terminal and open it again, then:
+
+   ```bash
+   nvm install 24
+   ```
+
+   Check: `node -v` prints `v24.…`.
+
+2. **Install Ollama** ([ollama.com/download/linux](https://ollama.com/download/linux)):
+
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull qwen3:8b
+   ```
+
+3. **Install Magic Folder.**
+
+   ```bash
+   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   ```
+
+4. **Create your folder, check, and start.**
+
+   ```bash
+   magic-folder init ~/"Magic Folder"
+   magic-folder doctor
+   magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Business"
+   ```
+
+### The run command
+
+- `--engine ollama` runs jobs on Ollama, free, on your computer. Without it, jobs use Claude.
+- `--issuer "Your Business"` is the name printed on your receipts.
+- `--key-url` and `--verify-url` are only for when you host your own verify page (see [Who signed it](#who-signed-it)).
+
+Drop a file into any job folder and leave it. A `… - working.txt` note appears while it runs, and the result lands in `Done`.
+
+About `--allow-scripts=better-sqlite3`: npm 11 asks you to approve packages that run an install script. This approves the one Magic Folder needs (it fetches the SQLite driver's ready-made build). Older npm ignores the flag.
+
+### Keep it running
+
+#### Mac: start at login
+
+This writes a LaunchAgent that starts Magic Folder when you log in and restarts it if it stops. Change `Your Business` first.
 
 ```bash
-npm install -g @agent-receipts/magic-folder @anthropic-ai/claude-agent-sdk
-export ANTHROPIC_API_KEY=sk-ant-...
-
-magic-folder init ~/"Magic Folder"
-magic-folder run ~/"Magic Folder" --issuer "Your Studio"
+mkdir -p ~/Library/LaunchAgents
+cat > ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.agent-receipts.magic-folder</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$(command -v node)</string>
+    <string>$(npm root -g)/@agent-receipts/magic-folder/dist/cli.js</string>
+    <string>run</string>
+    <string>$HOME/Magic Folder</string>
+    <string>--engine</string><string>ollama</string>
+    <string>--issuer</string><string>Your Business</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>$HOME/Library/Logs/magic-folder.log</string>
+  <key>StandardErrorPath</key><string>$HOME/Library/Logs/magic-folder.log</string>
+</dict>
+</plist>
+EOF
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
 ```
 
-Drop a file into any job folder and leave it. A `… - working.txt` note appears while it runs.
+Check: `tail ~/Library/Logs/magic-folder.log` shows `Watching …`. The Ollama app starts at login by itself.
+
+| | |
+| --- | --- |
+| Stop | `launchctl bootout gui/$(id -u)/com.agent-receipts.magic-folder` |
+| Start again | `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist` |
+| Remove | `launchctl bootout gui/$(id -u)/com.agent-receipts.magic-folder; rm ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist` |
+
+Or a double-click launcher on your Desktop instead:
+
+```bash
+cat > ~/Desktop/"Start Magic Folder.command" <<EOF
+#!/bin/sh
+if pgrep -f "magic-folder/dist/cli.js run" >/dev/null; then echo "Already running in the background."; exit 0; fi
+echo "Magic Folder is running. Leave this window open."
+exec "$(command -v node)" "$(npm root -g)/@agent-receipts/magic-folder/dist/cli.js" run "\$HOME/Magic Folder" --engine ollama --issuer "Your Business"
+EOF
+chmod +x ~/Desktop/"Start Magic Folder.command"
+```
+
+#### Windows: start at log on
+
+This puts a small starter in your Startup folder, so Magic Folder opens (minimised) each time you log on. Change `Your Business` first.
+
+```powershell
+$startup = [Environment]::GetFolderPath('Startup')
+Set-Content -Path "$startup\Start Magic Folder.bat" -Encoding ASCII -Value @'
+@echo off
+if not "%~1"=="min" (start "Magic Folder" /min "%~f0" min & exit /b)
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | Where-Object { $_.CommandLine -like '*magic-folder*run*' }) { exit 1 }"
+if errorlevel 1 (echo Already running. & timeout /t 5 >nul & exit /b)
+echo Magic Folder is running. Leave this window open.
+magic-folder run "%USERPROFILE%\Magic Folder" --engine ollama --issuer "Your Business"
+'@
+Start-Process "$startup\Start Magic Folder.bat"
+```
+
+Check: a minimised "Magic Folder" window is in the taskbar and says `Watching …`. Ollama starts at log on by itself.
+
+| | |
+| --- | --- |
+| Stop | Close the "Magic Folder" window |
+| Start again | `Start-Process "$([Environment]::GetFolderPath('Startup'))\Start Magic Folder.bat"` |
+| Remove | `Remove-Item "$([Environment]::GetFolderPath('Startup'))\Start Magic Folder.bat"` |
+
+#### Linux: a systemd user service
+
+Change `Your Business` first.
+
+```bash
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/magic-folder.service <<EOF
+[Unit]
+Description=Magic Folder
+
+[Service]
+ExecStart=$(command -v node) $(npm root -g)/@agent-receipts/magic-folder/dist/cli.js run "%h/Magic Folder" --engine ollama --issuer "Your Business"
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+systemctl --user daemon-reload
+systemctl --user enable --now magic-folder
+```
+
+Check: `systemctl --user status magic-folder` says `active (running)`. To keep it running while you're logged out too: `sudo loginctl enable-linger $USER`.
+
+| | |
+| --- | --- |
+| Logs | `journalctl --user -u magic-folder -f` |
+| Stop | `systemctl --user stop magic-folder` |
+| Start again | `systemctl --user start magic-folder` |
+| Remove | `systemctl --user disable --now magic-folder; rm ~/.config/systemd/user/magic-folder.service` |
+
+### If something goes wrong
+
+- **`magic-folder: command not found`**: open a new terminal window. If it's still missing, check `node -v` works; if it does, run the install command again.
+- **Wrong Node version** (`node -v` shows 25 or higher, or lower than 20): install Node 24 as above. On a Mac with Homebrew, make sure the `export PATH=…node@24…` line is in `~/.zshrc` and open a new window.
+- **npm warns about install scripts for better-sqlite3**: use the install command with `--allow-scripts=better-sqlite3` as shown.
+- **`doctor` says Ollama is not reachable**: start the Ollama app (Mac, Windows) or run `ollama serve` (Linux), then `ollama pull qwen3:8b`.
+- **Nothing happens when I drop a file**: Magic Folder must be running (`magic-folder run …` in an open window, or the start-at-login setup above). Files are picked up once they stop changing, a few seconds after the copy finishes. Drop into a job folder like `Fix typos`, not into the top folder.
+
+### Uninstall
+
+```bash
+npm uninstall -g @agent-receipts/magic-folder
+```
+
+Remove the start-at-login setup first (see above). Your `Magic Folder` (results and receipts) and the signing key in `~/.agent-receipts/magic-folder` (Windows: `%USERPROFILE%\.agent-receipts\magic-folder`) stay until you delete them yourself.
+
+### Use Claude (optional)
+
+For bigger jobs, Magic Folder can use Claude with your own Anthropic API key:
+
+```bash
+npm install -g @anthropic-ai/claude-agent-sdk
+export ANTHROPIC_API_KEY=sk-ant-...        # Windows PowerShell: $env:ANTHROPIC_API_KEY = "sk-ant-..."
+magic-folder run ~/"Magic Folder" --issuer "Your Business"
+```
 
 API keys only: Anthropic doesn't allow third-party products to use claude.ai logins.
 
