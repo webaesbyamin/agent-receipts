@@ -1,0 +1,25 @@
+{
+  "name": "@agent-receipts/site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "receipts.webaes.com: Magic Folder and Agent Receipts, explained and installable",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "dev": "node scripts/generate.mjs && next dev -p 3275",
+    "build": "node scripts/generate.mjs && next build",
+    "test": "node scripts/check-guide.mjs",
+    "typecheck": "node scripts/generate.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@agent-receipts/magic-folder": "workspace:*",
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^5.4.0"
+  }
+}

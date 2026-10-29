@@ -18,7 +18,7 @@ Magic Folder/
 
 ## Install
 
-Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 20 to 24** (Node 24 recommended). Don't use Node 25 or newer yet: the database driver it uses (better-sqlite3) may have no ready-made build for it and would try to compile from source. Note that nodejs.org's "LTS" download is now Node 26, so pick 24 explicitly.
+Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 22 or 24** (24 recommended). Its database driver (better-sqlite3) has ready-made builds for those; on Node 20 (end-of-life) or Node 26 it would have to compile from source, which needs developer tools most computers don't have. Note that nodejs.org's "LTS" download is now Node 26, so pick 24 explicitly.
 
 For free local jobs you also need [Ollama](https://ollama.com) with a model (`qwen3:8b`, about 5 GB). For Claude instead, see [Use Claude](#use-claude-optional).
 
@@ -250,7 +250,7 @@ Check: `systemctl --user status magic-folder` says `active (running)`. To keep i
 ### If something goes wrong
 
 - **`magic-folder: command not found`**: open a new terminal window. If it's still missing, check `node -v` works; if it does, run the install command again.
-- **Wrong Node version** (`node -v` shows 25 or higher, or lower than 20): install Node 24 as above. On a Mac with Homebrew, make sure the `export PATH=…node@24…` line is in `~/.zshrc` and open a new window.
+- **Wrong Node version** (`node -v` shows 25 or higher, or lower than 22): install Node 24 as above. On a Mac with Homebrew, make sure the `export PATH=…node@24…` line is in `~/.zshrc` and open a new window.
 - **npm warns about install scripts for better-sqlite3**: use the install command with `--allow-scripts=better-sqlite3` as shown.
 - **`doctor` says Ollama is not reachable**: start the Ollama app (Mac, Windows) or run `ollama serve` (Linux), then `ollama pull qwen3:8b`.
 - **Nothing happens when I drop a file**: Magic Folder must be running (`magic-folder run …` in an open window, or the start-at-login setup above). Files are picked up once they stop changing, a few seconds after the copy finishes. Drop into a job folder like `Fix typos`, not into the top folder.

@@ -113,11 +113,11 @@ async function main(argv: string[]): Promise<number> {
     case 'doctor': {
       const ok = (b: boolean) => (b ? '✓' : '·')
       const major = Number(process.versions.node.split('.')[0])
-      console.log(major < 20
+      console.log(major < 22
         ? `· Node ${process.versions.node} is too old: install Node 24`
         : major > 24
-          ? `· Node ${process.versions.node}: Magic Folder is tested on Node 20 to 24. If something fails, install Node 24`
-          : `✓ Node ${process.versions.node} (Magic Folder needs 20 to 24)`)
+          ? `· Node ${process.versions.node}: Magic Folder is tested on Node 22 to 24. If something fails, install Node 24`
+          : `✓ Node ${process.versions.node} (Magic Folder needs 22 to 24)`)
       console.log(`${ok(!!process.env['ANTHROPIC_API_KEY'])} ANTHROPIC_API_KEY ${process.env['ANTHROPIC_API_KEY'] ? 'is set' : 'not set (needed for the claude engine)'}`)
       let sdk = false
       try { await import('@anthropic-ai/claude-agent-sdk' as string); sdk = true } catch { /* not installed */ }

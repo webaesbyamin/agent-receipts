@@ -12,5 +12,6 @@ export { renderReceiptHtml, extractReceiptData, jsonForScript } from './render.j
 export type { Issuer, RenderOptions } from './render.js'
 export { renderVerifyPage } from './verify-page.js'
 export { BROWSER_VERIFY_JS } from './browser-verify.js'
+export { BROWSER_RENDER_JS, RECEIPT_CSS } from './browser-render.js'
 export { initMagicFolder, STARTER_RECIPES } from './starter.js'
 export { hashFile, manifestEntry, listFiles } from './files.js'

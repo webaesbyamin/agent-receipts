@@ -1,0 +1,74 @@
+{
+  "sig_version": 2,
+  "key_id": "key_00f548f612ff0704",
+  "prev_receipt_hash": "sha256:85cb167c57cde8c9a7a5c85991a28b2f85680552dc5059f82d1d27692b2bafd9",
+  "files": [
+    {
+      "name": "webaes-test-note-3.txt",
+      "sha256": "sha256:e4cba82fe9460b217a144f941135dbf5efd780c93f0b8ab3b2cd7fd1136d15ac",
+      "bytes": 125,
+      "role": "input"
+    },
+    {
+      "name": "changes.md",
+      "sha256": "sha256:6ab1af05004c460fc1ddfc8ae69844d3b63231324982ff0f0a7fe8793bea7b77",
+      "bytes": 110,
+      "role": "output"
+    },
+    {
+      "name": "webaes-test-note-3 (fixed).txt",
+      "sha256": "sha256:5d4ce4a98efab68c686eb6cea2c08ca5cc39843c47b0dfd0cf9365ab141567c4",
+      "bytes": 126,
+      "role": "output"
+    }
+  ],
+  "receipt_id": "rcpt_r6-_8hKJzONu",
+  "parent_receipt_id": null,
+  "chain_id": "chain_zkgCKFG_",
+  "receipt_type": "action",
+  "agent_id": "local-agent",
+  "org_id": "local-org",
+  "action": "magic_folder.fix-typos",
+  "input_hash": "sha256:dd8fb0362b0cf9d8bb235c7765a3813036728472f9a2d238619b298be4fcd9c5",
+  "output_hash": "sha256:35e14cf2c1ab99256196a60398b685394b141e7cf674cdd0438e51efa08056d3",
+  "output_summary": "Fixed the typos and grammar in webaes-test-note-3.txt, producing webaes-test-note-3 (fixed).txt with corrected spelling and punctuation while preserving the original wording and formatting.",
+  "model": "qwen3:8b",
+  "tokens_in": 1388,
+  "tokens_out": 1135,
+  "cost_usd": 0,
+  "latency_ms": 89010,
+  "tool_calls": [
+    "Read",
+    "Write"
+  ],
+  "timestamp": "2026-10-29T21:36:34.276Z",
+  "completed_at": "2026-10-29T21:38:03.305Z",
+  "status": "completed",
+  "error": null,
+  "environment": "production",
+  "tags": [
+    "magic-folder"
+  ],
+  "constraints": null,
+  "constraint_result": null,
+  "signature": "ed25519:2/OncnLtQG611kdvbMOlcSkStcd3YQ7mm2K1A7B+NRPVit+S5FLKKzv5szU3kHYgh3y9uuzeKozGvHV0mbsCDw==",
+  "verify_url": "local://verify/rcpt_r6-_8hKJzONu",
+  "callback_verified": null,
+  "confidence": null,
+  "metadata": {
+    "kind": "magic_folder_job",
+    "job_id": "2026-10-29 1536 webaes-test-note-3",
+    "recipe": "Fix typos",
+    "recipe_sha256": "sha256:c14e08779b3545786508a76f4d7e7df11e3babd02201b9b4fd0e1bdf8959a266",
+    "credits": 0,
+    "needs_approval": false,
+    "cost_is_estimate": false,
+    "executor": "ollama",
+    "local": true,
+    "engine_mode": "tools",
+    "issuer": {
+      "name": "Webaes",
+      "key_url": "https://verify.webaes.com/.well-known/agent-receipts.json"
+    }
+  }
+}

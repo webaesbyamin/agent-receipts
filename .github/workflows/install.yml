@@ -2,6 +2,8 @@
 # receipts.webaes.com/install) on clean Mac, Windows and Linux machines.
 # The packages come from this commit, published to a throwaway local registry,
 # so the guide's own `npm install -g …` command runs unchanged.
+# Node 22 and 24 only: better-sqlite3 ships no ready-made build for Node 20 (end-of-life),
+# so on Windows without Visual Studio it can't install there.
 # Not covered here: Ollama itself (too big to run in CI), so jobs end with a
 # signed "failed" receipt that says Ollama isn't reachable.
 name: install guide
@@ -44,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [homebrew, pkg, '20', '22']
+        node: [homebrew, pkg, '22']
     defaults:
       run:
         # An interactive zsh reads ~/.zshrc, like opening a new Terminal window; -e stops on errors
@@ -67,7 +69,7 @@ jobs:
           sudo installer -pkg "$pkg" -target /
           echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
       - uses: actions/setup-node@v4
-        if: matrix.node == '20' || matrix.node == '22'
+        if: matrix.node == '22'
         with: { node-version: '${{ matrix.node }}' }
       - name: Check Node
         run: |
@@ -131,8 +133,8 @@ jobs:
           </dict>
           </plist>
           EOF
-          plutil -lint ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
           launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
+          plutil -lint ~/Library/LaunchAgents/com.agent-receipts.magic-folder.plist
           for i in $(seq 30); do grep -q Watching ~/Library/Logs/magic-folder.log 2>/dev/null && break; sleep 1; done
           cat ~/Library/Logs/magic-folder.log
           grep -q Watching ~/Library/Logs/magic-folder.log
@@ -168,7 +170,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [msi, '20', '22']
+        node: [msi, '22']
     defaults:
       run:
         # Windows PowerShell 5.1, what people have by default
@@ -275,7 +277,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [nvm, '20', '22']
+        node: [nvm, '22']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
