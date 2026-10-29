@@ -1,5 +1,18 @@
 # @agent-receipts/magic-folder
 
+## 0.1.1
+
+### Patch Changes
+
+- [`3e65f05`](https://github.com/webaesbyamin/agent-receipts/commit/3e65f051befd049eccb8ac35bae776c972f3fb20) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - Receipts show the real start time: `ReceiptEngine.create()` takes an optional `started_at` that becomes the signed `timestamp`, and Magic Folder passes the job's start, so Started and Finished are as far apart as "Time taken".
+
+- [`3e65f05`](https://github.com/webaesbyamin/agent-receipts/commit/3e65f051befd049eccb8ac35bae776c972f3fb20) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - Cleaner Magic Folder receipts. Summaries no longer show the job's internal `input/` and `output/` folders or job paths. New recipe field `changes_report: true`: the runner compares each original with its "(fixed)" copy and writes `changes.md` itself, so it lists only real changes. The Fix typos starter recipe uses it. Branded verify pages (`verify-page --trust-key`) no longer show the key input box.
+
+- Updated dependencies [[`3e65f05`](https://github.com/webaesbyamin/agent-receipts/commit/3e65f051befd049eccb8ac35bae776c972f3fb20)]:
+  - @agent-receipts/mcp-server@0.5.1
+  - @agent-receipts/schema@0.5.1
+  - @agent-receipts/crypto@0.5.1
+
 ## 0.1.0
 
 ### Minor Changes

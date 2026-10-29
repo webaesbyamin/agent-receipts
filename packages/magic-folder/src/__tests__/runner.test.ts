@@ -90,11 +90,12 @@ describe('MagicFolder runner', () => {
   })
 
   it('waits for a drop to settle before starting', async () => {
-    const folder = open(describeEach, { settleMs: 50 })
+    // Wide enough that a slow second scan (a busy CI box) still lands inside it
+    const folder = open(describeEach, { settleMs: 400 })
     await writeFile(join(root, 'Fix typos', 'notes.txt'), 'teh cat')
     expect(await folder.scanOnce()).toHaveLength(0) // first sighting
     expect(await folder.scanOnce()).toHaveLength(0) // not settled long enough
-    await new Promise((r) => setTimeout(r, 70))
+    await new Promise((r) => setTimeout(r, 450))
     expect(await folder.scanOnce()).toHaveLength(1)
   })
 
