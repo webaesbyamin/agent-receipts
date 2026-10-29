@@ -24,9 +24,13 @@ function runCLI(args: string[], env?: Record<string, string>) {
   })
 }
 
+/** Stores opened by a test, closed before its folder is deleted (Windows can't delete an open database). */
+const openStores: ReceiptStore[] = []
+
 async function setupEngine(tmpDir: string) {
   const store = new ReceiptStore(tmpDir)
   await store.init()
+  openStores.push(store)
   const km = new KeyManager(tmpDir)
   await km.init()
   const cm = new ConfigManager(tmpDir)
@@ -43,6 +47,7 @@ describe('CLI', () => {
   })
 
   afterEach(async () => {
+    for (const store of openStores.splice(0)) store.close()
     await rm(tmpDir, { recursive: true, force: true })
   })
 

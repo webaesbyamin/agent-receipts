@@ -156,6 +156,11 @@ export class SqliteReceiptStore {
     return this.db
   }
 
+  /** Close the database. On Windows its files can't be moved or deleted while it's open. */
+  close(): void {
+    if (this.db?.open) this.db.close()
+  }
+
   /**
    * Save a receipt. Append-only once finalized: a receipt that is stored with
    * any status other than `pending` can never be overwritten. Pending

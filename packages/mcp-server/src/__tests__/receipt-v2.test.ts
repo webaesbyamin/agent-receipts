@@ -26,6 +26,7 @@ describe('Receipt v2 in the engine', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     store.getDb().close()
     await rm(dir, { recursive: true, force: true })
   })

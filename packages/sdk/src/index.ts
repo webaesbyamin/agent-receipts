@@ -43,6 +43,7 @@ export class AgentReceipts {
   private engine: ReceiptEngine | null = null
   private memoryEngine: MemoryEngine | null = null
   private memoryStore: MemoryStore | null = null
+  private store: ReceiptStore | null = null
   private dataDir: string
   private initialized = false
 
@@ -57,6 +58,7 @@ export class AgentReceipts {
 
     const store = new ReceiptStore(this.dataDir)
     await store.init()
+    this.store = store
 
     const keyManager = new KeyManager(this.dataDir)
     await keyManager.init()
@@ -78,6 +80,19 @@ export class AgentReceipts {
   private async ensureMemory(): Promise<MemoryEngine> {
     await this.ensureInitialized()
     return this.memoryEngine!
+  }
+
+  /**
+   * Close the receipt database. Call it when you're done (the next call opens
+   * it again). On Windows the data folder can't be moved or deleted while open.
+   */
+  close(): void {
+    this.store?.close()
+    this.store = null
+    this.engine = null
+    this.memoryEngine = null
+    this.memoryStore = null
+    this.initialized = false
   }
 
   async track(params: TrackParams): Promise<ActionReceipt> {

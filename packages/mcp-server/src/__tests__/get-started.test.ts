@@ -11,12 +11,13 @@ import { registerGetStarted } from '../tools/get-started.js'
 
 describe('get_started tool', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let engine: ReceiptEngine
   let server: McpServer
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'get-started-'))
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     const km = new KeyManager(tmpDir)
     await km.init()
@@ -28,6 +29,7 @@ describe('get_started tool', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     await rm(tmpDir, { recursive: true, force: true })
   })
 

@@ -58,6 +58,7 @@ describe('browser verifier (same bytes as the Node signer)', () => {
   })
 
   afterAll(async () => {
+    store?.close()
     store.getDb().close()
     await rm(dir, { recursive: true, force: true })
   })

@@ -11,6 +11,7 @@ import { verifyAnyReceipt } from '@agent-receipts/crypto'
 
 describe('AI Judge', () => {
   let tmpDir: string
+  let store: ReceiptStore
   let engine: ReceiptEngine
   let keyManager: KeyManager
 
@@ -18,7 +19,7 @@ describe('AI Judge', () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'judge-test-'))
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
 
-    const store = new ReceiptStore(tmpDir)
+    store = new ReceiptStore(tmpDir)
     await store.init()
     keyManager = new KeyManager(tmpDir)
     await keyManager.init()
@@ -29,6 +30,7 @@ describe('AI Judge', () => {
   })
 
   afterEach(async () => {
+    store?.close()
     delete process.env['RECEIPT_SIGNING_PRIVATE_KEY']
     await rm(tmpDir, { recursive: true, force: true })
   })
