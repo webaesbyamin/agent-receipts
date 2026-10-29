@@ -1,15 +1,17 @@
 # Agent Receipts
 
+Agent Receipts by [Webaes](https://webaes.com) · Site and live demo: [receipts.webaes.com](https://receipts.webaes.com) · A real issuer's verify page: [verify.webaes.com](https://verify.webaes.com)
+
 **Your AI agent remembers everything — and you can prove it.**
 
 Persistent memory for AI agents, backed by cryptographic receipts. Every fact your agent learns is signed, traceable, and independently verifiable. No cloud required.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://agent-receipts-web.vercel.app/)
-[![Interactive Walkthrough](https://img.shields.io/badge/Walkthrough-60_Seconds-green)](https://agent-receipts-web.vercel.app/walkthrough)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://receipts.webaes.com/)
+[![Interactive Walkthrough](https://img.shields.io/badge/Walkthrough-60_Seconds-green)](https://receipts.webaes.com/walkthrough)
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Try the Interactive Demo](https://agent-receipts-web.vercel.app/walkthrough) · [Install in 30 Seconds](#get-started) · [How It's Different](#how-its-different)
+[Try the Interactive Demo](https://receipts.webaes.com/walkthrough) · [Install in 30 Seconds](#get-started) · [How It's Different](#how-its-different)
 
 ---
 
@@ -150,7 +152,7 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 
 ### 5. Try Before Installing
 
-[Run the interactive demo →](https://agent-receipts-web.vercel.app/walkthrough) — experience memory, verification, and bundle export in 60 seconds. No install required.
+[Run the interactive demo →](https://receipts.webaes.com/walkthrough) — experience memory, verification, and bundle export in 60 seconds. No install required.
 
 ## What's Inside
 
@@ -187,9 +189,9 @@ The bundle includes every entity, observation, relationship, the receipts that c
 
 | | |
 |---|---|
-| [Interactive Demo](https://agent-receipts-web.vercel.app/walkthrough) | Try it in your browser — 60 seconds |
-| [Live Dashboard](https://agent-receipts-web.vercel.app) | See the full dashboard with sample data |
-| [How It Works](https://agent-receipts-web.vercel.app/how-it-works) | Receipt anatomy, memory model, ModQuote story |
+| [Interactive Demo](https://receipts.webaes.com/walkthrough) | Try it in your browser — 60 seconds |
+| [Live Dashboard](https://receipts.webaes.com) | See the full dashboard with sample data |
+| [How It Works](https://receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, ModQuote story |
 | [npm](https://www.npmjs.com/org/agent-receipts) | All 6 packages |
 
 <details>

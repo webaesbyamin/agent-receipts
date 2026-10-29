@@ -3,13 +3,13 @@
   "version": "0.5.0",
   "description": "TypeScript SDK for Agent Receipts — local-first action tracking",
   "license": "MIT",
-  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
   "repository": {
     "type": "git",
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "directory": "packages/sdk"
   },
-  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "homepage": "https://receipts.webaes.com",
   "bugs": {
     "url": "https://github.com/webaesbyamin/agent-receipts/issues"
   },

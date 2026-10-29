@@ -2,7 +2,7 @@
 
 Connect any MCP-compatible AI agent to cryptographic accountability in 3 lines of config. Every action gets a signed receipt. Every memory is provable. No API key, no account, no server — everything runs locally.
 
-[Try the Interactive Demo](https://agent-receipts-web.vercel.app/walkthrough) · [Full Documentation](https://github.com/webaesbyamin/agent-receipts)
+[Try the Interactive Demo](https://receipts.webaes.com/walkthrough) · [Full Documentation](https://github.com/webaesbyamin/agent-receipts)
 
 ## Quick Start
 

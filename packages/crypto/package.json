@@ -3,13 +3,13 @@
   "version": "0.5.0",
   "description": "Ed25519 signing and verification for the Action Receipt Protocol",
   "license": "MIT",
-  "author": "Amin <amin@webaes.co> (https://webaes.co)",
+  "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
   "repository": {
     "type": "git",
     "url": "https://github.com/webaesbyamin/agent-receipts",
     "directory": "packages/crypto"
   },
-  "homepage": "https://github.com/webaesbyamin/agent-receipts#readme",
+  "homepage": "https://receipts.webaes.com",
   "bugs": {
     "url": "https://github.com/webaesbyamin/agent-receipts/issues"
   },

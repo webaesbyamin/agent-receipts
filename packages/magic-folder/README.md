@@ -56,6 +56,14 @@ magic-folder verify-page verify.html --trust-key <your public key> --trust-name 
 
 Pass the public key (not just the `key_…` id) so the page can also check `receipt.json` files, which carry no key of their own. Host that page (e.g. `yourstudio.com/verify`) and give clients the link. Receipts signed by your key show green **Verified, signed by Your Studio**. Anything signed by another key shows red. The generic page in [apps/verify](../../apps/verify) shows amber "signer not confirmed" until the visitor types in the key you gave them. There's deliberately no `?key=` link option, because a link could carry an attacker's key. On the command line: `magic-folder verify receipt.html --key-id key_…`.
 
+**A real example:** Webaes hosts its own page at [verify.webaes.com](https://verify.webaes.com), with its public key published at [verify.webaes.com/.well-known/agent-receipts.json](https://verify.webaes.com/.well-known/agent-receipts.json). Its jobs run with the issuer name, key URL and verify page set, so every receipt names Webaes and links to that page:
+
+```bash
+magic-folder run ~/"Magic Folder" --issuer "Webaes" \
+  --key-url https://verify.webaes.com/.well-known/agent-receipts.json \
+  --verify-url https://verify.webaes.com
+```
+
 ## Run free on your own computer (Ollama)
 
 Install [Ollama](https://ollama.com), pull a model, and jobs run locally: no API key, nothing leaves the computer, no credits used. Receipts say **Free (ran on this computer)** and name the model.

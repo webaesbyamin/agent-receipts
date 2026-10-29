@@ -665,7 +665,7 @@ export default function WalkthroughPage() {
           <h1 className="text-xl font-semibold">The walkthrough is part of the online demo</h1>
           <p className="text-sm text-text-secondary">
             This dashboard shows your own receipts. To try the guided tour, open the demo at{' '}
-            <a className="underline" href="https://agent-receipts-web.vercel.app/walkthrough">agent-receipts-web.vercel.app</a>.
+            <a className="underline" href="https://receipts.webaes.com/walkthrough">receipts.webaes.com</a>.
           </p>
           <Link href="/receipts" className="inline-flex items-center gap-1 text-sm underline">
             Go to your receipts <ArrowRight className="w-4 h-4" />
