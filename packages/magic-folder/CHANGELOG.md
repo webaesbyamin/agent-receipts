@@ -1,5 +1,14 @@
 # @agent-receipts/magic-folder
 
+## 0.1.2
+
+### Patch Changes
+
+- [#8](https://github.com/webaesbyamin/agent-receipts/pull/8) [`83f52c8`](https://github.com/webaesbyamin/agent-receipts/commit/83f52c8f10cd7876b5e68ed3c3b85c5dcb965555) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - Windows and Linux support, tested in CI on all three systems. On Windows: sandbox path checks ignore case and handle `\\?\` long paths, UNC and drive paths; a junction pointing outside the job folder is refused; moves and deletes wait out brief file locks; more Office and Windows temp files are ignored. New install guide for Mac, Windows and Linux, including keeping it running (LaunchAgent, Startup folder, systemd). `doctor` flags Node versions outside 22–24, `run` stops cleanly on SIGTERM, the help text covers showing hidden files on every OS, and `BROWSER_RENDER_JS` and `RECEIPT_CSS` are exported. Requires Node 22 or 24: better-sqlite3 ships no ready-made build for Node 20.
+
+- Updated dependencies [[`83f52c8`](https://github.com/webaesbyamin/agent-receipts/commit/83f52c8f10cd7876b5e68ed3c3b85c5dcb965555)]:
+  - @agent-receipts/mcp-server@0.5.2
+
 ## 0.1.1
 
 ### Patch Changes

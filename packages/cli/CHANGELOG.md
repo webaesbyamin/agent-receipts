@@ -1,5 +1,12 @@
 # @agent-receipts/cli
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [[`83f52c8`](https://github.com/webaesbyamin/agent-receipts/commit/83f52c8f10cd7876b5e68ed3c3b85c5dcb965555)]:
+  - @agent-receipts/mcp-server@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
