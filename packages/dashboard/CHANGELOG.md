@@ -1,5 +1,11 @@
 # @agent-receipts/dashboard
 
+## 0.5.1
+
+### Patch Changes
+
+- Fix: the installed dashboard started in demo mode (demo banner and demo data instead of your own receipts). The package build now forces demo mode off and no longer ships `.env` files. The hosted demo on Vercel is unchanged.
+
 ## 0.5.0
 
 ### Minor Changes

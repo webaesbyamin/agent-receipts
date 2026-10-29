@@ -91,6 +91,9 @@ const server = spawn('node', [serverPath], {
     PORT: actualPort,
     HOSTNAME: '0.0.0.0',
     AGENT_RECEIPTS_DATA_DIR: DEFAULT_DATA_DIR,
+    // The local dashboard always shows the user's real receipts
+    DEMO_MODE: 'false',
+    NEXT_PUBLIC_DEMO_MODE: 'false',
   },
   stdio: 'inherit',
 })

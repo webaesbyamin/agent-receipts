@@ -9,7 +9,7 @@
  */
 
 const { execSync } = require('child_process')
-const { cpSync, rmSync, mkdirSync, existsSync } = require('fs')
+const { cpSync, rmSync, mkdirSync, existsSync, readdirSync, statSync } = require('fs')
 const path = require('path')
 
 const ROOT = path.resolve(__dirname, '../../..')
@@ -20,8 +20,16 @@ const STANDALONE_DIR = path.join(DASHBOARD_DIR, 'standalone')
 console.log('Building @agent-receipts/dashboard...\n')
 
 // Step 1: Build Next.js app
-console.log('1. Building Next.js app (standalone mode)...')
-execSync('pnpm build', { cwd: WEB_DIR, stdio: 'inherit' })
+// apps/web/.env.production turns demo mode on for the hosted Vercel demo.
+// The npm dashboard must show the user's own receipts, so force demo mode off
+// here: process env wins over .env files, and NEXT_PUBLIC_* is inlined at
+// build time, so this is the only place it can be set for the client bundle.
+console.log('1. Building Next.js app (standalone mode, demo mode off)...')
+execSync('pnpm build', {
+  cwd: WEB_DIR,
+  stdio: 'inherit',
+  env: { ...process.env, DEMO_MODE: 'false', NEXT_PUBLIC_DEMO_MODE: 'false' },
+})
 
 // Step 2: Clean previous standalone output
 if (existsSync(STANDALONE_DIR)) {
@@ -49,6 +57,21 @@ if (existsSync(publicSource)) {
   console.log('4. Copying public assets...')
   cpSync(publicSource, publicDest, { recursive: true })
 }
+
+// Step 5b: Never ship .env files (Next copies them into standalone output,
+// and the server would load DEMO_MODE=true from .env.production at runtime)
+function removeEnvFiles(dir) {
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules') continue
+    const full = path.join(dir, name)
+    if (statSync(full).isDirectory()) removeEnvFiles(full)
+    else if (name === '.env' || name.startsWith('.env.')) {
+      rmSync(full)
+      console.log(`   removed ${path.relative(STANDALONE_DIR, full)}`)
+    }
+  }
+}
+removeEnvFiles(STANDALONE_DIR)
 
 // Step 6: Compile CLI
 console.log('5. Compiling CLI...')
