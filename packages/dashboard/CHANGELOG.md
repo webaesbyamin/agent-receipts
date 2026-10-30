@@ -1,5 +1,11 @@
 # @agent-receipts/dashboard
 
+## 0.5.2
+
+### Patch Changes
+
+- Requires Node 22 or 24 (`engines: >=22 <25`), matching the other packages. better-sqlite3 has no ready-made build for Node 20.
+
 ## 0.5.1
 
 ### Patch Changes

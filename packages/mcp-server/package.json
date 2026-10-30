@@ -27,7 +27,7 @@
     "cursor"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22 <25"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
