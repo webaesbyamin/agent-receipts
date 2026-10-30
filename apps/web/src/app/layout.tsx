@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { LayoutShell } from '@/components/layout/layout-shell'
 import { InteractiveProvider } from '@/lib/interactive-context'
@@ -35,6 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ) : (
           content
         )}
+        {/* Page views for the hosted demo only. This app is also the npm dashboard people run
+            on their own machines (build:standalone sets NEXT_PUBLIC_DEMO_MODE=false), where
+            analytics must never load; build-standalone.js fails if it finds any. */}
+        {isDemoMode && <Analytics />}
       </body>
     </html>
   )

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Header, Footer } from '../components/Chrome'
 import { SITE_JS } from '../lib/scripts'
@@ -52,6 +53,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Footer />
         <script dangerouslySetInnerHTML={{ __html: SITE_JS }} />
+        {/* Page views only: no cookies, no personal data */}
+        <Analytics />
       </body>
     </html>
   )
