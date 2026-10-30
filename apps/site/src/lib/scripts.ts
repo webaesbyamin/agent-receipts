@@ -5,6 +5,23 @@
 /** Every page: copy buttons, tab groups, and the visitor's OS for install links and the install tabs. */
 export const SITE_JS = `
 (function () {
+  // A reload or back/forward starts at the top, not wherever the page was left;
+  // a #section in the URL still goes to that section, so shared links work.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  function settle() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    var target = id && document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    else window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+  settle();
+  // Settle again once everything has loaded, unless the visitor has already started scrolling
+  var touched = false;
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (t) { window.addEventListener(t, function () { touched = true; }, { once: true, passive: true }); });
+  window.addEventListener('load', function () { if (!touched) settle(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) settle(); });
+})();
+(function () {
   function os() {
     var p = ((navigator.userAgentData && navigator.userAgentData.platform) || '') + ' ' + navigator.userAgent;
     if (/Windows|Win32|Win64/i.test(p)) return 'windows';

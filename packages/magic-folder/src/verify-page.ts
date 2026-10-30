@@ -249,6 +249,21 @@ ${theme.footer}<script type="application/json" id="trusted-keys">${jsonForScript
 <script>
 ${BROWSER_VERIFY_JS}
 ${BROWSER_RENDER_JS}
+// A reload or back/forward starts at the top (a #section in the URL still goes there)
+(function () {
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  function settle() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    var target = id && document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    else window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+  settle();
+  var touched = false;
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(function (t) { window.addEventListener(t, function () { touched = true; }, { once: true, passive: true }); });
+  window.addEventListener('load', function () { if (!touched) settle(); });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) settle(); });
+})();
 var TRUSTED = JSON.parse(document.getElementById('trusted-keys').textContent);
 var lastFile = null;
 var expectedInput = document.getElementById('expected');

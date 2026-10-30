@@ -1,5 +1,11 @@
 # @agent-receipts/magic-folder
 
+## 0.1.4
+
+### Patch Changes
+
+- [`a934f13`](https://github.com/webaesbyamin/agent-receipts/commit/a934f137bb51c02530e306192ec4704ac86c696a) Thanks [@webaesbyamin](https://github.com/webaesbyamin)! - The verify page starts at the top on reload and on back/forward, instead of restoring an old scroll position that no longer matches the page (the result is gone after a reload). A `#section` in the URL still goes to that section.
+
 ## 0.1.3
 
 ### Patch Changes
