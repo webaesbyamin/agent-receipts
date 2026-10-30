@@ -3,12 +3,17 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { LayoutShell } from '@/components/layout/layout-shell'
 import { InteractiveProvider } from '@/lib/interactive-context'
+import { demoMetadata } from '@/lib/demo-seo'
 
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
+// The hosted demo adds its own titles, sharing tags and icons (demoMetadata);
+// the local dashboard gets {} there and keeps these
 export const metadata: Metadata = {
   title: 'Agent Receipts — Mission Control',
   description: 'Verifiable, signed, immutable proof that an autonomous action happened.',
+  icons: { icon: { url: '/icon.svg', type: 'image/svg+xml' } },
+  ...demoMetadata,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

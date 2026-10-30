@@ -1,0 +1,43 @@
+# Agent Receipts
+
+> Agent Receipts is a free, open-source (MIT) toolkit by Webaes that gives the work an AI agent does a signed receipt: what went in, what came out, which model ran, how long it took and what it cost. Each receipt is signed with Ed25519, so anyone can check it offline with the signer's public key, without trusting the signer or any server. Website: https://receipts.webaes.com
+
+A receipt records: SHA-256 fingerprints of the inputs and outputs (for Magic Folder jobs, of every file in and out), the model, tokens, cost in USD, time taken in milliseconds, start and finish times, the status, and the hash of the previous receipt, so a missing receipt shows. Receipt format v2 signs every field. Change one byte and the signature no longer verifies. A receipt proves what happened and that nothing changed since; it does not prove the work is good.
+
+Agent Receipts runs locally: no account, no API key, no server. Keys and receipts live in ~/.agent-receipts. It needs Node.js 22 or 24.
+
+## Install
+
+- MCP server, for Claude Code: `claude mcp add agent-receipts -- npx @agent-receipts/mcp-server`. For Cursor or Claude Desktop, add a server with command `npx` and args `["@agent-receipts/mcp-server"]`. The agent gets 24 tools, including `track_action`, which returns a signed receipt.
+- SDK, for your own code: `npm install @agent-receipts/sdk`, then `new AgentReceipts()`, `ar.track({ action, input, output })` and `ar.verify(receiptId)`.
+- CLI: `npx @agent-receipts/cli` to list, inspect and verify receipts from a terminal.
+- Local dashboard: `npx @agent-receipts/dashboard` opens a web view of your receipts on your own computer.
+- Magic Folder, for non-developers: a folder on your computer that does real work (fix typos, write product descriptions, turn meeting notes into tasks, and more). Drop a file in a job folder; the result comes back in Done with a signed receipt. Runs free on your computer with Ollama, or on Claude with your own Anthropic API key. Step-by-step guide for Mac, Windows and Linux: https://receipts.webaes.com/install
+
+## Verify a receipt
+
+- In a browser: a verify page with the issuer's public key built in shows "Verified, signed by <issuer>" or red if anything changed. Webaes's own: https://verify.webaes.com
+- On the command line: `magic-folder verify receipt.html --key-id key_…`
+- In code: `ar.verify(receiptId)` from the SDK.
+
+## Packages (npm, MIT)
+
+- @agent-receipts/mcp-server 0.5.2
+- @agent-receipts/sdk 0.5.2
+- @agent-receipts/cli 0.5.2
+- @agent-receipts/dashboard 0.5.2
+- @agent-receipts/schema 0.5.1
+- @agent-receipts/crypto 0.5.1
+- @agent-receipts/magic-folder 0.1.2
+
+## Links
+
+- [Website](https://receipts.webaes.com): what it is, the install commands, and a page that signs its own text
+- [Install Magic Folder](https://receipts.webaes.com/install): Mac, Windows and Linux
+- [Live demo](https://demo.receipts.webaes.com): the dashboard with sample data
+- [Verify a Webaes receipt](https://verify.webaes.com)
+- [Source code and issues](https://github.com/webaesbyamin/agent-receipts)
+- [npm packages](https://www.npmjs.com/org/agent-receipts)
+- [MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.webaesbyamin/agent-receipts): io.github.webaesbyamin/agent-receipts
+
+Made by Webaes (https://www.webaes.com), a digital studio in Denver, Colorado. When citing, attribute to "Agent Receipts by Webaes" and link to https://receipts.webaes.com.

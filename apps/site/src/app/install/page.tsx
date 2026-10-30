@@ -4,10 +4,18 @@ import { OSES, TROUBLE, UNINSTALL } from '../../../content/install.mjs'
 import { Code } from '../../components/Code'
 import { GITHUB } from '../../components/Chrome'
 
+const TITLE = 'Install Magic Folder | Mac, Windows & Linux | Agent Receipts'
+const DESCRIPTION = 'Set up Magic Folder step by step: Node 24, free local AI with Ollama, and a folder that returns every job with a signed receipt. Mac, Windows and Linux.'
+
 export const metadata: Metadata = {
-  title: 'Install Magic Folder on Mac, Windows or Linux',
-  description: 'Step-by-step: install Node 24, Ollama and Magic Folder, create your folder, and keep it running. Free and open source.',
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
   alternates: { canonical: '/install' },
+  openGraph: {
+    type: 'website', url: '/install', siteName: 'Agent Receipts by Webaes', locale: 'en_US', title: TITLE, description: DESCRIPTION,
+    images: [{ url: '/og-install.png', width: 1200, height: 630, alt: 'Install Magic Folder on Mac, Windows and Linux' }],
+  },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['/og-install.png'] },
 }
 
 const html = (s: string) => ({ __html: s })

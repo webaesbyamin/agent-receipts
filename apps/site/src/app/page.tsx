@@ -1,6 +1,8 @@
+import type { Metadata } from 'next'
 import product from '../generated/product.json'
 import signature from '../generated/signature.json'
 import { JOBS } from '../../content/jobs.mjs'
+import { FINE_PRINT, plain } from '../../content/fine-print.mjs'
 import { Code } from '../components/Code'
 import { GITHUB, VERIFY } from '../components/Chrome'
 import { PAGE_SIGNATURE_JS, STUB_JS } from '../lib/scripts'
@@ -100,22 +102,64 @@ const receipt = await ar.track({
 
 const { verified } = await ar.verify(receipt.receipt_id)`
 
-const FINE_PRINT: Array<[string, React.ReactNode]> = [
-  ['Is my data sent anywhere?', <>Not with Ollama: the AI runs on your computer, and your files stay in your Magic Folder. If you choose Claude instead, the files for that job are sent to Anthropic’s API with your own key. Checking a receipt, here or on a verify page, happens in your browser; nothing is uploaded. This website counts page views with Vercel Web Analytics (no cookies, no personal data). Magic Folder and the receipt checker send nothing.</>],
-  ['What if a job fails?', <>You still get a signed receipt that says why it failed, your original comes back untouched in <em>Done</em>, and the job costs nothing.</>],
-  ['Which computers?', <>Mac, Windows and Linux, with Node.js 22 or 24. The <a href="/install" data-install-link>install guide</a> walks through each one.</>],
-  ['Do I need a subscription?', <>No. With Ollama, a free program, jobs run on your own computer. Claude is optional, with your own Anthropic API key.</>],
-  ['What does it cost?', <>Nothing. Magic Folder and Agent Receipts are free and open source under the MIT licence.</>],
-  ['Where do I get help?', <>Open an issue on <a href={`${GITHUB}/issues`}>GitHub</a>.</>],
-  ['Who holds my waitlist email?', <>Buttondown, which sends the confirmation and, if it gets built, the one email saying so. See the <a href="https://webaes.com/privacy-policy">webaes.com privacy policy</a>.</>],
-]
 
 const ROLES = [['agency', 'agency'], ['freelancer', 'freelancer'], ['dev-team', 'dev team'], ['ai-product', 'building an AI product'], ['other', 'other']]
 const PAY = [['monthly', 'yes, a monthly plan'], ['per-client', 'yes, priced per client'], ['maybe', 'maybe, depends on price'], ['no', 'no, just curious']]
 
+const TITLE = 'Agent Receipts | Proof of Work for AI Agents | Webaes'
+const DESCRIPTION = 'Signed receipts for what your AI agent did: files in and out, model, time and cost. Anyone can verify them offline. Free, open-source MCP server and SDK.'
+
+export const metadata: Metadata = {
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website', url: '/', siteName: 'Agent Receipts by Webaes', locale: 'en_US', title: TITLE, description: DESCRIPTION,
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Your agent says it’s done. Prove it.' }],
+  },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['/og.png'] },
+}
+
+const SITE = 'https://receipts.webaes.com'
+const ORG = 'https://www.webaes.com/#organization'
+const JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': ['SoftwareApplication', 'SoftwareSourceCode'],
+      '@id': `${SITE}/#software`,
+      name: 'Agent Receipts',
+      description: DESCRIPTION,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'macOS, Windows, Linux',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      license: 'https://opensource.org/licenses/MIT',
+      url: `${SITE}/`,
+      downloadUrl: 'https://www.npmjs.com/org/agent-receipts',
+      codeRepository: GITHUB,
+      programmingLanguage: 'TypeScript',
+      publisher: { '@id': ORG },
+    },
+    {
+      '@type': 'Organization',
+      '@id': ORG,
+      name: 'Webaes',
+      url: 'https://webaes.com',
+      logo: { '@type': 'ImageObject', url: 'https://www.webaes.com/redesign/img/webaes-logo.png' },
+      sameAs: ['https://github.com/webaesbyamin', 'https://www.instagram.com/webaesbyamin/', 'https://www.tiktok.com/@webaesbyamin'],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE}/#faq`,
+      mainEntity: FINE_PRINT.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: plain(a) } })),
+    },
+  ],
+}
+
 export default function Home() {
   return (
     <main id="main" className="paper">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(JSON_LD) }} />
       <p id="edit-help" className="sr-only">Editable for the signature test: change this text and the page signature check will fail.</p>
 
       <section className="hero" aria-labelledby="hero-h">
@@ -290,7 +334,7 @@ export default function Home() {
         <p className="label" data-signed>06 · Fine print</p>
         <h2 id="fine-print-h" data-signed>Terms of this receipt.</h2>
         <ol className="terms">
-          {FINE_PRINT.map(([q, a]) => <li key={q}><strong data-signed>{q}</strong> <span data-signed>{a}</span></li>)}
+          {FINE_PRINT.map(([q, a]) => <li key={q}><strong data-signed>{q}</strong> <span data-signed dangerouslySetInnerHTML={{ __html: a }} /></li>)}
         </ol>
       </Section>
 

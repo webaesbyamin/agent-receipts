@@ -1,62 +1,33 @@
 # Agent Receipts
 
-Agent Receipts by [Webaes](https://webaes.com) · Magic Folder and install guide: [receipts.webaes.com](https://receipts.webaes.com) · Live demo: [demo.receipts.webaes.com](https://demo.receipts.webaes.com) · A real issuer's verify page: [verify.webaes.com](https://verify.webaes.com)
+**Your agent says it's done. Prove it.**
 
-**Your AI agent remembers everything — and you can prove it.**
+Agent Receipts gives the work your AI agent does a signed receipt: what went in, what came out, which model ran, how long it took and what it cost. Each receipt is signed with Ed25519 and linked to the one before it, so anyone can check it offline with your public key, without trusting you, your server or the agent. Change one byte and it no longer verifies.
 
-Persistent memory for AI agents, backed by cryptographic receipts. Every fact your agent learns is signed, traceable, and independently verifiable. No cloud required.
+```bash
+claude mcp add agent-receipts -- npx @agent-receipts/mcp-server
+```
+
+[receipts.webaes.com](https://receipts.webaes.com) (what it is, install, and a page that signs itself) · [demo.receipts.webaes.com](https://demo.receipts.webaes.com) (the dashboard with sample data) · [verify.webaes.com](https://verify.webaes.com) (a real issuer's verify page) · by [Webaes](https://webaes.com)
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Try_It_Now-blue)](https://demo.receipts.webaes.com/)
 [![Interactive Walkthrough](https://img.shields.io/badge/Walkthrough-60_Seconds-green)](https://demo.receipts.webaes.com/walkthrough)
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Try the Interactive Demo](https://demo.receipts.webaes.com/walkthrough) · [Install in 30 Seconds](#get-started) · [How It's Different](#how-its-different)
+[Get started](#get-started) · [Magic Folder](#magic-folder-receipts-for-people-who-dont-code) · [Memory](#memory) · [How it's different](#how-its-different)
 
 ---
 
-## The Problem
+## Proof
 
-You're building with AI agents. Claude Code refactors your auth module and says "done, all tests pass." Your agent generates a customer quote and says it applied the right pricing. Your assistant remembers your preferences from last week — but you can't see why it thinks that, or whether it's right.
+Every memory observation and every action your agent tracks produces a **receipt** — a signed JSON document with:
 
-Three things are broken:
-
-1. **Agents forget everything between sessions.** Every conversation starts from zero. Context is lost. You re-explain the same things.
-
-2. **When agents do remember, you can't see inside.** Platform memory is a black box. You can't see what it stored, when, or why. You can't correct it, export it, or verify it.
-
-3. **There's no proof of what agents actually did.** Logs are mutable. Agents write their own logs. "I updated 3 files and all tests pass" — did it? You're trusting the agent's word about its own work.
-
-## What Agent Receipts Does
-
-### Memory that actually works
-
-Your agent gets structured, persistent memory across sessions — people, projects, tools, preferences, facts. Not a flat key-value store. An entity-observation graph where every fact links to the conversation that created it.
-
-```bash
-# Your agent learns something
-memory_observe → "User prefers TypeScript, uses Neovim, building a SaaS called ModQuote"
-
-# Next session, it already knows
-memory_context → loads everything: entities, observations, relationships, preferences
-
-# You can search it
-memory_recall → "what tech stack does the user prefer?" → structured results
-
-# You can forget (and the forget itself is tracked)
-memory_forget → soft delete with audit trail
-```
-
-The agent handles this automatically when you add the [system prompt](#2-add-the-system-prompt). You don't manage memory manually.
-
-### Proof that's actually proof
-
-Every memory observation and every agent action produces a **receipt** — a signed JSON document with:
-
-- **Ed25519 signature** — tamper-proof, independently verifiable
+- **Ed25519 signature** over every field (receipt format v2) — tamper-proof, independently verifiable
 - **Input/output hashes** — proves exactly what went in and came out (raw data never stored)
 - **Timestamps** — when it happened, when it completed
 - **Agent ID** — which agent did it
+- **Link to the previous receipt** — the hash of the one before it, so a missing receipt shows
 - **Provenance chain** — trace any memory back to the conversation that created it
 
 This isn't logging. Logs are mutable text files the agent writes about itself. Receipts are cryptographic proof that a third party can verify without trusting you, your server, or the agent.
@@ -67,43 +38,11 @@ This isn't logging. Logs are mutable text files the agent writes about itself. R
 npx @agent-receipts/mcp-server
 ```
 
-That's it. No API key. No account. No cloud. No monthly fee. No data leaving your machine. SQLite database in `~/.agent-receipts/`. Works offline.
-
-## Why This Exists
-
-I was building [ModQuote](https://modquote.io) — a multi-tenant SaaS where AI agents generate quotes for automotive protection shops. Real money, real customers, real liability.
-
-When Claude generated a $2,400 PPF quote, I needed answers: What vehicle data did it receive? What pricing rules did it apply? If a customer disputes the price, can I prove what happened — not with a log entry the agent wrote about itself, but with cryptographic proof?
-
-I looked at the existing tools:
-
-- **Mem0** — great memory, but no proof. It remembers things, but can't prove when or why it learned them. Memories are mutable.
-- **Langfuse** — great observability, but it's tracing, not proof. Logs are internal to your system, not verifiable by third parties.
-- **Zep** — temporal knowledge graph, but hosted and opaque.
-
-None of them could answer: **"Prove to someone outside your system that this specific agent took this specific action with this specific input at this specific time."**
-
-So I built Agent Receipts. Now every quote generation is a signed receipt. Every memory has a provenance chain. And when someone asks "how did the agent come up with that number?" — I hand them a receipt they can verify themselves.
-
-## How It's Different
-
-| | Agent Receipts | Mem0 | Langfuse | Zep |
-|---|---|---|---|---|
-| **Memory** | Signed entity-observation graph | Smart extraction + consolidation | No memory | Temporal knowledge graph |
-| **Proof** | Ed25519 signed receipts | None | Mutable traces | None |
-| **Verification** | Offline, by anyone, no server | No | No | No |
-| **Infrastructure** | `npx` and done. Zero config. | Requires LLM for extraction | Cloud or self-host | Cloud API |
-| **Cost** | Free forever (local) | Free tier, then paid | Free tier, then paid | Paid |
-| **Export** | Portable bundles with crypto verification | Export available | API export | No |
-| **Audit trail** | Immutable receipt chain | Mutable | Mutable logs | Mutable |
-
-**Agent Receipts isn't a better version of these tools. It's a different thing.**
-
-Mem0 answers: *"What does my agent remember?"*
-Langfuse answers: *"What happened in my LLM pipeline?"*
-Agent Receipts answers: *"Can you prove it?"*
+That's it. No API key. No account. No cloud. No monthly fee. No data leaving your machine. SQLite database in `~/.agent-receipts/`. Works offline. Needs Node.js 22 or 24.
 
 ## Get Started
+
+Needs Node.js 22 or 24.
 
 ### 1. Add the MCP Server
 
@@ -154,16 +93,6 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 
 [Run the interactive demo →](https://demo.receipts.webaes.com/walkthrough) — experience memory, verification, and bundle export in 60 seconds. No install required.
 
-## What's Inside
-
-- **24 MCP tools** — memory, actions, verification, constraints, judgments, invoicing, bundles
-- **21 SDK methods** — full TypeScript API
-- **15 CLI commands + 9 memory subcommands** — terminal-first
-- **18 dashboard pages** — receipts, memory graph, chains, agents, constraints, judgments, invoices
-- **604 tests** — zero TypeScript `any` in package source
-- **Ed25519 + SHA-256** — via `@noble/ed25519` (audited, pure JS); receipt format v2 signs every field
-- **SQLite + FTS5** — local-first with full-text memory search
-
 ## Magic Folder: receipts for people who don't code
 
 Drop a file into a folder named after a job ("Write product descriptions", "Fix typos"). An agent does the work, and the result comes back in `Done/` with your untouched original and a one-page `receipt.html` that anyone can check, plus an approval step for anything client-facing.
@@ -176,9 +105,29 @@ magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Studio"
 
 Needs Node 22 or 24 and, for free local jobs, [Ollama](https://ollama.com). Step-by-step for Mac, Windows and Linux: [receipts.webaes.com/install](https://receipts.webaes.com/install).
 
-The runner writes the receipt, not the agent: it hashes the real files and reads cost from the API. See [packages/magic-folder](packages/magic-folder) and the static [verify page](apps/verify).
+The runner writes the receipt, not the agent: it hashes the real files and records the model, time and cost itself (on Claude, the cost is the Agent SDK's own estimate and is marked as one; on Ollama it's $0). See [packages/magic-folder](packages/magic-folder) and the static [verify page](apps/verify).
 
-## Portable Memory Bundles
+## Memory
+
+Your agent gets structured, persistent memory across sessions — people, projects, tools, preferences, facts. Not a flat key-value store. An entity-observation graph where every fact links to the conversation that created it.
+
+```bash
+# Your agent learns something
+memory_observe → "User prefers TypeScript, uses Neovim, building a SaaS called ModQuote"
+
+# Next session, it already knows
+memory_context → loads everything: entities, observations, relationships, preferences
+
+# You can search it
+memory_recall → "what tech stack does the user prefer?" → structured results
+
+# You can forget (and the forget itself is tracked)
+memory_forget → soft delete with audit trail
+```
+
+The agent handles this automatically when you add the [system prompt](#2-add-the-system-prompt). You don't manage memory manually.
+
+### Portable memory bundles
 
 Export your agent's entire memory as a single verifiable file:
 
@@ -188,6 +137,62 @@ npx @agent-receipts/cli memory export > my-project.bundle.json
 
 The bundle includes every entity, observation, relationship, the receipts that created them, and the public key needed to verify everything. Hand it to another agent, another team, or another Agent Receipts instance — they can verify every fact without trusting you.
 
+## The Problem
+
+You're building with AI agents. Claude Code refactors your auth module and says "done, all tests pass." Your agent generates a customer quote and says it applied the right pricing. Your assistant remembers your preferences from last week — but you can't see why it thinks that, or whether it's right.
+
+Three things are broken:
+
+1. **Agents forget everything between sessions.** Every conversation starts from zero. Context is lost. You re-explain the same things.
+
+2. **When agents do remember, you can't see inside.** Platform memory is a black box. You can't see what it stored, when, or why. You can't correct it, export it, or verify it.
+
+3. **There's no proof of what agents actually did.** Logs are mutable. Agents write their own logs. "I updated 3 files and all tests pass" — did it? You're trusting the agent's word about its own work.
+
+## Why This Exists
+
+I was building [ModQuote](https://modquote.io) — a multi-tenant SaaS where AI agents generate quotes for automotive protection shops. Real money, real customers, real liability.
+
+When Claude generated a $2,400 PPF quote, I needed answers: What vehicle data did it receive? What pricing rules did it apply? If a customer disputes the price, can I prove what happened — not with a log entry the agent wrote about itself, but with cryptographic proof?
+
+I looked at the existing tools:
+
+- **Mem0** — great memory, but no proof. It remembers things, but can't prove when or why it learned them. Memories are mutable.
+- **Langfuse** — great observability, but it's tracing, not proof. Logs are internal to your system, not verifiable by third parties.
+- **Zep** — temporal knowledge graph, but hosted and opaque.
+
+None of them could answer: **"Prove to someone outside your system that this specific agent took this specific action with this specific input at this specific time."**
+
+So I built Agent Receipts. Now every quote generation is a signed receipt. Every memory has a provenance chain. And when someone asks "how did the agent come up with that number?" — I hand them a receipt they can verify themselves.
+
+## How It's Different
+
+| | Agent Receipts | Mem0 | Langfuse | Zep |
+|---|---|---|---|---|
+| **Memory** | Signed entity-observation graph | Smart extraction + consolidation | No memory | Temporal knowledge graph |
+| **Proof** | Ed25519 signed receipts | None | Mutable traces | None |
+| **Verification** | Offline, by anyone, no server | No | No | No |
+| **Infrastructure** | `npx` and done. Zero config. | Requires LLM for extraction | Cloud or self-host | Cloud API |
+| **Cost** | Free forever (local) | Free tier, then paid | Free tier, then paid | Paid |
+| **Export** | Portable bundles with crypto verification | Export available | API export | No |
+| **Audit trail** | Immutable receipt chain | Mutable | Mutable logs | Mutable |
+
+**Agent Receipts isn't a better version of these tools. It's a different thing.**
+
+Mem0 answers: *"What does my agent remember?"*
+Langfuse answers: *"What happened in my LLM pipeline?"*
+Agent Receipts answers: *"Can you prove it?"*
+
+## What's Inside
+
+- **24 MCP tools** — memory, actions, verification, constraints, judgments, invoicing, bundles
+- **21 SDK methods** — full TypeScript API
+- **15 CLI commands + 9 memory subcommands** — terminal-first
+- **18 dashboard pages** — receipts, memory graph, chains, agents, constraints, judgments, invoices
+- **651 tests** (634 across the packages, 17 for the website) — zero TypeScript `any` in package source
+- **Ed25519 + SHA-256** — via `@noble/ed25519` (pure JS, no native code); receipt format v2 signs every field
+- **SQLite + FTS5** — local-first with full-text memory search
+
 ## Links
 
 | | |
@@ -195,7 +200,9 @@ The bundle includes every entity, observation, relationship, the receipts that c
 | [Interactive Demo](https://demo.receipts.webaes.com/walkthrough) | Try it in your browser — 60 seconds |
 | [Live Dashboard](https://demo.receipts.webaes.com) | See the full dashboard with sample data |
 | [How It Works](https://demo.receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, ModQuote story |
-| [npm](https://www.npmjs.com/org/agent-receipts) | All 6 packages |
+| [npm](https://www.npmjs.com/org/agent-receipts) | All 7 packages |
+| [receipts.webaes.com](https://receipts.webaes.com) | Magic Folder, install guide for Mac, Windows and Linux |
+| [verify.webaes.com](https://verify.webaes.com) | A real issuer's verify page |
 
 <details>
 <summary><strong>Full SDK API Reference (21 methods)</strong></summary>
@@ -272,6 +279,7 @@ The bundle includes every entity, observation, relationship, the receipts that c
 | `keys [--export] [--import]` | Display, export, or import signing keys |
 | `inspect <id\|file>` | Pretty-print a receipt |
 | `verify <id\|file> [--key]` | Verify a receipt signature |
+| `verify-chain <chain_id>` | Verify every signature and link in a chain |
 | `list [--agent] [--status] [--json]` | List receipts with filters |
 | `chain <chain_id> [--tree]` | Show receipt chain |
 | `judgments <id> [--json]` | List judgments for a receipt |
@@ -319,15 +327,17 @@ The bundle includes every entity, observation, relationship, the receipts that c
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@agent-receipts/schema`](packages/schema) | Zod schemas and TypeScript types |
-| [`@agent-receipts/crypto`](packages/crypto) | Ed25519 signing, verification, key management |
-| [`@agent-receipts/mcp-server`](packages/mcp-server) | MCP server with 24 tools |
-| [`@agent-receipts/sdk`](packages/sdk) | TypeScript SDK (21 methods) |
-| [`@agent-receipts/cli`](packages/cli) | Command-line interface |
-| [`@agent-receipts/dashboard`](packages/dashboard) | Mission Control web UI |
-| [`@agent-receipts/magic-folder`](packages/magic-folder) | Drop-a-file job runner with signed, self-checking receipts |
+| Package | Version | Description |
+|---------|---------|-------------|
+| [`@agent-receipts/schema`](packages/schema) | 0.5.1 | Zod schemas and TypeScript types |
+| [`@agent-receipts/crypto`](packages/crypto) | 0.5.1 | Ed25519 signing, verification, key management |
+| [`@agent-receipts/mcp-server`](packages/mcp-server) | 0.5.2 | MCP server with 24 tools |
+| [`@agent-receipts/sdk`](packages/sdk) | 0.5.2 | TypeScript SDK (21 methods) |
+| [`@agent-receipts/cli`](packages/cli) | 0.5.2 | Command-line interface |
+| [`@agent-receipts/dashboard`](packages/dashboard) | 0.5.2 | Mission Control web UI, on your own computer |
+| [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.1.2 | Drop-a-file job runner with signed, self-checking receipts |
+
+All MIT, all on [npm](https://www.npmjs.com/org/agent-receipts). Node.js 22 or 24.
 
 ## Roadmap
 
