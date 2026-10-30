@@ -39,7 +39,7 @@ ${product.renderJs}
     try { res = await arVerify(r, KEY, { requireV2: true }); } catch (e) { res = null; }
     if (mine !== seq) return;
     var seal;
-    if (!res) seal = { state: 'warn', title: 'Your browser can’t check this signature', sub: 'Try a current Chrome, Safari, Edge or Firefox.' };
+    if (!res || res.unsupported) seal = { state: 'warn', title: 'Your browser can’t check this signature', sub: 'Try a current Chrome, Safari, Edge or Firefox.' };
     else if (res.valid && res.key_id === r.key_id) seal = { state: 'ok', title: 'Verified, signed by Webaes', sub: 'Checked by your browser against Webaes’s published key.' };
     else seal = { state: 'bad', title: 'Not verified: this receipt was changed after it was signed', sub: 'The signature no longer matches what the receipt says.' };
     sheet.innerHTML = arRenderReceipt({ receipt: r, approval: null, publicKey: KEY, verifyPageUrl: ${json(VERIFY)} }, seal);

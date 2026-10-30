@@ -57,7 +57,9 @@ async function arVerify(receipt, publicKeyHex, opts) {
     res.reason = res.valid ? '' : (res.key_id_matches === false ? 'Signed with a different key than this receipt names.' : 'The receipt was changed after it was signed, or the key is wrong.');
   } catch (e) {
     res.valid = false;
-    res.reason = /Ed25519|algorithm|NotSupported/i.test(String(e && (e.name + e.message))) ? 'This browser can\'t check Ed25519 signatures. Try a current Chrome, Safari or Firefox.' : 'Could not check this receipt.';
+    // Not being able to check is not the same as "changed": callers must not show this as a failed check
+    res.unsupported = /Ed25519|algorithm|NotSupported/i.test(String(e && (e.name + e.message)));
+    res.reason = res.unsupported ? 'This browser can\'t check Ed25519 signatures. Try a current Chrome, Safari or Firefox.' : 'Could not check this receipt.';
   }
   return res;
 }

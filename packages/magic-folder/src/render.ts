@@ -73,7 +73,9 @@ ${BROWSER_RENDER_JS}
   var genuine = !d.approval || arIsApprovalOf(d.approval, d.receipt);
   // A page can only show it hasn't been changed. Who signed it is confirmed
   // by the issuer's own verify page, which knows the issuer's key.
-  var seal = (r.valid && (!a || a.valid) && genuine)
+  var seal = (r.unsupported || (a && a.unsupported))
+    ? { state: 'warn', title: 'Can\\'t check in this browser', sub: r.reason || a.reason }
+    : (r.valid && (!a || a.valid) && genuine)
     ? { state: 'warn', title: 'Unchanged since signing', sub: 'Signed by ' + r.key_id + (a ? ', approval included' : '') + '. Confirm the signer on the issuer\\'s verify page.' }
     : { state: 'bad', title: 'Not verified', sub: (!r.valid ? r.reason : !genuine ? 'The approval on this page is not a valid approval of this job.' : a.reason) || 'This receipt could not be verified.' };
   app.innerHTML = arRenderReceipt(d, seal);
