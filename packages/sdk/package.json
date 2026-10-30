@@ -23,7 +23,7 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22 <25"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
