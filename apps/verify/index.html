@@ -63,8 +63,11 @@ a{color:var(--good)}
 main{max-width:620px;margin:0 auto}
 .page-title{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:500;font-size:32px;line-height:1.15;margin:0 0 8px}
 .page-lead{color:#3c3830;margin:0 0 22px}
-.drop{display:block;border:1.5px dashed #cfc7b6;border-radius:16px;padding:34px 18px;text-align:center;background-color:#fffefb;background-image:linear-gradient(180deg,#fffefb,#fbf8f1);cursor:pointer}
+.drop{display:block;width:100%;font:inherit;color:inherit;text-align:center;-webkit-appearance:none;appearance:none;border:1.5px dashed #cfc7b6;border-radius:16px;padding:34px 18px;text-align:center;background-color:#fffefb;background-image:linear-gradient(180deg,#fffefb,#fbf8f1);cursor:pointer}
 .drop.over{border-color:var(--good);background:#f2f7f3}
+.drop:focus-visible{outline:3px solid var(--good);outline-offset:3px}
+.nojs{margin:18px 0 0;padding:14px 16px;border-radius:12px;border:1px solid #eadbb5;background:var(--wait-bg);color:var(--wait)}
+.result:focus{outline:none}
 .drop strong{display:block;font-size:16px;margin-bottom:4px}
 .drop span{color:var(--muted);font-size:13.5px}
 input[type=file]{position:absolute;left:-9999px}
@@ -90,17 +93,18 @@ input[type=text]{width:100%;font:13px ui-monospace,SFMono-Regular,Menlo,monospac
   <h1 class="page-title">Verify a receipt</h1>
   <p class="page-lead">Drop a receipt here to check it. The check runs in your browser; the file never leaves your device.</p>
 
-  <label class="drop" id="drop" for="file">
+  <button type="button" class="drop" id="drop">
     <strong>Drop receipt.html or receipt.json</strong>
     <span>or tap to choose a file</span>
-  </label>
-  <input type="file" id="file" accept=".html,.htm,.json,application/json,text/html">
+  </button>
+  <input type="file" id="file" tabindex="-1" aria-label="Receipt file to check" accept=".html,.htm,.json,application/json,text/html">
+  <noscript><p class="nojs">This page checks receipts with JavaScript, in your browser. Turn JavaScript on to use it. Nothing is uploaded either way.</p></noscript>
 
   <p class="trusted" id="trusted-note" hidden></p>
   <label class="k" for="expected">Signer's key ID or public key</label>
   <input type="text" id="expected" placeholder="key_… or 64-character public key" autocomplete="off" spellcheck="false">
 
-  <section class="result" id="result" aria-live="polite">
+  <section class="result" id="result" aria-live="polite" tabindex="-1">
     <h2 id="r-title"></h2>
     <p id="r-sub"></p>
     <dl id="r-details"></dl>
@@ -108,7 +112,7 @@ input[type=text]{width:100%;font:13px ui-monospace,SFMono-Regular,Menlo,monospac
 
   <div class="sheet" id="shown" hidden></div>
 
-  <p class="fine">Receipts are signed with Ed25519. A valid signature proves the receipt is exactly as it was signed. It proves who signed it only when the signing key is one you trust: one this page vouches for, or one you entered above.</p>
+  <p class="fine">Receipts are signed with Ed25519, a standard kind of digital signature. A valid signature proves the receipt is exactly as it was signed. It proves who signed it only when the signing key is one you trust: one this page vouches for, or one you entered above.</p>
 </main>
 <script type="application/json" id="trusted-keys">[]</script>
 <script>
@@ -158,7 +162,9 @@ async function arVerify(receipt, publicKeyHex, opts) {
     res.reason = res.valid ? '' : (res.key_id_matches === false ? 'Signed with a different key than this receipt names.' : 'The receipt was changed after it was signed, or the key is wrong.');
   } catch (e) {
     res.valid = false;
-    res.reason = /Ed25519|algorithm|NotSupported/i.test(String(e && (e.name + e.message))) ? 'This browser can\'t check Ed25519 signatures. Try a current Chrome, Safari or Firefox.' : 'Could not check this receipt.';
+    // Not being able to check is not the same as "changed": callers must not show this as a failed check
+    res.unsupported = /Ed25519|algorithm|NotSupported/i.test(String(e && (e.name + e.message)));
+    res.reason = res.unsupported ? 'This browser can\'t check Ed25519 signatures. Try a current Chrome, Safari or Firefox.' : 'Could not check this receipt.';
   }
   return res;
 }
@@ -275,6 +281,7 @@ function show(kind, title, sub, rows) {
     var d = document.createElement('div'); var dt = document.createElement('dt'); var dd = document.createElement('dd');
     dt.textContent = r[0]; dd.textContent = r[1]; if (r[2]) dd.className = 'mono'; d.appendChild(dt); d.appendChild(dd); dl.appendChild(d);
   });
+  box.focus();
 }
 function showReceipt(data, seal) {
   var el = document.getElementById('shown');
@@ -285,7 +292,8 @@ function showReceipt(data, seal) {
 async function check(text) {
   showReceipt(null, null);
   var data;
-  try { data = arExtract(text); } catch (e) { show('bad', 'Not a receipt', 'This file has no receipt data in it.'); return; }
+  try { data = arExtract(text); } catch (e) { show('warn', 'Not a receipt', 'This file has no receipt data in it. Choose the receipt.html or receipt.json from a job\'s folder.'); return; }
+  if (!data || !data.receipt || typeof data.receipt !== 'object') { show('warn', 'Not a receipt', 'This file has no receipt data in it. Choose the receipt.html or receipt.json from a job\'s folder.'); return; }
   var expected = expectedInput ? expectedInput.value.trim() : '';
   // A receipt.json carries no key: use the trusted key it names, or a typed public key.
   var named = null;
@@ -298,6 +306,7 @@ async function check(text) {
   }
   if (!key) { show('bad', 'Need a public key', 'This receipt file has no key in it. Paste the signer\'s 64-character public key above.'); return; }
   var r = await arVerify(data.receipt, key, { requireV2: false });
+  if (r.unsupported) { show('warn', 'Your browser can\'t check Ed25519', 'Try a current Chrome, Safari or Firefox. Nothing was checked, so this is not a result either way.'); return; }
   var signedRows = [['Action', data.receipt.action], ['Status', data.receipt.status], ['Receipt', data.receipt.receipt_id, true], ['Signed by key', r.key_id || '\u2014', true]];
   if (!r.valid) { show('bad', 'Not verified', r.reason || 'The receipt could not be verified.', signedRows); return; }
   if (r.sig_version !== 2) {
@@ -324,6 +333,7 @@ async function check(text) {
   var a = null;
   if (data.approval) {
     a = await arVerify(data.approval, key, { requireV2: true });
+    if (a.unsupported) { show('warn', 'Your browser can\'t check Ed25519', 'Try a current Chrome, Safari or Firefox. Nothing was checked, so this is not a result either way.'); return; }
     if (!a.valid || !arIsApprovalOf(data.approval, data.receipt)) { show('bad', 'Approval not verified', (a.valid ? 'This is not a valid approval of this job.' : a.reason), signedRows); return; }
   }
 
@@ -336,14 +346,29 @@ async function check(text) {
     showReceipt(data, { state: 'warn', title: 'Signer not confirmed', sub: 'Signed by ' + r.key_id + '. Enter the issuer\'s key above to confirm it.' });
   }
 }
-function readFile(f) { lastFile = f; var fr = new FileReader(); fr.onload = function () { check(String(fr.result)); }; fr.readAsText(f); }
+var MAX_BYTES = 5 * 1024 * 1024;
+function readFile(f) {
+  lastFile = f;
+  showReceipt(null, null);
+  if (f.size > MAX_BYTES) { show('warn', 'Too big to be a receipt', 'This file is ' + (f.size / 1048576).toFixed(1) + ' MB. A receipt is a small file, usually under 100 KB.'); return; }
+  var fr = new FileReader();
+  fr.onload = function () { check(String(fr.result)); };
+  fr.onerror = function () { show('warn', 'Couldn\'t read that file', 'Try choosing it again.'); };
+  fr.readAsText(f);
+}
+function readFiles(files) {
+  if (!files || !files.length) return;
+  if (files.length > 1) { lastFile = null; showReceipt(null, null); show('warn', 'One receipt at a time', 'You chose ' + files.length + ' files. Drop or choose a single receipt.html or receipt.json.'); return; }
+  readFile(files[0]);
+}
 var drop = document.getElementById('drop');
-document.getElementById('file').addEventListener('change', function (e) { if (e.target.files[0]) readFile(e.target.files[0]); });
+drop.addEventListener('click', function () { document.getElementById('file').click(); });
+document.getElementById('file').addEventListener('change', function (e) { readFiles(e.target.files); });
 document.getElementById('file').addEventListener('click', function (e) { e.target.value = ''; });
 if (expectedInput) expectedInput.addEventListener('input', function () { if (lastFile) readFile(lastFile); });
 ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
 ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
-drop.addEventListener('drop', function (e) { var f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readFile(f); });
+drop.addEventListener('drop', function (e) { readFiles(e.dataTransfer && e.dataTransfer.files); });
 </script>
 </body>
 </html>

@@ -36,6 +36,15 @@ Usage:
                                              "unchanged", not who signed it.
   magic-folder verify-page [out.html] [--trust-key <key_… or public key> --trust-name <name>] [--title <t>]
                                              Write the static verify page (with your key baked in)
+      Optional branding (none = the neutral page):
+      --heading <text>                                          The visible heading, if not the --title
+      --brand-name <text> --brand-sub <text> --home-url <url>   Header wordmark and its link
+      --ink <#hex> --paper <#hex> --accent <#hex>               Colours (accent: focus, drop zone, invalid edge)
+      --font-display <names> --font-body <names> --font-mono <names>
+      --font-css <url or file.css>                              A stylesheet to link, or @font-face rules to inline
+      --icon <url> --apple-icon <url> --theme-color <#hex>
+      --description <text> --og-image <url> --canonical <url>   Search and sharing tags
+      --link <label>=<url>                                      A footer link (repeat for more)
 
 Running jobs needs ANTHROPIC_API_KEY and: npm install @anthropic-ai/claude-agent-sdk
 `
@@ -190,9 +199,26 @@ async function main(argv: string[]): Promise<number> {
       const trusted = trustKey && trustName
         ? [/^[0-9a-f]{64}$/i.test(trustKey) ? { publicKey: trustKey, name: trustName } : { keyId: trustKey, name: trustName }]
         : undefined
+      // --font-css: an existing file's CSS is inlined; otherwise it's a stylesheet URL to link
+      let fontCss = flag(argv, '--font-css')
+      if (fontCss) fontCss = await readFile(fontCss, 'utf-8').catch(() => fontCss)
+      const links = argv.flatMap((a, i) => (a === '--link' && argv[i + 1] ? [argv[i + 1]] : [])).map((l) => {
+        const at = l.indexOf('=')
+        if (at < 1) throw new Error(`--link needs <label>=<url>, not ${l}`)
+        return { label: l.slice(0, at), url: l.slice(at + 1) }
+      })
+      const theme = {
+        heading: flag(argv, '--heading'), brandName: flag(argv, '--brand-name'), brandSub: flag(argv, '--brand-sub'), homeUrl: flag(argv, '--home-url'),
+        ink: flag(argv, '--ink'), paper: flag(argv, '--paper'), accent: flag(argv, '--accent'),
+        fontDisplay: flag(argv, '--font-display'), fontBody: flag(argv, '--font-body'), fontMono: flag(argv, '--font-mono'), fontCss,
+        icon: flag(argv, '--icon'), appleIcon: flag(argv, '--apple-icon'), themeColor: flag(argv, '--theme-color'),
+        description: flag(argv, '--description'), ogImage: flag(argv, '--og-image'), canonical: flag(argv, '--canonical'),
+        ...(links.length ? { links } : {}),
+      }
       const html = renderVerifyPage({
         ...(pageTitle ? { title: pageTitle } : {}),
         ...(trusted ? { trustedKeys: trusted } : {}),
+        theme,
       })
       const out = target && !target.startsWith('--') ? target : undefined
       if (out) { await writeFile(out, html); console.log(`Wrote ${out}`) } else process.stdout.write(html)
