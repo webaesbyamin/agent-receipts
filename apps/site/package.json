@@ -19,6 +19,7 @@
   "devDependencies": {
     "@agent-receipts/crypto": "workspace:*",
     "@agent-receipts/magic-folder": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^20.14.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

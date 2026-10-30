@@ -161,21 +161,23 @@ if (symlinks.length) {
   process.exit(1)
 }
 
-// Step 5e: Fail if web analytics made it into the local dashboard. The hosted
-// demo counts page views; a dashboard on someone's own machine must not.
+// Step 5e: Fail if anything only for the hosted demo made it into the local
+// dashboard: web analytics (the demo counts page views; a dashboard on
+// someone's own machine must not) or the demo's search/sharing metadata.
+const DEMO_ONLY = ['_vercel/insights', 'Live Demo | Agent Receipts Dashboard', 'demo.receipts.webaes.com/sitemap.xml']
 function findInsights(dir, found = []) {
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules') continue
     const full = path.join(dir, name)
     const st = lstatSync(full)
     if (st.isDirectory()) findInsights(full, found)
-    else if (st.isFile() && readFileSync(full).includes('_vercel/insights')) found.push(path.relative(STANDALONE_DIR, full))
+    else if (st.isFile() && DEMO_ONLY.some((s) => readFileSync(full).includes(s))) found.push(path.relative(STANDALONE_DIR, full))
   }
   return found
 }
 const insights = findInsights(STANDALONE_DIR)
 if (insights.length) {
-  console.error(`\nVercel Web Analytics ("_vercel/insights") found in standalone/, outside node_modules:\n  ${insights.slice(0, 20).join('\n  ')}`)
+  console.error(`\nHosted-demo code (${DEMO_ONLY.join(', ')}) found in standalone/, outside node_modules:\n  ${insights.slice(0, 20).join('\n  ')}`)
   process.exit(1)
 }
 

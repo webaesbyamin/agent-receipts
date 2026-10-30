@@ -20,20 +20,11 @@ const mono = localFont({
   variable: '--f-mono', display: 'swap', fallback: ['ui-monospace', 'Menlo', 'Consolas', 'monospace'],
 })
 
-const TITLE = 'Agent Receipts by Webaes: signed receipts for what your AI agent did'
-const DESCRIPTION = 'Every job your AI agent does can come back with a signed receipt: what went in, what came out, what it cost. Anyone can check it in a browser, offline. This page is signed too: edit any word and watch the stamp turn to VOID. Free and open source.'
-
+// Each page sets its own title, description, canonical, Open Graph and Twitter card
 export const metadata: Metadata = {
   metadataBase: new URL('https://receipts.webaes.com'),
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: '/' },
-  openGraph: {
-    type: 'website', url: 'https://receipts.webaes.com', siteName: 'Agent Receipts by Webaes',
-    title: TITLE, description: DESCRIPTION,
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'A receipt-style page headed “Your agent says it’s done. Prove it.”' }],
-  },
-  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['/og.png'] },
+  title: { default: 'Agent Receipts | Proof of Work for AI Agents | Webaes', template: '%s | Agent Receipts' },
+  applicationName: 'Agent Receipts',
 }
 
 export const viewport: Viewport = {

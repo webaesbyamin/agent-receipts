@@ -1,5 +1,11 @@
 {
   "framework": "nextjs",
   "buildCommand": "cd ../.. && pnpm build --filter=@agent-receipts/web",
-  "installCommand": "cd ../.. && pnpm install"
+  "installCommand": "cd ../.. && pnpm install",
+  "headers": [
+    { "source": "/receipts/:id", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/agents/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/chains/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/memory/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] }
+  ]
 }
