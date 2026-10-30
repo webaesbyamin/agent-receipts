@@ -1,14 +1,23 @@
 import type { Metadata, Viewport } from 'next'
-import { Archivo, DM_Sans, DM_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { Header, Footer } from '../components/Chrome'
 import { SITE_JS } from '../lib/scripts'
 
-// The Webaes type system. next/font downloads these at build time and serves
-// them from this site; no request goes to Google.
-const display = Archivo({ subsets: ['latin'], weight: ['800', '900'], variable: '--f-display', display: 'swap' })
-const sans = DM_Sans({ subsets: ['latin'], weight: ['400', '500'], variable: '--f-sans', display: 'swap' })
-const mono = DM_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--f-mono', display: 'swap' })
+// The Webaes type system, self-hosted from src/fonts (no request to Google,
+// at build time or in the browser).
+const display = localFont({
+  src: [{ path: '../fonts/archivo-latin-800-normal.woff2', weight: '800' }, { path: '../fonts/archivo-latin-900-normal.woff2', weight: '900' }],
+  variable: '--f-display', display: 'swap', fallback: ['Arial Black', 'Impact', 'sans-serif'],
+})
+const sans = localFont({
+  src: [{ path: '../fonts/dm-sans-latin-400-normal.woff2', weight: '400' }, { path: '../fonts/dm-sans-latin-500-normal.woff2', weight: '500' }],
+  variable: '--f-sans', display: 'swap', fallback: ['-apple-system', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif'],
+})
+const mono = localFont({
+  src: [{ path: '../fonts/dm-mono-latin-400-normal.woff2', weight: '400' }, { path: '../fonts/dm-mono-latin-500-normal.woff2', weight: '500' }],
+  variable: '--f-mono', display: 'swap', fallback: ['ui-monospace', 'Menlo', 'Consolas', 'monospace'],
+})
 
 const TITLE = 'Agent Receipts by Webaes: signed receipts for what your AI agent did'
 const DESCRIPTION = 'Every job your AI agent does can come back with a signed receipt: what went in, what came out, what it cost. Anyone can check it in a browser, offline. This page is signed too: edit any word and watch the stamp turn to VOID. Free and open source.'
