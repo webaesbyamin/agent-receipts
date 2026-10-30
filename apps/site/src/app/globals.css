@@ -97,10 +97,10 @@ h2 { font-size: clamp(40px, 6vw, 96px); line-height: 0.9; letter-spacing: -0.01e
 
 /* name ........ value */
 .item { display: flex; align-items: baseline; gap: 12px; margin: 0; padding: 9px 0; font: 400 17px/1.4 var(--mono); }
-.item > span:first-child { flex: 0 1 auto; min-width: 0; }
-.item .val { flex: 0 1 auto; min-width: 0; text-align: right; font-weight: 500; }
+.item > span:first-child { flex: 0 1 auto; min-width: min-content; }
+.item .val { flex: 0 1 auto; min-width: min-content; text-align: right; font-weight: 500; }
 .item.rule { margin-top: 18px; padding-top: 27px; border-top: 2px dashed var(--dim); }
-.item.total { font: 900 clamp(40px, 7vw, 120px)/1 var(--display); text-transform: uppercase; letter-spacing: -0.01em; margin-top: 20px; padding-top: 24px; border-top: 6px double var(--ink); }
+.item.total { font: 900 clamp(34px, 7vw, 120px)/1 var(--display); text-transform: uppercase; letter-spacing: -0.01em; margin-top: 20px; padding-top: 24px; border-top: 6px double var(--ink); }
 .item.total .lead { border-bottom-width: 6px; transform: translateY(-0.18em); }
 
 /* Buttons */
@@ -160,7 +160,9 @@ h2 { font-size: clamp(40px, 6vw, 96px); line-height: 0.9; letter-spacing: -0.01e
 .sigfields div { padding: 10px 0; border-bottom: 1px dotted var(--dim); }
 .sigfields dt { font: 500 13px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim-2); }
 .sigfields dd { margin: 2px 0 0; font: 400 15px/1.5 var(--mono); overflow-wrap: anywhere; }
-.stamp-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 40px 48px; padding: 48px 16px; }
+/* The stamp is rotated 9°, so its corners reach past its box by about 7% of its
+   width above and below. The buttons get their own row, far enough below. */
+.stamp-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: clamp(56px, 8vw, 112px); padding: clamp(40px, 6vw, 88px) 16px clamp(16px, 2vw, 24px); }
 .stamp { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; padding: 16px 26px 14px; border: 8px double currentColor; border-radius: 10px; color: var(--dim-2); transform: rotate(-9deg); font-family: var(--display); text-transform: uppercase; text-align: center; line-height: 0.9; }
 .stamp-word { font-weight: 900; font-size: clamp(60px, 9vw, 128px); letter-spacing: 0.03em; }
 .stamp-sub { font-weight: 800; font-size: 20px; letter-spacing: 0.08em; line-height: 1.2; max-width: 22ch; }
