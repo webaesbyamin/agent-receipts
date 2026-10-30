@@ -1,21 +1,18 @@
 import product from '../generated/product.json'
+import signature from '../generated/signature.json'
 import { JOBS } from '../../content/jobs.mjs'
 import { Code } from '../components/Code'
-import { Nav, Footer, GITHUB, VERIFY, DEMO } from '../components/Chrome'
+import { GITHUB, VERIFY } from '../components/Chrome'
+import { PAGE_SIGNATURE_JS, STUB_JS } from '../lib/scripts'
+
+// Everything marked data-signed is part of the page signature: its text is
+// collected, hashed and signed at build time (scripts/build.mjs), and checked
+// again by the visitor's browser (PAGE_SIGNATURE_JS). Never nest data-signed.
 
 /** Webaes's public key, the one published at verify.webaes.com/.well-known/agent-receipts.json */
 const WEBAES_KEY = 'b293d3f52ad15d278870eb07b63edbe82b697ad52c8a9232f1136ad2c7e623b6'
 
-const receipt = product.receipt as unknown as {
-  receipt_id: string; key_id: string; output_summary: string; latency_ms: number; model: string
-  metadata: { job_id: string; recipe: string; issuer: { name: string } }
-  files: Array<{ name: string; role: string }>
-}
-
-function duration(ms: number): string {
-  const s = Math.round(ms / 1000)
-  return s < 60 ? `${s} sec` : `${Math.floor(s / 60)} min ${s % 60} sec`
-}
+const receipt = product.receipt as unknown as { output_summary: string; model: string; metadata: { recipe: string } }
 
 const json = (v: unknown) => JSON.stringify(v).replace(/</g, '\\u003c')
 
@@ -53,186 +50,256 @@ ${product.renderJs}
 })();
 `
 
-const FAQ: Array<[string, React.ReactNode]> = [
-  ['Is my data sent anywhere?', <>Not with Ollama: the AI runs on your computer, and your files stay in your Magic Folder. If you choose Claude instead, the files for that job are sent to Anthropic’s API with your own key. Checking a receipt, here or on a verify page, happens in your browser; nothing is uploaded.</>],
-  ['What if a job fails?', <>You still get a signed receipt that says why it failed, your original comes back untouched in <em>Done</em>, and the job costs nothing.</>],
-  ['Which computers does it run on?', <>Mac, Windows and Linux, with Node.js 22 or 24. The <a href="/install">install guide</a> walks through each one.</>],
-  ['Do I need an AI subscription?', <>No. With Ollama, a free program, jobs run on your own computer. Claude is optional, with your own Anthropic API key.</>],
-  ['What does it cost?', <>Nothing. Magic Folder and Agent Receipts are free and open source under the MIT licence.</>],
-  ['Where do I get help?', <>Open an issue on <a href={`${GITHUB}/issues`}>GitHub</a>.</>],
+/** A margin note. On wide screens it sits beside main-column row `row`, pointing at it. */
+function Note({ row, children }: { row: number; children: React.ReactNode }) {
+  return <p className="mnote" style={{ '--row': row } as React.CSSProperties} data-signed>{children}</p>
+}
+
+/** name ........ value */
+function Item({ name, value, big = false, rule = false }: { name: string; value: React.ReactNode; big?: boolean; rule?: boolean }) {
+  return (
+    <p className={['item', big && 'total', rule && 'rule'].filter(Boolean).join(' ')}>
+      <span data-signed>{name}</span><span className="lead" aria-hidden="true" /><span className="val" data-signed>{value}</span>
+    </p>
+  )
+}
+
+function Section({ id, className, children }: { id: string; className?: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className={className ? `sec ${className}` : 'sec'} aria-labelledby={`${id}-h`}>
+      <hr className="perf" />
+      <div className="wrap grid">{children}</div>
+    </section>
+  )
+}
+
+const AGENT_TABS = [
+  { id: 'cc', name: 'claude code' },
+  { id: 'cursor', name: 'cursor + desktop' },
+  { id: 'sdk', name: 'sdk' },
 ]
 
+const MCP_JSON = `{
+  "mcpServers": {
+    "agent-receipts": {
+      "command": "npx",
+      "args": ["@agent-receipts/mcp-server"]
+    }
+  }
+}`
+
+const SDK_JS = `import { AgentReceipts } from '@agent-receipts/sdk'
+
+const ar = new AgentReceipts()
+
+const receipt = await ar.track({
+  action: 'summarize_brief',
+  input: { file: 'brief.md' },
+  output: { summary: 'Five tasks for the launch' },
+})
+
+const { verified } = await ar.verify(receipt.receipt_id)`
+
+const FINE_PRINT: Array<[string, React.ReactNode]> = [
+  ['Is my data sent anywhere?', <>Not with Ollama: the AI runs on your computer, and your files stay in your Magic Folder. If you choose Claude instead, the files for that job are sent to Anthropic’s API with your own key. Checking a receipt, here or on a verify page, happens in your browser; nothing is uploaded.</>],
+  ['What if a job fails?', <>You still get a signed receipt that says why it failed, your original comes back untouched in <em>Done</em>, and the job costs nothing.</>],
+  ['Which computers?', <>Mac, Windows and Linux, with Node.js 22 or 24. The <a href="/install" data-install-link>install guide</a> walks through each one.</>],
+  ['Do I need a subscription?', <>No. With Ollama, a free program, jobs run on your own computer. Claude is optional, with your own Anthropic API key.</>],
+  ['What does it cost?', <>Nothing. Magic Folder and Agent Receipts are free and open source under the MIT licence.</>],
+  ['Where do I get help?', <>Open an issue on <a href={`${GITHUB}/issues`}>GitHub</a>.</>],
+  ['Who holds my waitlist email?', <>Buttondown, which sends the confirmation and, if it gets built, the one email saying so. See the <a href="https://webaes.com/privacy-policy">webaes.com privacy policy</a>.</>],
+]
+
+const ROLES = [['agency', 'agency'], ['freelancer', 'freelancer'], ['dev-team', 'dev team'], ['ai-product', 'building an AI product'], ['other', 'other']]
+const PAY = [['monthly', 'yes, a monthly plan'], ['per-client', 'yes, priced per client'], ['maybe', 'maybe, depends on price'], ['no', 'no, just curious']]
+
 export default function Home() {
-  const inputs = receipt.files.filter((f) => f.role === 'input')
-  const outputs = receipt.files.filter((f) => f.role === 'output')
   return (
-    <>
-      <Nav />
-      <main id="main">
-        <section className="hero">
-          <div className="wrap hero-grid">
-            <div>
-              <p className="kicker">Magic Folder · Agent Receipts</p>
-              <h1>Drop a file. Get the work back, with a receipt anyone can check.</h1>
-              <p className="lede">Magic Folder is a folder on your computer that does real work, like fixing typos, writing product descriptions or turning notes into tasks. Every job comes back with a signed receipt showing what went in, what came out and what it cost. Change one word and the seal breaks.</p>
-              <div className="btns">
-                <a className="btn primary" href="/install" data-install-link>Install free</a>
-                <a className="btn" href="#how">See how it works</a>
-              </div>
-              <p className="small">Free and open source · Mac, Windows, Linux · Runs on your computer</p>
+    <main id="main" className="paper">
+      <p id="edit-help" className="sr-only">Editable for the signature test: change this text and the page signature check will fail.</p>
+
+      <section className="hero" aria-labelledby="hero-h">
+        <div className="wrap grid">
+          <p className="rcpt-head full"><span data-signed>RCPT_SITE_HOME</span><span className="lead" aria-hidden="true" /><span data-signed>{product.builtOn}</span></p>
+          <h1 id="hero-h" className="full" data-signed>Your agent says it’s done. <span className="red">Prove it.</span></h1>
+          <p className="sub" data-signed>Agent Receipts gives the work your AI agent does a signed receipt: what went in, what came out, what it cost. Anyone can check it, offline, without trusting you.</p>
+          <div className="actions">
+            <Code pill code="claude mcp add agent-receipts -- npx @agent-receipts/mcp-server" label="add Agent Receipts to Claude Code" />
+            <button className="btn" type="button" data-fake aria-pressed="false">try to fake this page</button>
+          </div>
+          <Note row={3}>receipts are checked with a public key. no account, no server, no call home.</Note>
+          <Note row={4}>one line adds it to claude code. the button makes this page editable.</Note>
+        </div>
+      </section>
+
+      <Section id="records">
+        <p className="label" data-signed>01 · The receipt</p>
+        <h2 id="records-h" data-signed>What a receipt records.</h2>
+        <Item name="files in, fingerprinted" value="sha256" />
+        <Item name="files out" value="sha256" />
+        <Item name="model that ran" value="id" />
+        <Item name="time taken" value="ms" />
+        <Item name="cost" value="USD" />
+        <Item name="link to previous receipt" value="sha256" />
+        <Item rule name="servers to trust" value="0" />
+        <Item name="accounts needed" value="0" />
+        <Item name="price" value="$0.00 · MIT" />
+        <Item big name="Total" value="Proof" />
+        <Note row={3}>sha256 of everything in and out. change one byte and it stops matching.</Note>
+        <Note row={5}>logs are written by the agent. receipts are signed by the harness.</Note>
+        <Note row={7}>in magic folder: claude’s estimate, or $0 on ollama.</Note>
+        <Note row={8}>each receipt carries the hash of the one before it, so a missing one shows.</Note>
+        <Note row={10}>checking needs the receipt and a public key. nothing else.</Note>
+      </Section>
+
+      <Section id="install">
+        <p className="label" data-signed>02 · Install</p>
+        <h2 id="install-h" data-signed>One line. Any agent.</h2>
+        <div className="tabset">
+          <div className="tabs" role="tablist" aria-label="Your agent" data-tabs="agent">
+            {AGENT_TABS.map((t, i) => (
+              <button key={t.id} type="button" role="tab" id={`tab-${t.id}`} data-tab={t.id} aria-controls={`panel-${t.id}`} aria-selected={i === 0} tabIndex={i === 0 ? 0 : -1}>{t.name}</button>
+            ))}
+          </div>
+          <div className="panel" role="tabpanel" id="panel-cc" aria-labelledby="tab-cc">
+            <p data-signed>In a terminal:</p>
+            <Code code="claude mcp add agent-receipts -- npx @agent-receipts/mcp-server" label="add Agent Receipts to Claude Code" />
+          </div>
+          <div className="panel" role="tabpanel" id="panel-cursor" aria-labelledby="tab-cursor">
+            <p data-signed>Add this to <code>.cursor/mcp.json</code> in your project (Cursor), or to <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (Claude Desktop on a Mac), then restart it.</p>
+            <Code code={MCP_JSON} label="MCP config for Cursor or Claude Desktop" />
+          </div>
+          <div className="panel" role="tabpanel" id="panel-sdk" aria-labelledby="tab-sdk">
+            <p data-signed>Receipts from your own code:</p>
+            <Code code="npm install @agent-receipts/sdk" label="install the SDK" />
+            <Code code={SDK_JS} label="track and verify with the SDK" />
+          </div>
+        </div>
+        <p data-signed>Your agent gets a <code>track_action</code> tool: each call comes back as a signed receipt, stored on your computer.</p>
+        <div className="mini">
+          <p data-signed>See them in a local dashboard:</p>
+          <Code code="npx @agent-receipts/dashboard" label="start the local dashboard" />
+        </div>
+        <Note row={3}>works with any MCP client.</Note>
+        <Note row={4}>keys and receipts live in ~/.agent-receipts.</Note>
+        <Note row={5}>the dashboard runs on your computer. nothing leaves it.</Note>
+      </Section>
+
+      <Section id="magic-folder">
+        <p className="label" data-signed>03 · Magic Folder</p>
+        <h2 id="magic-folder-h" data-signed>Drop a file. Get the work back.</h2>
+        <p data-signed>A folder on your computer that does real work. Drop a file into a job, and the result comes back in <em>Done</em> with a signed receipt.</p>
+        <div className="listing">
+          {product.recipes.map((r) => (
+            <Item key={r.name} name={r.name} value={(JOBS[r.name as keyof typeof JOBS] as { short: string }).short} />
+          ))}
+        </div>
+        <p className="go"><a className="btn ink" href="/install" data-install-link>install free <span aria-hidden="true">→</span></a> <span data-signed>mac · windows · linux</span></p>
+        <Note row={3}>runs free on your computer with ollama, or on claude with your own api key.</Note>
+        <Note row={4}>the client email waits in “needs your OK” until you approve it.</Note>
+        <Note row={5}>the install steps run on clean mac, windows and linux machines on every change.</Note>
+      </Section>
+
+      <Section id="try">
+        <p className="label" data-signed>04 · Try it on a real receipt</p>
+        <h2 id="try-h" data-signed>Change one word. Watch it fail.</h2>
+        <p data-signed>This is the receipt from a real job: a short note sent through <em>{receipt.metadata.recipe}</em> on a Mac. Edit its summary and your browser checks the signature again with every keystroke.</p>
+        <div className="fake">
+          <div className="editor">
+            <label htmlFor="summary">The summary on this receipt</label>
+            <textarea id="summary" defaultValue={receipt.output_summary} spellCheck={false} rows={5} />
+            {/* The demo script writes this before React hydrates; React must leave it alone */}
+            <div className="status" id="status" role="status" aria-live="polite" suppressHydrationWarning>Checking…</div>
+            <button className="btn" type="button" id="reset">reset</button>
+          </div>
+          <div id="receipt-host" className="receipt-host" />
+        </div>
+        <script type="application/json" id="demo-receipt" dangerouslySetInnerHTML={{ __html: json(product.receipt) }} />
+        <script dangerouslySetInnerHTML={{ __html: DEMO_JS }} />
+        <Note row={3}>a real job, run on {receipt.model} on a Mac. the receipt is shown exactly as it was signed.</Note>
+        <Note row={4}>checked against the key webaes publishes at verify.webaes.com. nothing is sent anywhere.</Note>
+      </Section>
+
+      <Section id="signature">
+        <p className="label" data-signed>05 · Signature</p>
+        <h2 id="signature-h" data-signed>This page is a receipt.</h2>
+        <p data-signed>Every heading, paragraph, line item, note and command on this page was signed when the site was built. Your browser is checking that signature now. Press “try to fake this page”, change any word, and the stamp turns to VOID.</p>
+        <dl className="sigfields">
+          <div><dt>page text, sha256</dt><dd id="sig-hash" suppressHydrationWarning>{signature.sha256}</dd></div>
+          <div><dt>signature, Ed25519</dt><dd>{signature.signature}</dd></div>
+          <div><dt>key id</dt><dd>{signature.key_id}{signature.dev && ' (local test key)'}</dd></div>
+          <div><dt>public key</dt><dd>{signature.public_key}</dd></div>
+          <div><dt>published by this site?</dt><dd><span id="sig-published" suppressHydrationWarning>checking</span> · <a href="/.well-known/agent-receipts-site.json">/.well-known/agent-receipts-site.json</a></dd></div>
+        </dl>
+        <div className="stamp-wrap">
+          <div className="stamp" data-stamp data-state="checking" role="status" aria-live="polite" suppressHydrationWarning>
+            <span className="stamp-word" data-stamp-word suppressHydrationWarning>Checking</span>
+            <span className="stamp-sub" data-stamp-sub suppressHydrationWarning>your browser is checking the signature</span>
+          </div>
+          <div className="stamp-actions">
+            <button className="btn" type="button" data-fake aria-pressed="false">try to fake this page</button>
+            <button className="btn red" type="button" data-restore>restore the original</button>
+          </div>
+        </div>
+        <script type="application/json" id="page-signature" dangerouslySetInnerHTML={{ __html: json(signature) }} />
+        <Note row={3}>the signature check runs in your browser, with WebCrypto.</Note>
+        <Note row={4}>a key just for this site. it isn’t the key that signs magic folder jobs.</Note>
+      </Section>
+
+      <section id="stub" className="sec stub" aria-labelledby="stub-h">
+        <div className="tear-here" aria-hidden="true"><span>✂ tear here</span></div>
+        <div className="wrap stub-grid">
+          <div className="stub-copy">
+            <p className="label" data-signed>Stub · Early access</p>
+            <h2 id="stub-h" data-signed>Hand your clients a receipt.</h2>
+            <p data-signed>For agencies and studios delivering AI work: your name on every receipt, a verify page on your domain, and a portal where clients see every job and its proof. Not built yet. We’ll build it if enough of you want it.</p>
+          </div>
+          <div className="stub-form">
+            <form id="stub-form">
+              <label className="field" htmlFor="stub-email"><span>email</span>
+                <input id="stub-email" name="email" type="email" required autoComplete="email" />
+              </label>
+              <fieldset className="choices">
+                <legend>you are</legend>
+                {ROLES.map(([v, l]) => <label key={v}><input type="radio" name="role" value={v} /><span>{l}</span></label>)}
+              </fieldset>
+              <fieldset className="choices">
+                <legend>would you pay?</legend>
+                {PAY.map(([v, l]) => <label key={v}><input type="radio" name="pay" value={v} /><span>{l}</span></label>)}
+              </fieldset>
+              <label className="field" htmlFor="stub-worth"><span>worth per month <em>(optional)</em></span>
+                <span className="money"><span aria-hidden="true">$</span><input id="stub-worth" name="worth" type="text" inputMode="decimal" maxLength={12} /></span>
+              </label>
+              <label className="field" htmlFor="stub-use"><span>receipts for what? <em>(optional)</em></span>
+                <input id="stub-use" name="use" type="text" maxLength={300} />
+              </label>
+              <div className="hp" aria-hidden="true"><label>leave this empty<input name="hp_token" type="text" tabIndex={-1} autoComplete="off" /></label></div>
+              <button className="btn red big" type="submit">Hand in the stub</button>
+              <p className="fine">one email when it’s real · nothing else</p>
+              <p id="stub-msg" className="stub-msg" role="alert" />
+            </form>
+            <div id="stub-done" className="stub-done" hidden tabIndex={-1}>
+              <div className="stamp" data-state="ok"><span className="stamp-word">Received</span><span className="stamp-sub" id="stub-done-sub">check your email to confirm</span></div>
             </div>
-
-            <div className="hv" aria-label="A file dropped into Fix typos comes back in Done with a signed receipt">
-              <div className="hv-win">
-                <div className="hv-bar"><i /><i /><i /><b>Magic Folder</b></div>
-                <ul className="hv-list">
-                  {product.recipes.map((r) => (
-                    <li key={r.name} className={r.name === receipt.metadata.recipe ? 'on' : undefined}>
-                      <span className="fi" aria-hidden="true" /><span>{r.name}</span>
-                      {r.name === receipt.metadata.recipe && <em className="chip">{inputs[0]?.name}</em>}
-                    </li>
-                  ))}
-                  <li><span className="fi" aria-hidden="true" /><span>Done</span></li>
-                  <li><span className="fi" aria-hidden="true" /><span>Needs your OK</span></li>
-                </ul>
-              </div>
-              <div className="hv-win hv-done">
-                <div className="hv-bar"><i /><i /><i /><b>Done › {receipt.metadata.job_id}</b></div>
-                <ul className="hv-list">
-                  <li><span className="fi" aria-hidden="true" /><span>result</span><span className="muted">&nbsp;· {outputs.map((f) => f.name).join(', ')}</span></li>
-                  <li><span className="fi" aria-hidden="true" /><span>original</span><span className="muted">&nbsp;· untouched</span></li>
-                  <li><span className="doc r" aria-hidden="true" /><span>receipt.html</span></li>
-                  <li><span className="doc" aria-hidden="true" /><span>receipt.json</span></li>
-                </ul>
-              </div>
-              <div className="hv-mini">
-                <div className="top">{receipt.metadata.issuer.name}<span>RECEIPT</span></div>
-                <p className="hv-title">{receipt.metadata.recipe}</p>
-                <p>{duration(receipt.latency_ms)} · {receipt.model} · Free (ran on this computer)</p>
-                <div className="seal-row"><span className="seal-dot" aria-hidden="true" />Verified, signed by {receipt.metadata.issuer.name}</div>
-              </div>
-            </div>
           </div>
-        </section>
+        </div>
+        <script dangerouslySetInnerHTML={{ __html: STUB_JS }} />
+      </section>
 
-        <section className="section" id="how">
-          <div className="wrap">
-            <p className="kicker">How it works</p>
-            <h2>A folder that does the job, and shows its work.</h2>
-            <div className="grid3">
-              <div className="card"><span className="num">1</span><h3>Drop it into the job you want</h3><p>Your Magic Folder has a folder for each job, like <em>Fix typos</em> or <em>Meeting notes to tasks</em>. Drop a file in.</p></div>
-              <div className="card"><span className="num">2</span><h3>Leave it</h3><p>Your file moves out of the job folder at once, and a “working” note takes its place until the job is done. You don’t need to do anything.</p></div>
-              <div className="card"><span className="num">3</span><h3>Open Done</h3><p>The result, your original (untouched) and a receipt land together in <em>Done</em>, in their own folder.</p></div>
-            </div>
-            <p className="note">Some jobs, like a client email, wait in <em>Needs your OK</em> first. Check the draft, then move it to <em>Done</em> to approve it. The approval gets its own signed receipt.</p>
-          </div>
-        </section>
+      <Section id="fine-print" className="fine-print">
+        <p className="label" data-signed>06 · Fine print</p>
+        <h2 id="fine-print-h" data-signed>Terms of this receipt.</h2>
+        <ol className="terms">
+          {FINE_PRINT.map(([q, a]) => <li key={q}><strong data-signed>{q}</strong> <span data-signed>{a}</span></li>)}
+        </ol>
+      </Section>
 
-        <section className="section" id="jobs">
-          <div className="wrap">
-            <p className="kicker">The jobs it comes with</p>
-            <h2>Six jobs, ready on day one.</h2>
-            <div className="grid3">
-              {product.recipes.map((r) => {
-                const j = JOBS[r.name as keyof typeof JOBS] as { in: string; out: string; note?: string }
-                return (
-                  <article className="card job" key={r.name}>
-                    <h3>{r.name}{r.needsApproval && <span className="tag">Needs your OK</span>}</h3>
-                    <dl>
-                      <div><dt>Drop in</dt><dd>{j.in}</dd></div>
-                      <div><dt>You get</dt><dd>{j.out}</dd></div>
-                    </dl>
-                    {j.note && <p className="tip">{j.note}</p>}
-                    <details><summary>Read the instructions it follows</summary><pre>{r.instruction}</pre></details>
-                  </article>
-                )
-              })}
-            </div>
-            <p className="note"><strong>Make your own job:</strong> copy a job folder, rename it, and edit the one hidden text file inside that says what to do.</p>
-          </div>
-        </section>
-
-        <section className="section" id="try">
-          <div className="wrap">
-            <p className="kicker">Try to fake it</p>
-            <h2>Change one word. Watch the seal break.</h2>
-            <p className="lede">This is the receipt from a real job: a short note sent through <em>Fix typos</em> on a Mac. Edit its summary and your browser checks the signature again with every keystroke.</p>
-            <div className="fake">
-              <div className="editor">
-                <label htmlFor="summary">The summary on this receipt</label>
-                <textarea id="summary" defaultValue={receipt.output_summary} spellCheck={false} />
-                {/* The demo script writes this before React hydrates; React must leave it alone */}
-                <div className="status" id="status" role="status" aria-live="polite" suppressHydrationWarning>Checking…</div>
-                <button className="btn" type="button" id="reset">Reset</button>
-                <p className="caption">A real receipt from a real job. Your browser checks the signature itself. Nothing is sent anywhere.</p>
-              </div>
-              <div id="receipt-host" className="receipt-host" />
-            </div>
-            <script type="application/json" id="demo-receipt" dangerouslySetInnerHTML={{ __html: json(product.receipt) }} />
-            <script dangerouslySetInnerHTML={{ __html: DEMO_JS }} />
-          </div>
-        </section>
-
-        <section className="section" id="proves">
-          <div className="wrap">
-            <p className="kicker">What a receipt proves</p>
-            <h2>Three things you can check, without trusting anyone.</h2>
-            <div className="grid3">
-              <div className="card"><h3>What was done</h3><p>The files that went in and came out, each with a fingerprint. If a file changes by one byte, its fingerprint no longer matches.</p></div>
-              <div className="card"><h3>When, how long, what it cost</h3><p>Start and finish times, the model, and the cost, recorded by the program that ran the job, not by the AI.</p></div>
-              <div className="card"><h3>Who signed it</h3><p>Every receipt is signed. A verify page checks the signature against the issuer’s published key, so you know it came from them.</p></div>
-            </div>
-            <p className="note">A receipt proves what happened and that nothing changed since. It doesn’t prove the work is good. That’s still your call.</p>
-          </div>
-        </section>
-
-        <section className="section" id="free">
-          <div className="wrap narrow">
-            <p className="kicker">Free on your computer</p>
-            <h2>Runs on your own machine.</h2>
-            <p className="lede">With <a href="https://ollama.com">Ollama</a>, a free program, the AI runs on your computer. Nothing leaves your machine, local jobs cost nothing, and their receipts say “Free (ran on this computer)”.</p>
-            <p>For bigger jobs, Magic Folder can use Claude with your own Anthropic API key.</p>
-          </div>
-        </section>
-
-        <section className="section" id="your-name">
-          <div className="wrap narrow">
-            <p className="kicker">Your name on your receipts</p>
-            <h2>Receipts that say they’re from you.</h2>
-            <p className="lede">Start Magic Folder with your business name, and every receipt carries it.</p>
-            <Code code={'magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Business"'} label="run with your business name" />
-            <p style={{ marginTop: 24 }}>Then host your own verify page, so clients see <strong>Verified, signed by Your Business</strong>. One command makes it, with your public key built in:</p>
-            <Code code={'magic-folder key\nmagic-folder verify-page verify.html --trust-key <your public key> --trust-name "Your Business" --title "Verify a Your Business receipt"'} label="make your verify page" />
-            <p style={{ marginTop: 24 }}>Upload <code>verify.html</code> to your website. <a href={VERIFY}>verify.webaes.com</a> is a live example.</p>
-          </div>
-        </section>
-
-        <section className="section" id="developers">
-          <div className="wrap">
-            <p className="kicker">For developers</p>
-            <h2>The same receipts, for your own agents.</h2>
-            <p className="lede">Magic Folder is built on Agent Receipts, an open-source toolkit for signed, checkable records of what an AI agent did.</p>
-            <ul className="devs">
-              <li><div><strong>MCP server</strong><span>Receipts for any MCP client, e.g. Claude Code</span></div><Code code="claude mcp add agent-receipts -- npx @agent-receipts/mcp-server" label="add the MCP server to Claude Code" /></li>
-              <li><div><strong>SDK</strong><span>Receipts from your own code</span></div><Code code="npm install @agent-receipts/sdk" label="install the SDK" /></li>
-              <li><div><strong>CLI</strong><span>Inspect and verify from a terminal</span></div><Code code="npx @agent-receipts/cli stats" label="run the CLI" /></li>
-              <li><div><strong>Local dashboard</strong><span>A web view of your receipts</span></div><Code code="npx @agent-receipts/dashboard" label="start the dashboard" /></li>
-              <li><div><strong>Live demo</strong><span>The dashboard with sample data</span></div><a href={DEMO}>demo.receipts.webaes.com</a></li>
-              <li><div><strong>Source</strong><span>Code, docs and issues</span></div><a href={GITHUB}>github.com/webaesbyamin/agent-receipts</a></li>
-              <li><div><strong>MCP Registry</strong><span>Listed as</span></div><a href="https://registry.modelcontextprotocol.io/v0/servers?search=io.github.webaesbyamin/agent-receipts"><code>io.github.webaesbyamin/agent-receipts</code></a></li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="section faq" id="faq">
-          <div className="wrap narrow">
-            <p className="kicker">Questions</p>
-            <h2>Good to know</h2>
-            {FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </>
+      <div id="editbar" className="editbar" hidden>
+        <span className="stamp mini" data-stamp data-state="checking" suppressHydrationWarning><span className="stamp-word" data-stamp-word suppressHydrationWarning>Checking</span><span className="stamp-sub" data-stamp-sub suppressHydrationWarning>checking</span></span>
+        <button className="btn red" type="button" data-restore>restore the original</button>
+        <button className="btn" type="button" data-fake aria-pressed="true">stop editing</button>
+      </div>
+      <script dangerouslySetInnerHTML={{ __html: PAGE_SIGNATURE_JS }} />
+    </main>
   )
 }

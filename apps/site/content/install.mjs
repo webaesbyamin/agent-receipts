@@ -8,7 +8,7 @@
 const RUN_FLAGS = [
   '<code>--engine ollama</code> runs jobs on Ollama, free, on your computer.',
   '<code>--issuer "Your Business"</code> is the name printed on your receipts. Use your own.',
-  '<code>--key-url</code> and <code>--verify-url</code> are only for when you host your own verify page. <a href="/#your-name">How that works</a>.',
+  '<code>--key-url</code> and <code>--verify-url</code> are only for when you host your own verify page. <a href="https://github.com/webaesbyamin/agent-receipts/tree/main/packages/magic-folder#who-signed-it">How that works</a>.',
 ]
 
 export const OSES = [

@@ -1,0 +1,9 @@
+{
+  "key_id": "key_d041e4852c85dc51",
+  "public_key": "a11ed489d04bd47bffa08ad5e14d1fe0cf0357c10786fccdef9267f2a63e64cf",
+  "algorithm": "Ed25519",
+  "purpose": "site",
+  "issuer": "Agent Receipts by Webaes",
+  "url": "https://receipts.webaes.com",
+  "message": "agent-receipts-site:v1:<path>:<sha256 hex of the page text>"
+}

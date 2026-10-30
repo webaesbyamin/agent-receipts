@@ -6,8 +6,8 @@
   "scripts": {
     "generate": "node scripts/generate.mjs",
     "dev": "node scripts/generate.mjs && next dev -p 3275",
-    "build": "node scripts/generate.mjs && next build",
-    "test": "node scripts/check-guide.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/check-guide.mjs && node --test \"test/*.test.mjs\"",
     "typecheck": "node scripts/generate.mjs && tsc --noEmit"
   },
   "dependencies": {
@@ -20,6 +20,8 @@
     "@types/node": "^20.14.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "@agent-receipts/crypto": "workspace:*",
+    "linkedom": "^0.18.12"
   }
 }
