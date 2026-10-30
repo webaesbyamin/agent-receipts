@@ -230,7 +230,7 @@ ${theme.header}<main>
     <strong>Drop receipt.html or receipt.json</strong>
     <span>or tap to choose a file</span>
   </button>
-  <input type="file" id="file" tabindex="-1" accept=".html,.htm,.json,application/json,text/html">
+  <input type="file" id="file" tabindex="-1" aria-label="Receipt file to check" accept=".html,.htm,.json,application/json,text/html">
   <noscript><p class="nojs">This page checks receipts with JavaScript, in your browser. Turn JavaScript on to use it. Nothing is uploaded either way.</p></noscript>
 
   <p class="trusted" id="trusted-note" hidden></p>
