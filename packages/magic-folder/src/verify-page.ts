@@ -196,7 +196,7 @@ ${RECEIPT_CSS}
 main{max-width:620px;margin:0 auto}
 .page-title{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:500;font-size:32px;line-height:1.15;margin:0 0 8px}
 .page-lead{color:#3c3830;margin:0 0 22px}
-.drop{display:block;border:1.5px dashed #cfc7b6;border-radius:16px;padding:34px 18px;text-align:center;background-color:#fffefb;background-image:linear-gradient(180deg,#fffefb,#fbf8f1);cursor:pointer}
+.drop{display:block;width:100%;font:inherit;color:inherit;text-align:center;-webkit-appearance:none;appearance:none;border:1.5px dashed #cfc7b6;border-radius:16px;padding:34px 18px;text-align:center;background-color:#fffefb;background-image:linear-gradient(180deg,#fffefb,#fbf8f1);cursor:pointer}
 .drop.over{border-color:var(--good);background:#f2f7f3}
 .drop:focus-visible{outline:3px solid var(--good);outline-offset:3px}
 .nojs{margin:18px 0 0;padding:14px 16px;border-radius:12px;border:1px solid #eadbb5;background:var(--wait-bg);color:var(--wait)}
@@ -226,10 +226,10 @@ ${theme.header}<main>
   <h1 class="page-title">${options.theme?.heading ? escAttr(options.theme.heading) : safeTitle}</h1>
   <p class="page-lead">Drop a receipt here to check it. The check runs in your browser; the file never leaves your device.</p>
 
-  <label class="drop" id="drop" for="file" tabindex="0" role="button" aria-label="Choose a receipt file to check (receipt.html or receipt.json)">
+  <button type="button" class="drop" id="drop">
     <strong>Drop receipt.html or receipt.json</strong>
     <span>or tap to choose a file</span>
-  </label>
+  </button>
   <input type="file" id="file" tabindex="-1" accept=".html,.htm,.json,application/json,text/html">
   <noscript><p class="nojs">This page checks receipts with JavaScript, in your browser. Turn JavaScript on to use it. Nothing is uploaded either way.</p></noscript>
 
@@ -363,7 +363,7 @@ function readFiles(files) {
   readFile(files[0]);
 }
 var drop = document.getElementById('drop');
-drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('file').click(); } });
+drop.addEventListener('click', function () { document.getElementById('file').click(); });
 document.getElementById('file').addEventListener('change', function (e) { readFiles(e.target.files); });
 document.getElementById('file').addEventListener('click', function (e) { e.target.value = ''; });
 if (expectedInput) expectedInput.addEventListener('input', function () { if (lastFile) readFile(lastFile); });
