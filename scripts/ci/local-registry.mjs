@@ -4,7 +4,7 @@
 // guide's exact `npm install -g …` command run against unreleased code.
 //   node scripts/ci/local-registry.mjs <dir with *.tgz>
 import { spawn, execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, readdirSync, appendFileSync, openSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readdirSync, appendFileSync, openSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -37,10 +37,16 @@ const child = spawn(npx, ['--yes', 'verdaccio@6', '--config', config, '--listen'
 })
 child.unref()
 
+// Up to 5 minutes: on a fresh Windows machine npx first downloads Verdaccio
+// into an empty cache, which has taken longer than 2 minutes
 const registry = 'http://127.0.0.1:4873/'
+const STARTUP_SECONDS = 300
 for (let i = 0; ; i++) {
-  try { if ((await fetch(registry + '-/ping')).ok) break } catch { /* not up yet */ }
-  if (i > 120) throw new Error('Verdaccio did not start')
+  try { if ((await fetch(registry + '-/ping')).ok) { console.log(`Verdaccio up after ${i}s`); break } } catch { /* not up yet */ }
+  if (i >= STARTUP_SECONDS) {
+    console.error(readFileSync(join(home, 'verdaccio.log'), 'utf-8').slice(-4000))
+    throw new Error(`Verdaccio did not start within ${STARTUP_SECONDS}s`)
+  }
   await new Promise((r) => setTimeout(r, 1000))
 }
 
