@@ -1,4 +1,10 @@
+import path from 'node:path'
 import type { NextConfig } from 'next'
+
+// Web Analytics is only for the hosted demo (demo.receipts.webaes.com). Any
+// other build, including the npm dashboard (build:standalone sets
+// NEXT_PUBLIC_DEMO_MODE=false), gets a stub instead of the real package.
+const isDemoBuild = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -16,6 +22,14 @@ const nextConfig: NextConfig = {
     PORT: '3274',
   },
   webpack: (config, { isServer }) => {
+    if (!isDemoBuild) {
+      config.resolve.alias = { ...config.resolve.alias, '@vercel/analytics/next': path.resolve(__dirname, 'src/lib/no-analytics.tsx') }
+    }
+    // Webpack's cache doesn't see the alias change, so demo and non-demo builds
+    // keep separate caches and never reuse each other's modules.
+    if (config.cache && typeof config.cache === 'object' && 'name' in config.cache) {
+      config.cache = { ...config.cache, name: `${config.cache.name}-${isDemoBuild ? 'demo' : 'local'}` }
+    }
     if (isServer) {
       if (!Array.isArray(config.externals)) {
         config.externals = [config.externals]

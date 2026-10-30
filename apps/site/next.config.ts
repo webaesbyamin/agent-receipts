@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next'
 
-// A static site: `next build` writes plain HTML/CSS to out/. No server, no
-// Node APIs at request time, and nothing shared with the dashboard build.
+// Pages are prerendered to static HTML at build time. The one server route is
+// /api/waitlist (the early-access stub), so this is no longer a static export.
+// Nothing here is shared with the dashboard build.
 const nextConfig: NextConfig = {
-  output: 'export',
   images: { unoptimized: true },
   poweredByHeader: false,
   reactStrictMode: true,

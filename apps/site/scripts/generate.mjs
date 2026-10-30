@@ -1,7 +1,7 @@
 // Pulls the real product into the site at build time, so nothing is retyped:
 // the starter recipes, the in-browser verifier and the receipt renderer come
 // from @agent-receipts/magic-folder; the receipt is a real Webaes job.
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { STARTER_RECIPES, parseRecipe, BROWSER_VERIFY_JS, BROWSER_RENDER_JS, RECEIPT_CSS } from '@agent-receipts/magic-folder'
@@ -21,5 +21,9 @@ if (missing.length || extra.length) throw new Error(`content/jobs.mjs is out of 
 
 const receipt = JSON.parse(readFileSync(join(here, '..', 'content', 'webaes-receipt.json'), 'utf-8'))
 
-writeFileSync(join(out, 'product.json'), JSON.stringify({ recipes, receipt, verifyJs: BROWSER_VERIFY_JS, renderJs: BROWSER_RENDER_JS, receiptCss: RECEIPT_CSS }, null, 2))
+const builtOn = new Date().toISOString().slice(0, 10)
+writeFileSync(join(out, 'product.json'), JSON.stringify({ recipes, receipt, builtOn, verifyJs: BROWSER_VERIFY_JS, renderJs: BROWSER_RENDER_JS, receiptCss: RECEIPT_CSS }, null, 2))
+// scripts/build.mjs replaces this with the real page signature before the final render
+const sig = join(out, 'signature.json')
+if (!existsSync(sig)) writeFileSync(sig, JSON.stringify({ path: '/', sha256: '', signature: '', key_id: '', public_key: '', dev: true }, null, 2) + '\n')
 console.log(`site content: ${recipes.length} recipes, receipt ${receipt.receipt_id}`)

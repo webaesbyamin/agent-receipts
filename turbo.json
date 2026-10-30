@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "env": ["DEMO_MODE", "NEXT_PUBLIC_DEMO_MODE"],
+      "env": ["DEMO_MODE", "NEXT_PUBLIC_DEMO_MODE", "SITE_SIGNING_KEY", "VERCEL"],
       "outputs": ["dist/**", ".next/**"]
     },
     "test": {
