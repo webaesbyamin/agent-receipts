@@ -120,15 +120,15 @@ function themeParts(t: VerifyPageTheme | undefined, title: string) {
   ].filter(Boolean).map((l) => l + '\n').join('') + fontLink
   const css = `${fontRules}:root{--ink:${ink};--paper:${paper};--accent:${accent};--fd:${fd};--fb:${fb};--fm:${fm}}
 html{background:var(--ink)}
-body{padding:0;color:var(--ink);background-color:var(--paper);background-image:linear-gradient(var(--paper),var(--paper));font-family:var(--fb)}
+body{padding:0;color:var(--ink);background-color:var(--paper);background-image:linear-gradient(var(--paper),var(--paper));background-attachment:scroll;font-family:var(--fb);min-height:100vh;display:flex;flex-direction:column}
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .band{background-color:var(--ink);background-image:linear-gradient(var(--ink),var(--ink));color:var(--paper);padding:max(10px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 6px max(20px,env(safe-area-inset-left))}
 .mark{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:inherit;text-decoration:none}
 .mark b{font:900 22px/1 var(--fd);text-transform:uppercase;letter-spacing:-.01em}
 .mark span{font:400 13px/1 var(--fm);color:#d8d5ce}
 .torn{height:16px;background-color:var(--ink);background-image:linear-gradient(45deg,var(--paper) 50%,transparent 50%),linear-gradient(-45deg,var(--paper) 50%,transparent 50%);background-size:16px 16px;background-repeat:repeat-x;background-position:0 100%}
-.torn.end{transform:rotate(180deg)}
-main{padding:28px max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-area-inset-left))}
+.torn.end{transform:rotate(180deg);margin-bottom:-1px}
+main{flex:1 0 auto;width:100%;max-width:660px;box-sizing:border-box;padding:28px max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-area-inset-left))}
 .page-title{font:900 clamp(38px,10vw,60px)/.92 var(--fd);text-transform:uppercase;letter-spacing:-.015em;margin:0 0 16px}
 .page-lead{color:var(--ink);font-size:17px}
 .drop{border:2px dashed var(--ink);border-radius:0;background-color:#fff;background-image:linear-gradient(#fff,#fff)}
@@ -142,18 +142,18 @@ main{padding:28px max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-ar
 .result.bad{border-left-color:var(--accent)}
 .sheet{border-radius:0}
 .sheet .issuer,.sheet h1{font-family:var(--fb);font-weight:500}
-.foot{background-color:var(--ink);background-image:linear-gradient(var(--ink),var(--ink));padding:18px max(20px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
-.foot nav{max-width:620px;margin:0 auto;display:flex;flex-wrap:wrap;gap:0 4px}
-.foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font:400 15px var(--fm);color:#d8d5ce;text-decoration:none}
-.foot a:hover{color:var(--paper);text-decoration:underline}
-.foot :focus-visible{outline-color:var(--paper)}
+.site-foot{background-color:var(--ink);background-image:linear-gradient(var(--ink),var(--ink));padding:18px max(20px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+.site-foot nav{max-width:620px;margin:0 auto;display:flex;flex-wrap:wrap;gap:0 4px}
+.site-foot a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font:400 15px var(--fm);color:#d8d5ce;text-decoration:none}
+.site-foot a:hover{color:var(--paper);text-decoration:underline}
+.site-foot :focus-visible{outline-color:var(--paper)}
 `
   const brand = t.brandName ? `<b>${escAttr(t.brandName)}</b>${t.brandSub ? ` <span>${escAttr(t.brandSub)}</span>` : ''}` : ''
   const header = brand
     ? `<header class="band">${t.homeUrl ? `<a class="mark" href="${themeUrl('home-url', t.homeUrl)}">${brand}</a>` : `<span class="mark">${brand}</span>`}</header>\n<div class="torn" aria-hidden="true"></div>\n`
     : ''
   const links = (t.links ?? []).map((l) => `<a href="${themeUrl('link', l.url)}">${escAttr(l.label)}</a>`).join('')
-  const footer = links ? `<div class="torn end" aria-hidden="true"></div>\n<footer class="foot"><nav aria-label="Links">${links}</nav></footer>\n` : ''
+  const footer = links ? `<div class="torn end" aria-hidden="true"></div>\n<footer class="site-foot"><nav aria-label="Links">${links}</nav></footer>\n` : ''
   return { head, css, header, footer }
 }
 

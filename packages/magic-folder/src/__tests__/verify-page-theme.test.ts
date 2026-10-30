@@ -42,7 +42,7 @@ describe('verify page theming', () => {
     expect(page).toContain('<meta property="og:title" content="Verify a Webaes Receipt | Ed25519 in Your Browser | Webaes">')
     expect(page).toContain('<meta property="og:image" content="https://verify.webaes.com/og.png">')
     expect(page).toContain('<meta name="twitter:card" content="summary_large_image">')
-    expect(page).toContain('<footer class="foot"><nav aria-label="Links"><a href="https://receipts.webaes.com">receipts.webaes.com</a><a href="/.well-known/agent-receipts.json">public key</a></nav></footer>')
+    expect(page).toContain('<footer class="site-foot"><nav aria-label="Links"><a href="https://receipts.webaes.com">receipts.webaes.com</a><a href="/.well-known/agent-receipts.json">public key</a></nav></footer>')
     // The check itself is the same code as the neutral page
     expect(page).toContain('id="trusted-keys"')
   })
