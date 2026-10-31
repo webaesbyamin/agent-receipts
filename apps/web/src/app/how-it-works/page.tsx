@@ -24,14 +24,13 @@ function ReceiptField({ label, value, highlight }: { label: string; value: strin
   )
 }
 
-function CompareRow({ feature, ar, mem0, langfuse, zep }: { feature: string; ar: string; mem0: string; langfuse: string; zep: string }) {
+function CompareRow({ feature, ar, memory, observability }: { feature: string; ar: string; memory: string; observability: string }) {
   return (
     <tr className="border-b border-border/50">
       <td className="py-2 pr-4 text-xs font-medium text-text-primary">{feature}</td>
       <td className="py-2 pr-4 text-xs text-primary font-medium">{ar}</td>
-      <td className="py-2 pr-4 text-xs text-text-secondary">{mem0}</td>
-      <td className="py-2 pr-4 text-xs text-text-secondary">{langfuse}</td>
-      <td className="py-2 text-xs text-text-secondary">{zep}</td>
+      <td className="py-2 pr-4 text-xs text-text-secondary">{memory}</td>
+      <td className="py-2 text-xs text-text-secondary">{observability}</td>
     </tr>
   )
 }
@@ -121,15 +120,16 @@ export default function HowItWorksPage() {
           </div>
         </div>
 
-        <p>No other memory system can answer: <strong className="text-text-primary">&quot;Prove when this agent learned that fact.&quot;</strong></p>
+        <p>That makes it possible to answer: <strong className="text-text-primary">&quot;Prove when this agent learned that fact.&quot;</strong></p>
         <p>Memories can be recalled, forgotten (auditably — the forget itself is receipted), exported as portable bundles, and verified by third parties.</p>
       </Section>
 
       {/* Section 3: The ModQuote Story */}
-      <Section id="modquote-story" title="Real-World Example: ModQuote" icon={Zap}>
+      <Section id="modquote-story" title="Worked Example: AI Quotes at ModQuote" icon={Zap}>
         <p>
           <a href="https://modquote.io" className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer">ModQuote</a> is
-          a multi-tenant SaaS where AI agents generate quotes for automotive protection shops — PPF, ceramic coatings, window tint.
+          a multi-tenant SaaS for automotive protection shops — PPF, ceramic coatings, window tint — and it&apos;s where the idea for Agent Receipts came from.
+          AI-drafted quotes are on its roadmap. This is how each quote will be receipted once that feature ships.
         </p>
 
         <div className="card divide-y divide-border/50">
@@ -232,18 +232,16 @@ export default function HowItWorksPage() {
               <tr className="border-b border-border">
                 <th className="text-left py-2 pr-4 font-medium text-text-primary w-28"></th>
                 <th className="text-left py-2 pr-4 font-medium text-primary">Agent Receipts</th>
-                <th className="text-left py-2 pr-4 font-medium text-text-primary">Mem0</th>
-                <th className="text-left py-2 pr-4 font-medium text-text-primary">Langfuse</th>
-                <th className="text-left py-2 font-medium text-text-primary">Zep</th>
+                <th className="text-left py-2 pr-4 font-medium text-text-primary">Typical memory tools</th>
+                <th className="text-left py-2 font-medium text-text-primary">Typical observability tools</th>
               </tr>
             </thead>
             <tbody>
-              <CompareRow feature="Core" ar="Cryptographic proof" mem0="Memory persistence" langfuse="Observability" zep="Memory + RAG" />
-              <CompareRow feature="Signing" ar="Ed25519 every action" mem0="None" langfuse="None" zep="None" />
-              <CompareRow feature="Memory" ar="Signed + provable" mem0="Yes (hosted)" langfuse="No" zep="Yes (hosted)" />
-              <CompareRow feature="Verification" ar="Offline, by anyone" mem0="No" langfuse="No" zep="No" />
-              <CompareRow feature="Infrastructure" ar="Local-first" mem0="Cloud API" langfuse="Cloud/self-host" zep="Cloud API" />
-              <CompareRow feature="Audit trail" ar="Tamper-proof chain" mem0="Mutable" langfuse="Mutable logs" zep="Mutable" />
+              <CompareRow feature="Answers" ar="Can you prove it?" memory="What does my agent remember?" observability="What happened in my pipeline?" />
+              <CompareRow feature="Signing" ar="Ed25519 over every field" memory="Usually none" observability="Usually none" />
+              <CompareRow feature="Who can check" ar="Anyone, offline, with a public key" memory="You, inside the tool" observability="You, inside your system" />
+              <CompareRow feature="History" ar="Linked chain; edits and deletions detectable" memory="Editable records" observability="Editable logs and traces" />
+              <CompareRow feature="Runs" ar="Locally, no account" memory="Varies (hosted or self-hosted)" observability="Varies (hosted or self-hosted)" />
             </tbody>
           </table>
         </div>
