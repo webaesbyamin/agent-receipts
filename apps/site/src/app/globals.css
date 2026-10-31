@@ -78,6 +78,8 @@ h1 { font-size: clamp(64px, 11vw, 200px); line-height: 0.88; letter-spacing: -0.
 .hero:not(.install-hero) .wrap { container-type: inline-size; }
 .hero:not(.install-hero) h1 { font-size: min(calc((100vw - 2 * var(--pad)) / 8.6), 140px); font-size: min(100cqi / 8.6, 140px); line-height: 0.9; }
 .hero:not(.install-hero) h1 .ln { display: block; white-space: nowrap; }
+/* While faking the page, a longer word wraps instead of running off the edge */
+body.editing .hero:not(.install-hero) h1 .ln { white-space: normal; }
 h2 { font-size: clamp(40px, 6vw, 96px); line-height: 0.9; letter-spacing: -0.01em; margin: 0 0 28px; }
 .red { color: var(--red); }
 .sub { font-size: clamp(18px, 1.6vw, 22px); line-height: 1.5; max-width: 46ch; }
@@ -168,10 +170,13 @@ h2 { font-size: clamp(40px, 6vw, 96px); line-height: 0.9; letter-spacing: -0.01e
    width above and below. The buttons get their own row, far enough below. */
 .stamp-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: clamp(56px, 8vw, 112px); padding: clamp(40px, 6vw, 88px) 16px clamp(16px, 2vw, 24px); }
 .stamp { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; padding: 16px 26px 14px; border: 8px double currentColor; border-radius: 10px; color: var(--dim-2); transform: rotate(-9deg); font-family: var(--display); text-transform: uppercase; text-align: center; line-height: 0.9; }
-.stamp-word { font-weight: 900; font-size: clamp(60px, 9vw, 128px); letter-spacing: 0.03em; }
+/* Stamp words never outgrow their border: VERIFIED is 5.42em wide, and the border and padding take 68px */
+.stamp-wrap, .stub-done { container-type: inline-size; }
+.stamp-word { font-weight: 900; font-size: clamp(60px, 9vw, 128px); font-size: min(clamp(60px, 9vw, 128px), (100cqi - 68px) / 5.6); letter-spacing: 0.03em; }
 .stamp-sub { font-weight: 800; font-size: 20px; letter-spacing: 0.08em; line-height: 1.2; max-width: 22ch; }
 .stamp[data-state=ok] { color: var(--ink); }
 .stamp[data-state=void] { color: var(--red); }
+.stamp[data-state=void] .stamp-word { font-size: min(clamp(60px, 9vw, 128px), (100cqi - 68px) / 3); } /* VOID is 2.85em: it keeps its full size */
 .stamp[data-state=unsupported] .stamp-word { font-size: clamp(40px, 6vw, 72px); }
 .stamp[data-state=unsupported] .stamp-sub { font: 500 18px/1.4 var(--sans); text-transform: none; letter-spacing: 0; color: var(--ink); }
 .thump { animation: thump 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.25); }
@@ -225,7 +230,7 @@ body.editing [data-signed]:focus { outline-style: solid; outline-color: var(--in
 .stub-msg { margin: 14px 0 0; padding: 10px 14px; border-left: 6px solid var(--red); background: var(--red-bg); font: 500 15px/1.4 var(--mono); }
 .stub-done { padding: 56px 16px; }
 .stub-done:focus { outline: none; }
-.stub-done .stamp-word { font-size: clamp(48px, 5.5vw, 84px); }
+.stub-done .stamp-word { font-size: min(clamp(48px, 5.5vw, 84px), (100cqi - 68px) / 6.1); } /* RECEIVED is 5.93em */
 
 /* Fine print */
 .fine-print h2 { font-size: clamp(32px, 4vw, 56px); }
