@@ -151,37 +151,23 @@ Three things are broken:
 
 ## Why This Exists
 
-I was building [ModQuote](https://modquote.io) — a multi-tenant SaaS where AI agents generate quotes for automotive protection shops. Real money, real customers, real liability.
+The idea came from building [ModQuote](https://modquote.io), a multi-tenant SaaS for automotive protection and detailing shops: PPF, ceramic coatings, window tint.
 
-When Claude generated a $2,400 PPF quote, I needed answers: What vehicle data did it receive? What pricing rules did it apply? If a customer disputes the price, can I prove what happened — not with a log entry the agent wrote about itself, but with cryptographic proof?
+AI-drafted quotes are on ModQuote's roadmap, and designing that feature raised a question I couldn't answer with the tools I had. If an agent drafts a $2,400 PPF quote and the customer disputes the price, how do I show what vehicle data it received and which pricing rules it applied? Not with a log entry the agent wrote about itself, but with proof that someone outside my system can check.
 
-I looked at the existing tools:
+Memory tools could tell me what an agent remembered, and observability tools could tell me what happened inside my own pipeline. Neither gave me a record that a customer, a client or an auditor could verify without trusting me.
 
-- **Mem0** — great memory, but no proof. It remembers things, but can't prove when or why it learned them. Memories are mutable.
-- **Langfuse** — great observability, but it's tracing, not proof. Logs are internal to your system, not verifiable by third parties.
-- **Zep** — temporal knowledge graph, but hosted and opaque.
-
-None of them could answer: **"Prove to someone outside your system that this specific agent took this specific action with this specific input at this specific time."**
-
-So I built Agent Receipts. Now every quote generation is a signed receipt. Every memory has a provenance chain. And when someone asks "how did the agent come up with that number?" — I hand them a receipt they can verify themselves.
+So I built Agent Receipts first, as its own open-source project. When AI quoting ships in ModQuote, every quote will come with a signed receipt. Until then, Agent Receipts stands on its own: any agent, any client, any workflow.
 
 ## How It's Different
 
-| | Agent Receipts | Mem0 | Langfuse | Zep |
-|---|---|---|---|---|
-| **Memory** | Signed entity-observation graph | Smart extraction + consolidation | No memory | Temporal knowledge graph |
-| **Proof** | Ed25519 signed receipts | None | Mutable traces | None |
-| **Verification** | Offline, by anyone, no server | No | No | No |
-| **Infrastructure** | `npx` and done. Zero config. | Requires LLM for extraction | Cloud or self-host | Cloud API |
-| **Cost** | Free forever (local) | Free tier, then paid | Free tier, then paid | Paid |
-| **Export** | Portable bundles with crypto verification | Export available | API export | No |
-| **Audit trail** | Immutable receipt chain | Mutable | Mutable logs | Mutable |
+Most AI tooling answers one of two questions. Memory tools answer *"What does my agent remember?"* Observability tools answer *"What happened in my pipeline?"* Agent Receipts answers a third: **"Can you prove it?"**
 
-**Agent Receipts isn't a better version of these tools. It's a different thing.**
-
-Mem0 answers: *"What does my agent remember?"*
-Langfuse answers: *"What happened in my LLM pipeline?"*
-Agent Receipts answers: *"Can you prove it?"*
+- **Proof, not logs.** Every receipt is signed with Ed25519 over every field (format v2). Logs can be edited and are written by the agent about itself; a receipt breaks if anything changes.
+- **Anyone can verify it.** Offline, in a browser, from the CLI or in code, with a public key. No account, no server, no trusting the person who sent it.
+- **History you can't quietly rewrite.** Receipts link to the one before them, and `verify-chain` detects edited, removed or forked receipts.
+- **Memory with provenance.** Every fact your agent remembers links to the receipt that created it, and can be exported as a bundle someone else can verify.
+- **Local-first and free.** `npx` and done. Keys and receipts stay in `~/.agent-receipts`. MIT licensed.
 
 ## What's Inside
 
@@ -199,7 +185,7 @@ Agent Receipts answers: *"Can you prove it?"*
 |---|---|
 | [Interactive Demo](https://demo.receipts.webaes.com/walkthrough) | Try it in your browser — 60 seconds |
 | [Live Dashboard](https://demo.receipts.webaes.com) | See the full dashboard with sample data |
-| [How It Works](https://demo.receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, ModQuote story |
+| [How It Works](https://demo.receipts.webaes.com/how-it-works) | Receipt anatomy, memory model, a worked quoting example |
 | [npm](https://www.npmjs.com/org/agent-receipts) | All 7 packages |
 | [receipts.webaes.com](https://receipts.webaes.com) | Magic Folder, install guide for Mac, Windows and Linux |
 | [verify.webaes.com](https://verify.webaes.com) | A real issuer's verify page |
@@ -335,7 +321,7 @@ Agent Receipts answers: *"Can you prove it?"*
 | [`@agent-receipts/sdk`](packages/sdk) | 0.5.2 | TypeScript SDK (21 methods) |
 | [`@agent-receipts/cli`](packages/cli) | 0.5.2 | Command-line interface |
 | [`@agent-receipts/dashboard`](packages/dashboard) | 0.5.2 | Mission Control web UI, on your own computer |
-| [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.1.2 | Drop-a-file job runner with signed, self-checking receipts |
+| [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.1.4 | Drop-a-file job runner with signed, self-checking receipts |
 
 All MIT, all on [npm](https://www.npmjs.com/org/agent-receipts). Node.js 22 or 24.
 
