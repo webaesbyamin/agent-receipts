@@ -1,0 +1,54 @@
+name: Bug report
+description: Something doesn't work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For security problems, please don't use this form: see [SECURITY.md](../blob/main/SECURITY.md).
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - mcp-server
+        - sdk
+        - cli
+        - dashboard
+        - magic-folder
+        - schema / crypto
+        - website (receipts.webaes.com / verify page)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 0.5.2 (npx @agent-receipts/cli --version)
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Node version
+      placeholder: e.g. macOS 15, Node 24.11
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or error message
+      description: Remove keys, tokens and anything private first.
+      render: text
