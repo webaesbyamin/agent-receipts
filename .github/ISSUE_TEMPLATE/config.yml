@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Install guide (Mac, Windows, Linux)
+    url: https://receipts.webaes.com/install
+    about: Step-by-step setup and troubleshooting for Magic Folder.
+  - name: Check a receipt
+    url: https://verify.webaes.com
+    about: Verify a Webaes receipt in your browser.
+  - name: Report a security problem
+    url: https://github.com/webaesbyamin/agent-receipts/security/advisories/new
+    about: Please report vulnerabilities privately, not as an issue.

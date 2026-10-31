@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or job, in your own words. What happens today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+  - type: dropdown
+    id: who
+    attributes:
+      label: You are
+      options:
+        - Developer using the MCP server or SDK
+        - Using Magic Folder
+        - Agency or studio delivering AI work to clients
+        - Other
