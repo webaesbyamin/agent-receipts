@@ -165,7 +165,7 @@ export default function Home() {
       <section className="hero" aria-labelledby="hero-h">
         <div className="wrap grid">
           <p className="rcpt-head full"><span data-signed>RCPT_SITE_HOME</span><span className="lead" aria-hidden="true" /><span data-signed>{product.builtOn}</span></p>
-          <h1 id="hero-h" className="full" data-signed>Your agent says it’s done. <span className="red">Prove it.</span></h1>
+          <h1 id="hero-h" className="full" data-signed><span className="ln">Your agent</span> <span className="ln">says it’s done.</span> <span className="ln red">Prove it.</span></h1>
           <p className="sub" data-signed>Agent Receipts gives the work your AI agent does a signed receipt: what went in, what came out, what it cost. Anyone can check it, offline, without trusting you.</p>
           <div className="actions">
             <Code pill code="claude mcp add agent-receipts -- npx @agent-receipts/mcp-server" label="add Agent Receipts to Claude Code" />
