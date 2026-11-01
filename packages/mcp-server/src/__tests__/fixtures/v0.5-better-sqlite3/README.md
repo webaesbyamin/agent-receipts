@@ -1,0 +1,1 @@
+A receipts.db written by Agent Receipts 0.5.x on better-sqlite3 (SQLite 3.51.3): two v2 receipts in chain_fixture and one memory observation in the FTS index. public.key is the key that signed them (there is no private key here). The test checks that node:sqlite opens it unchanged.

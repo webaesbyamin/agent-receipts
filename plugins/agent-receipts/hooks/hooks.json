@@ -1,0 +1,53 @@
+{
+  "description": "Agent Receipts: a signed receipt for every file edit, file write, notebook edit and shell command, and a session summary",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent-receipts-claude-code-hook.mjs",
+              "post-tool-use"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent-receipts-claude-code-hook.mjs",
+              "post-tool-use"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/agent-receipts-claude-code-hook.mjs",
+              "session-end",
+              "--inflight-wait-ms",
+              "1000"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

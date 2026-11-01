@@ -1,10 +1,10 @@
 import { readdir, mkdir } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
 import type { ActionReceipt } from '@agent-receipts/schema'
 import { hashReceipt } from '@agent-receipts/crypto'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
+import { openDatabase, retryWhileLocked, type SqlDatabase } from './sqlite-driver.js'
 
 const SORTABLE_COLUMNS = new Set([
   'timestamp', 'completed_at', 'cost_usd',
@@ -14,7 +14,7 @@ const SORTABLE_COLUMNS = new Set([
 export class SqliteReceiptStore {
   private dbPath: string
   private receiptsDir: string
-  private db!: Database.Database
+  private db!: SqlDatabase
 
   constructor(private dataDir: string) {
     this.dbPath = join(dataDir, 'receipts.db')
@@ -24,58 +24,64 @@ export class SqliteReceiptStore {
   async init(): Promise<void> {
     await mkdir(this.dataDir, { recursive: true })
 
-    this.db = new Database(this.dbPath)
-    this.db.pragma('journal_mode = WAL')
-    this.db.pragma('foreign_keys = ON')
+    this.db = openDatabase(this.dbPath)
+    await retryWhileLocked(() => {
+      this.db.pragma('journal_mode = WAL')
+      // Node's SQLite defaults to FULL in WAL mode: a disk flush on every commit, which
+      // is very slow on Windows. NORMAL is what better-sqlite3 (0.5.x) built in: safe
+      // from corruption and from app crashes; only a power cut can drop the last commits.
+      this.db.pragma('synchronous = NORMAL')
+      this.db.pragma('foreign_keys = ON')
 
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS receipts (
-        receipt_id TEXT PRIMARY KEY,
-        chain_id TEXT NOT NULL,
-        parent_receipt_id TEXT,
-        receipt_type TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        org_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        status TEXT NOT NULL,
-        environment TEXT NOT NULL,
-        input_hash TEXT NOT NULL,
-        output_hash TEXT,
-        model TEXT,
-        tokens_in INTEGER,
-        tokens_out INTEGER,
-        cost_usd REAL,
-        latency_ms INTEGER,
-        confidence REAL,
-        timestamp TEXT NOT NULL,
-        completed_at TEXT,
-        expires_at TEXT,
-        tags TEXT,
-        data TEXT NOT NULL
-      );
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS receipts (
+          receipt_id TEXT PRIMARY KEY,
+          chain_id TEXT NOT NULL,
+          parent_receipt_id TEXT,
+          receipt_type TEXT NOT NULL,
+          agent_id TEXT NOT NULL,
+          org_id TEXT NOT NULL,
+          action TEXT NOT NULL,
+          status TEXT NOT NULL,
+          environment TEXT NOT NULL,
+          input_hash TEXT NOT NULL,
+          output_hash TEXT,
+          model TEXT,
+          tokens_in INTEGER,
+          tokens_out INTEGER,
+          cost_usd REAL,
+          latency_ms INTEGER,
+          confidence REAL,
+          timestamp TEXT NOT NULL,
+          completed_at TEXT,
+          expires_at TEXT,
+          tags TEXT,
+          data TEXT NOT NULL
+        );
 
-      CREATE INDEX IF NOT EXISTS idx_receipts_agent_id ON receipts(agent_id);
-      CREATE INDEX IF NOT EXISTS idx_receipts_chain_id ON receipts(chain_id);
-      CREATE INDEX IF NOT EXISTS idx_receipts_status ON receipts(status);
-      CREATE INDEX IF NOT EXISTS idx_receipts_action ON receipts(action);
-      CREATE INDEX IF NOT EXISTS idx_receipts_timestamp ON receipts(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_receipts_environment ON receipts(environment);
-      CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
-      CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_agent_id ON receipts(agent_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_chain_id ON receipts(chain_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_status ON receipts(status);
+        CREATE INDEX IF NOT EXISTS idx_receipts_action ON receipts(action);
+        CREATE INDEX IF NOT EXISTS idx_receipts_timestamp ON receipts(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_receipts_environment ON receipts(environment);
+        CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
+        CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
 
-      -- Receipts removed by TTL cleanup leave their hash behind, so chains
-      -- that link to them still verify (as "expired"), while a receipt
-      -- deleted any other way shows up as a broken link.
-      CREATE TABLE IF NOT EXISTS receipt_tombstones (
-        receipt_hash TEXT PRIMARY KEY,
-        receipt_id TEXT NOT NULL,
-        chain_id TEXT NOT NULL,
-        expired_at TEXT NOT NULL,
-        deleted_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
-    `)
+        -- Receipts removed by TTL cleanup leave their hash behind, so chains
+        -- that link to them still verify (as "expired"), while a receipt
+        -- deleted any other way shows up as a broken link.
+        CREATE TABLE IF NOT EXISTS receipt_tombstones (
+          receipt_hash TEXT PRIMARY KEY,
+          receipt_id TEXT NOT NULL,
+          chain_id TEXT NOT NULL,
+          expired_at TEXT NOT NULL,
+          deleted_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
+      `)
+    })
 
     await this.migrateJsonFiles()
   }
@@ -104,7 +110,7 @@ export class SqliteReceiptStore {
     )`)
 
     let migrated = 0
-    const tx = this.db.transaction(() => {
+    this.db.transaction(() => {
       for (const file of jsonFiles) {
         try {
           // Synchronous read for transaction performance
@@ -117,7 +123,6 @@ export class SqliteReceiptStore {
         }
       }
     })
-    tx()
 
     if (migrated > 0) {
       console.log(`Migrated ${migrated} receipts from JSON files to SQLite`)
@@ -152,13 +157,13 @@ export class SqliteReceiptStore {
     }
   }
 
-  getDb(): Database.Database {
+  getDb(): SqlDatabase {
     return this.db
   }
 
   /** Close the database. On Windows its files can't be moved or deleted while it's open. */
   close(): void {
-    if (this.db?.open) this.db.close()
+    this.db?.close()
   }
 
   /**
@@ -250,15 +255,14 @@ export class SqliteReceiptStore {
    * the chain. `build` must be synchronous.
    */
   finalizeAtTip(chainId: string, build: (tip: ActionReceipt | null) => ActionReceipt): ActionReceipt {
-    const run = this.db.transaction(() => {
+    return this.db.transaction(() => {
       const row = this.db.prepare(
         `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending' ORDER BY rowid DESC LIMIT 1`
       ).get(chainId) as { data: string } | undefined
       const receipt = build(row ? (JSON.parse(row.data) as ActionReceipt) : null)
       this.saveSync(receipt)
       return receipt
-    })
-    return run.immediate()
+    }, 'immediate')
   }
 
   /**
@@ -310,7 +314,7 @@ export class SqliteReceiptStore {
         tombstone.run(hashReceipt(r as Record<string, unknown>), r.receipt_id, r.chain_id, row.expires_at, now)
         deleted += remove.run(r.receipt_id).changes
       }
-    })()
+    })
 
     return { deleted, total }
   }

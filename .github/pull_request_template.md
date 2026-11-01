@@ -4,7 +4,7 @@
 
 ## Checklist
 
-- [ ] `pnpm build` and `pnpm test` pass (Node 22 or 24)
+- [ ] `pnpm build` and `pnpm test` pass (Node 22.16 or later)
 - [ ] A changeset is included if a published package changed (`pnpm changeset`)
 - [ ] Docs and READMEs updated if behaviour or commands changed
 - [ ] No keys, tokens or `.env` files committed

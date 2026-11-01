@@ -1,0 +1,10 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": { "command": "GITHUB_TOKEN=ghp_SECRET123 git commit -m 'SECRET message' && git push https://user:pass@example.com/repo", "description": "Commit and push", "timeout": 120000, "run_in_background": false },
+  "tool_response": { "stdout": "SECRET-OUTPUT [main 1a2b3c] done", "stderr": "", "interrupted": false, "isImage": false, "bashEditDiff": { "changedFiles": ["{{cwd}}/src/app.ts", "{{cwd}}/gone.txt"], "files": [], "moreFiles": 0 } },
+  "tool_use_id": "toolu_01BASH",
+  "duration_ms": 850
+}

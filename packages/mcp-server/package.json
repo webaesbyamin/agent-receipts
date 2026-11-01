@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/mcp-server",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "mcpName": "io.github.webaesbyamin/agent-receipts",
   "type": "module",
   "description": "Local-first MCP server for Agent Receipts — storage, engine, and protocol",
@@ -27,7 +27,7 @@
     "cursor"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.16 <27"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -56,12 +56,10 @@
     "@agent-receipts/crypto": "workspace:*",
     "@agent-receipts/schema": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "better-sqlite3": "^12.8.0",
     "nanoid": "^5.1.2",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.0.0",
     "tsup": "^8.2.0",
     "typescript": "^5.4.0",

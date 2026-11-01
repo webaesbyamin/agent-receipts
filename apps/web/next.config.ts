@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
     '@agent-receipts/mcp-server',
     '@agent-receipts/sdk',
   ],
-  serverExternalPackages: ['better-sqlite3'],
   // Output tracing copies some src/lib files next to the server; the demo-only
   // module must never ship in the npm dashboard
   outputFileTracingExcludes: { '*': ['./src/lib/demo-seo.ts'] },
@@ -24,7 +23,7 @@ const nextConfig: NextConfig = {
   env: {
     PORT: '3274',
   },
-  webpack: (config, { isServer, webpack }) => {
+  webpack: (config, { webpack }) => {
     if (!isDemoBuild) {
       config.resolve.alias = { ...config.resolve.alias, '@vercel/analytics/next': path.resolve(__dirname, 'src/lib/no-analytics.tsx') }
       // '@/…' imports are resolved by Next's tsconfig-paths plugin before
@@ -35,12 +34,6 @@ const nextConfig: NextConfig = {
     // keep separate caches and never reuse each other's modules.
     if (config.cache && typeof config.cache === 'object' && 'name' in config.cache) {
       config.cache = { ...config.cache, name: `${config.cache.name}-${isDemoBuild ? 'demo' : 'local'}` }
-    }
-    if (isServer) {
-      if (!Array.isArray(config.externals)) {
-        config.externals = [config.externals]
-      }
-      config.externals.push('better-sqlite3')
     }
     return config
   },

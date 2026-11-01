@@ -17,9 +17,12 @@ import {
   formatInvoiceMarkdown,
   formatInvoiceHTML,
   seedDemoData,
+  assertSupportedNode,
 } from '@agent-receipts/mcp-server'
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyAnyReceipt, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
+import { hooksCommand } from './hooks/commands.js'
+import { proxyCommand } from './proxy/proxy.js'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts
@@ -45,6 +48,16 @@ Commands:
   watch [options]                   Watch for new receipts in real-time
   prompts <client>                  Show setup guide (claude-code, cursor, system)
   memory <subcommand>               Memory module commands
+  hooks <subcommand>                Sign a receipt for every Claude Code action
+  proxy [--name <n>] -- <command>   Run an MCP server (stdio) behind a proxy that signs
+                                    a receipt for every tool call
+
+Hooks subcommands:
+  hooks install [--scope user|project|local] [--store-commands] [--yes]
+                                    Add the hooks to Claude Code's settings (shows the change first)
+  hooks uninstall [--scope user|project|local] [--yes]
+                                    Remove them again, leaving the rest of the file as it was
+  hooks status                      Where they're installed, and any problems logged
 
 Memory subcommands:
   memory context                            Get structured memory context summary
@@ -1025,6 +1038,7 @@ Call \`track_action\` to create a signed receipt for significant actions.
 }
 
 async function main() {
+  assertSupportedNode()
   const args = process.argv.slice(2)
   const command = args[0]
 
@@ -1093,6 +1107,12 @@ async function main() {
     case 'prompts':
       cmdPrompts(args[1])
       break
+    case 'hooks':
+      process.exitCode = await hooksCommand(args.slice(1))
+      break
+    case 'proxy':
+      // stdout belongs to the MCP protocol here: nothing else may be printed
+      process.exit(await proxyCommand(args.slice(1)))
     default:
       console.error(`Unknown command: ${command}`)
       console.log(HELP)

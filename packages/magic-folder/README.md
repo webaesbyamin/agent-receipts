@@ -18,7 +18,7 @@ Magic Folder/
 
 ## Install
 
-Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 22 or 24** (24 recommended). Its database driver (better-sqlite3) has ready-made builds for those; on Node 20 (end-of-life) or Node 26 it would have to compile from source, which needs developer tools most computers don't have. Note that nodejs.org's "LTS" download is now Node 26, so pick 24 explicitly.
+Magic Folder runs on Mac, Windows and Linux. It needs **Node.js 22.16 or later** (24 recommended; 26 works too). It uses Node's built-in SQLite, so there is nothing to compile and no install script to approve. On Node 22, and on 24 before 24.15, Node calls built-in SQLite experimental; Magic Folder hides that one notice.
 
 For free local jobs you also need [Ollama](https://ollama.com) with a model (`qwen3:8b`, about 5 GB). For Claude instead, see [Use Claude](#use-claude-optional).
 
@@ -47,7 +47,7 @@ How this is tested: every step below except installing Ollama and its model runs
 3. **Install Magic Folder.**
 
    ```bash
-   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   npm install -g @agent-receipts/magic-folder
    ```
 
    If you installed Node with the `.pkg` and see `EACCES`, run it again with `sudo ` in front. Check: `magic-folder --help` prints the commands.
@@ -78,7 +78,7 @@ How this is tested: every step below except installing Ollama and its model runs
 3. **Install Magic Folder.**
 
    ```powershell
-   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   npm install -g @agent-receipts/magic-folder
    ```
 
    If PowerShell says *running scripts is disabled on this system*, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, answer `Y`, and try again. Check: `magic-folder --help` prints the commands.
@@ -117,7 +117,7 @@ How this is tested: every step below except installing Ollama and its model runs
 3. **Install Magic Folder.**
 
    ```bash
-   npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+   npm install -g @agent-receipts/magic-folder
    ```
 
 4. **Create your folder, check, and start.**
@@ -135,8 +135,6 @@ How this is tested: every step below except installing Ollama and its model runs
 - `--key-url` and `--verify-url` are only for when you host your own verify page (see [Who signed it](#who-signed-it)).
 
 Drop a file into any job folder and leave it. A `… - working.txt` note appears while it runs, and the result lands in `Done`.
-
-About `--allow-scripts=better-sqlite3`: npm 11 asks you to approve packages that run an install script. This approves the one Magic Folder needs (it fetches the SQLite driver's ready-made build). Older npm ignores the flag.
 
 ### Keep it running
 
@@ -250,8 +248,7 @@ Check: `systemctl --user status magic-folder` says `active (running)`. To keep i
 ### If something goes wrong
 
 - **`magic-folder: command not found`**: open a new terminal window. If it's still missing, check `node -v` works; if it does, run the install command again.
-- **Wrong Node version** (`node -v` shows 25 or higher, or lower than 22): install Node 24 as above. On a Mac with Homebrew, make sure the `export PATH=…node@24…` line is in `~/.zshrc` and open a new window.
-- **npm warns about install scripts for better-sqlite3**: use the install command with `--allow-scripts=better-sqlite3` as shown.
+- **Wrong Node version** (`node -v` shows lower than 22.16, or 27 or higher): install Node 24 as above. On a Mac with Homebrew, make sure the `export PATH=…node@24…` line is in `~/.zshrc` and open a new window.
 - **`doctor` says Ollama is not reachable**: start the Ollama app (Mac, Windows) or run `ollama serve` (Linux), then `ollama pull qwen3:8b`.
 - **Nothing happens when I drop a file**: Magic Folder must be running (`magic-folder run …` in an open window, or the start-at-login setup above). Files are picked up once they stop changing, a few seconds after the copy finishes. Drop into a job folder like `Fix typos`, not into the top folder.
 

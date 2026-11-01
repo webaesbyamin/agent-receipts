@@ -1,0 +1,11 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "permission_mode": "acceptEdits",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Write",
+  "tool_input": { "file_path": "{{cwd}}/notes/todo.md", "content": "SECRET-CONTENT do not store" },
+  "tool_response": { "filePath": "{{cwd}}/notes/todo.md", "type": "create" },
+  "tool_use_id": "toolu_01WRITE",
+  "duration_ms": 12
+}

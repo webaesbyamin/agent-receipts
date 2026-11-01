@@ -1,0 +1,10 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "PowerShell",
+  "tool_input": { "command": "Get-ChildItem -Recurse C:\\Users\\SECRET", "description": "List files recursively" },
+  "tool_response": { "stdout": "SECRET-OUTPUT", "stderr": "", "interrupted": false, "isImage": false },
+  "tool_use_id": "toolu_01PS",
+  "duration_ms": 300
+}

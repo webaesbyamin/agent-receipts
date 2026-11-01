@@ -7,10 +7,12 @@ export { ConfigManager } from './storage/config-manager.js'
 
 // Memory
 export { MemoryStore } from './storage/memory-store.js'
+export { openDatabase, assertSupportedNode, isSupportedNode, unsupportedNodeMessage, MIN_NODE } from './storage/sqlite-driver.js'
+export type { SqlDatabase, SqlStatement } from './storage/sqlite-driver.js'
 export type { SearchResult, ProvenanceChain, MemoryRecallResult } from './storage/memory-store.js'
 
 // Engine
-export { ReceiptEngine } from './engine/receipt-engine.js'
+export { ReceiptEngine, verifyChainReceipts } from './engine/receipt-engine.js'
 export { MemoryEngine } from './engine/memory-engine.js'
 export type {
   ObserveParams, ObserveResult, RecallParams, RecallResult,
@@ -18,7 +20,7 @@ export type {
   AuditReport, TimelineEntry, ContextParams, ContextResult,
   ExportBundleParams, ImportBundleResult,
 } from './engine/memory-engine.js'
-export type { TrackParams, CreateParams, CompleteParams } from './engine/receipt-engine.js'
+export type { TrackParams, CreateParams, CompleteParams, ChainVerification } from './engine/receipt-engine.js'
 export { evaluateConstraints } from './engine/constraint-evaluator.js'
 export { validateJsonSchema } from './engine/json-schema-validator.js'
 

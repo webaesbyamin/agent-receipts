@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import { openDatabase, type SqlDatabase } from '../storage/sqlite-driver.js'
 import { MemoryStore } from '../storage/memory-store.js'
 import type { Entity, Observation, Relationship } from '@agent-receipts/schema'
 
@@ -45,12 +45,12 @@ function makeObservation(entityId: string, overrides: Partial<Observation> = {})
 
 describe('MemoryStore', () => {
   let tmpDir: string
-  let db: Database.Database
+  let db: SqlDatabase
   let store: MemoryStore
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'memory-store-'))
-    db = new Database(join(tmpDir, 'test.db'))
+    db = openDatabase(join(tmpDir, 'test.db'))
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     store = new MemoryStore(db)

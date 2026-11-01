@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/sdk",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "TypeScript SDK for Agent Receipts — local-first action tracking",
   "license": "MIT",
   "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
@@ -23,7 +23,7 @@
     "typescript"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.16 <27"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

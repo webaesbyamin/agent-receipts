@@ -90,6 +90,8 @@ const MCP_JSON = `{
   }
 }`
 
+const PROXY_CMD = 'claude mcp add fs-receipted -- npx -y @agent-receipts/cli proxy --name fs -- npx -y @modelcontextprotocol/server-filesystem ~/Documents'
+
 const SDK_JS = `import { AgentReceipts } from '@agent-receipts/sdk'
 
 const ar = new AgentReceipts()
@@ -224,9 +226,16 @@ export default function Home() {
           <p data-signed>See them in a local dashboard:</p>
           <Code code="npx @agent-receipts/dashboard" label="start the local dashboard" />
         </div>
+        <div className="mini">
+          <p data-signed>Or get a receipt for every action, automatically. In Claude Code, every file edit and shell command:</p>
+          <Code code="npx @agent-receipts/cli hooks install" label="sign every Claude Code action" />
+          <p data-signed>Any MCP server, through the proxy. Each tool call is signed; every message passes through unchanged:</p>
+          <Code code={PROXY_CMD} label="put an MCP server behind the receipts proxy" />
+        </div>
         <Note row={3}>works with any MCP client.</Note>
         <Note row={4}>keys and receipts live in ~/.agent-receipts.</Note>
         <Note row={5}>the dashboard runs on your computer. nothing leaves it.</Note>
+        <Note row={6}>signed as each tool finishes, outside the agent. hashes only: no commands, file contents or results.</Note>
       </Section>
 
       <Section id="magic-folder">

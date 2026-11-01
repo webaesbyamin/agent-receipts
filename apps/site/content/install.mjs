@@ -35,7 +35,7 @@ echo 'export PATH="$(brew --prefix node@24)/bin:$PATH"' >> ~/.zshrc`,
       },
       {
         title: 'Install Magic Folder',
-        code: 'npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder',
+        code: 'npm install -g @agent-receipts/magic-folder',
         check: '<code>magic-folder --help</code> lists the commands.',
         note: 'If you installed Node with the <code>.pkg</code> and see <code>EACCES</code>, run the same command with <code>sudo </code> in front.',
       },
@@ -120,7 +120,7 @@ ollama pull qwen3:8b`,
       },
       {
         title: 'Install Magic Folder',
-        code: 'npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder',
+        code: 'npm install -g @agent-receipts/magic-folder',
         check: '<code>magic-folder --help</code> lists the commands.',
         note: 'If PowerShell says <em>running scripts is disabled on this system</em>, run <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>, answer <code>Y</code>, and try again.',
       },
@@ -184,7 +184,7 @@ ollama pull qwen3:8b`,
       },
       {
         title: 'Install Magic Folder',
-        code: 'npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder',
+        code: 'npm install -g @agent-receipts/magic-folder',
         check: '<code>magic-folder --help</code> lists the commands.',
       },
       {
@@ -234,8 +234,7 @@ systemctl --user enable --now magic-folder`,
 
 export const TROUBLE = [
   ['“magic-folder: command not found”', 'Open a new terminal window. If it’s still missing, check that <code>node -v</code> works; if it does, run the install command again.'],
-  ['Wrong Node version', '<code>node -v</code> shows 25 or higher, or lower than 22: install Node 24 as above. On a Mac with Homebrew, make sure the <code>export PATH=…node@24…</code> line is in <code>~/.zshrc</code> and open a new window.'],
-  ['npm warns about install scripts', 'npm 11 asks before running a package’s install script. Magic Folder needs one, for its SQLite database driver (better-sqlite3). The install command above already approves it with <code>--allow-scripts=better-sqlite3</code>; older npm ignores the flag.'],
+  ['Wrong Node version', '<code>node -v</code> shows lower than 22.16, or 27 or higher: install Node 24 as above. On a Mac with Homebrew, make sure the <code>export PATH=…node@24…</code> line is in <code>~/.zshrc</code> and open a new window.'],
   ['doctor says Ollama is not reachable', 'Start the Ollama app (Mac, Windows) or run <code>ollama serve</code> (Linux), then <code>ollama pull qwen3:8b</code>.'],
   ['Nothing happens when I drop a file', 'Magic Folder must be running: <code>magic-folder run …</code> in an open window, or the start-at-login setup. Files are picked up a few seconds after they stop changing. Drop into a job folder such as <em>Fix typos</em>, not into the top folder.'],
 ]

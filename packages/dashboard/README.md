@@ -41,9 +41,7 @@ Dark mode, global search (Cmd+K), auto-refresh.
 
 ## Prerequisites
 
-Requires Node 22 or 24. The dashboard reads receipts with `better-sqlite3`, which has ready-made builds for those versions only.
-
-If npm 11 asks you to approve `better-sqlite3`'s install script, approve it (`npm install-scripts approve better-sqlite3`; with pnpm, `pnpm approve-builds`). It builds the SQLite driver the dashboard uses to read your receipts.
+Requires Node 22.16 or later (24 recommended). The dashboard reads receipts with Node's built-in SQLite, so there is nothing to compile. On Node 22, and on 24 before 24.15, Node calls built-in SQLite experimental; the dashboard hides that one notice.
 
 Requires receipts to exist in `~/.agent-receipts/`. Create them via:
 

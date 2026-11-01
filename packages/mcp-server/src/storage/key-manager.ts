@@ -1,4 +1,5 @@
-import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, chmod, link, unlink } from 'node:fs/promises'
+import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { generateKeyPair, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 
@@ -35,14 +36,23 @@ export class KeyManager {
       // Key file doesn't exist — auto-generate
     }
 
-    // Priority 3: Auto-generate
+    // Priority 3: Auto-generate. Several processes can get here at once (e.g.
+    // Claude Code hooks firing together on first use), so the key is written to
+    // a temp file and hard-linked into place: the link fails if a key already
+    // exists, exactly one key wins, and every process uses that one.
     const keyPair = generateKeyPair()
-    this.privateKey = keyPair.privateKey
-    this.publicKey = keyPair.publicKey
-
-    // Persist the key
-    await writeFile(privateKeyPath, this.privateKey, { encoding: 'utf-8', mode: 0o600 })
-    await chmod(privateKeyPath, 0o600)
+    const tmpPath = join(this.keysDir, `.private.key.${process.pid}.${randomBytes(6).toString('hex')}`)
+    await writeFile(tmpPath, keyPair.privateKey, { encoding: 'utf-8', mode: 0o600 })
+    await chmod(tmpPath, 0o600)
+    try {
+      await link(tmpPath, privateKeyPath)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+    } finally {
+      await unlink(tmpPath).catch(() => {})
+    }
+    this.privateKey = (await readFile(privateKeyPath, 'utf-8')).trim()
+    this.publicKey = getPublicKeyFromPrivate(this.privateKey)
 
     const publicKeyPath = join(this.keysDir, 'public.key')
     await writeFile(publicKeyPath, this.publicKey, 'utf-8')

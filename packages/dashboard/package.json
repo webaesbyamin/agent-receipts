@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/dashboard",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Mission Control dashboard for Agent Receipts — local web UI for AI agent accountability",
   "license": "MIT",
   "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
@@ -34,10 +34,7 @@
     "prepublishOnly": "npm run build:standalone"
   },
   "engines": {
-    "node": ">=22 <25"
-  },
-  "dependencies": {
-    "better-sqlite3": "^12.8.0"
+    "node": ">=22.16 <27"
   },
   "devDependencies": {
     "tsup": "^8.2.0",

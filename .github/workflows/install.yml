@@ -2,8 +2,7 @@
 # receipts.webaes.com/install) on clean Mac, Windows and Linux machines.
 # The packages come from this commit, published to a throwaway local registry,
 # so the guide's own `npm install -g …` command runs unchanged.
-# Node 22 and 24 only: better-sqlite3 ships no ready-made build for Node 20 (end-of-life),
-# so on Windows without Visual Studio it can't install there.
+# Magic Folder needs Node 22.16 or later (built-in SQLite with FTS5); the guide installs 24.
 # Not covered here: Ollama itself (too big to run in CI), so jobs end with a
 # signed "failed" receipt that says Ollama isn't reachable.
 name: install guide
@@ -85,11 +84,11 @@ jobs:
           if [ "${{ matrix.node }}" = pkg ]; then
             # The guide: "If you installed Node with the .pkg and see EACCES, run it again with sudo"
             # (sudo -E keeps CI's local-registry setting)
-            npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder 2>&1 | tee install.log || {
-              grep -q EACCES install.log && echo "EACCES: retrying with sudo, as the guide says" && sudo -E env PATH="$PATH" npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+            npm install -g @agent-receipts/magic-folder 2>&1 | tee install.log || {
+              grep -q EACCES install.log && echo "EACCES: retrying with sudo, as the guide says" && sudo -E env PATH="$PATH" npm install -g @agent-receipts/magic-folder
             }
           else
-            npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+            npm install -g @agent-receipts/magic-folder
           fi
           magic-folder --help | head -3
 
@@ -204,7 +203,7 @@ jobs:
 
       - name: 'Guide 3: install Magic Folder'
         run: |
-          npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+          npm install -g @agent-receipts/magic-folder
           if ($LASTEXITCODE) { exit 1 }
           magic-folder --help | Select-Object -First 3
 
@@ -304,7 +303,7 @@ jobs:
 
       - name: 'Guide 3: install Magic Folder'
         run: |
-          npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+          npm install -g @agent-receipts/magic-folder
           magic-folder --help | head -3
 
       - name: 'Guide 4: init, doctor, a job and its receipt'

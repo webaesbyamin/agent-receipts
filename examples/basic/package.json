@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/example-basic",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Basic receipt creation example",
   "scripts": {
