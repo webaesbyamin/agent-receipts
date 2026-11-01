@@ -27,6 +27,17 @@ describe('KeyManager', () => {
     expect(privKey).toMatch(/^[a-f0-9]{64}$/)
   })
 
+  it('processes that start together on a new data dir all end up with the same key', async () => {
+    const managers = Array.from({ length: 20 }, () => new KeyManager(tmpDir))
+    await Promise.all(managers.map((m) => m.init()))
+    const keys = new Set(managers.map((m) => m.getPublicKey()))
+    expect(keys.size).toBe(1)
+    const onDisk = (await readFile(join(tmpDir, 'keys', 'public.key'), 'utf-8')).trim()
+    expect(keys.has(onDisk)).toBe(true)
+    const { readdir } = await import('node:fs/promises')
+    expect((await readdir(join(tmpDir, 'keys'))).sort()).toEqual(['private.key', 'public.key'])
+  })
+
   it('persists keys to files', async () => {
     const km = new KeyManager(tmpDir)
     await km.init()

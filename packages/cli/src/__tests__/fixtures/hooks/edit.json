@@ -1,0 +1,12 @@
+{
+  "session_id": "{{session}}",
+  "transcript_path": "/home/user/.claude/projects/x/{{session}}.jsonl",
+  "cwd": "{{cwd}}",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Edit",
+  "tool_input": { "file_path": "{{cwd}}/src/app.ts", "old_string": "const a = 1", "new_string": "const a = 2", "replace_all": false },
+  "tool_response": { "filePath": "{{cwd}}/src/app.ts", "oldString": "const a = 1", "newString": "const a = 2" },
+  "tool_use_id": "toolu_01EDIT",
+  "duration_ms": 9
+}

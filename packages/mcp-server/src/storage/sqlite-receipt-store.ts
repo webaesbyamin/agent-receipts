@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import type { ActionReceipt } from '@agent-receipts/schema'
 import { hashReceipt } from '@agent-receipts/crypto'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
-import { openDatabase, type SqlDatabase } from './sqlite-driver.js'
+import { openDatabase, retryWhileLocked, type SqlDatabase } from './sqlite-driver.js'
 
 const SORTABLE_COLUMNS = new Set([
   'timestamp', 'completed_at', 'cost_usd',
@@ -25,57 +25,59 @@ export class SqliteReceiptStore {
     await mkdir(this.dataDir, { recursive: true })
 
     this.db = openDatabase(this.dbPath)
-    this.db.pragma('journal_mode = WAL')
-    this.db.pragma('foreign_keys = ON')
+    await retryWhileLocked(() => {
+      this.db.pragma('journal_mode = WAL')
+      this.db.pragma('foreign_keys = ON')
 
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS receipts (
-        receipt_id TEXT PRIMARY KEY,
-        chain_id TEXT NOT NULL,
-        parent_receipt_id TEXT,
-        receipt_type TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        org_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        status TEXT NOT NULL,
-        environment TEXT NOT NULL,
-        input_hash TEXT NOT NULL,
-        output_hash TEXT,
-        model TEXT,
-        tokens_in INTEGER,
-        tokens_out INTEGER,
-        cost_usd REAL,
-        latency_ms INTEGER,
-        confidence REAL,
-        timestamp TEXT NOT NULL,
-        completed_at TEXT,
-        expires_at TEXT,
-        tags TEXT,
-        data TEXT NOT NULL
-      );
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS receipts (
+          receipt_id TEXT PRIMARY KEY,
+          chain_id TEXT NOT NULL,
+          parent_receipt_id TEXT,
+          receipt_type TEXT NOT NULL,
+          agent_id TEXT NOT NULL,
+          org_id TEXT NOT NULL,
+          action TEXT NOT NULL,
+          status TEXT NOT NULL,
+          environment TEXT NOT NULL,
+          input_hash TEXT NOT NULL,
+          output_hash TEXT,
+          model TEXT,
+          tokens_in INTEGER,
+          tokens_out INTEGER,
+          cost_usd REAL,
+          latency_ms INTEGER,
+          confidence REAL,
+          timestamp TEXT NOT NULL,
+          completed_at TEXT,
+          expires_at TEXT,
+          tags TEXT,
+          data TEXT NOT NULL
+        );
 
-      CREATE INDEX IF NOT EXISTS idx_receipts_agent_id ON receipts(agent_id);
-      CREATE INDEX IF NOT EXISTS idx_receipts_chain_id ON receipts(chain_id);
-      CREATE INDEX IF NOT EXISTS idx_receipts_status ON receipts(status);
-      CREATE INDEX IF NOT EXISTS idx_receipts_action ON receipts(action);
-      CREATE INDEX IF NOT EXISTS idx_receipts_timestamp ON receipts(timestamp);
-      CREATE INDEX IF NOT EXISTS idx_receipts_environment ON receipts(environment);
-      CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
-      CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_agent_id ON receipts(agent_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_chain_id ON receipts(chain_id);
+        CREATE INDEX IF NOT EXISTS idx_receipts_status ON receipts(status);
+        CREATE INDEX IF NOT EXISTS idx_receipts_action ON receipts(action);
+        CREATE INDEX IF NOT EXISTS idx_receipts_timestamp ON receipts(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_receipts_environment ON receipts(environment);
+        CREATE INDEX IF NOT EXISTS idx_receipts_receipt_type ON receipts(receipt_type);
+        CREATE INDEX IF NOT EXISTS idx_receipts_expires_at ON receipts(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_receipts_parent_receipt_id ON receipts(parent_receipt_id);
 
-      -- Receipts removed by TTL cleanup leave their hash behind, so chains
-      -- that link to them still verify (as "expired"), while a receipt
-      -- deleted any other way shows up as a broken link.
-      CREATE TABLE IF NOT EXISTS receipt_tombstones (
-        receipt_hash TEXT PRIMARY KEY,
-        receipt_id TEXT NOT NULL,
-        chain_id TEXT NOT NULL,
-        expired_at TEXT NOT NULL,
-        deleted_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
-    `)
+        -- Receipts removed by TTL cleanup leave their hash behind, so chains
+        -- that link to them still verify (as "expired"), while a receipt
+        -- deleted any other way shows up as a broken link.
+        CREATE TABLE IF NOT EXISTS receipt_tombstones (
+          receipt_hash TEXT PRIMARY KEY,
+          receipt_id TEXT NOT NULL,
+          chain_id TEXT NOT NULL,
+          expired_at TEXT NOT NULL,
+          deleted_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_tombstones_chain_id ON receipt_tombstones(chain_id);
+      `)
+    })
 
     await this.migrateJsonFiles()
   }

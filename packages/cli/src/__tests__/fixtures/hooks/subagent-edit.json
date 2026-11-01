@@ -1,0 +1,12 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "PostToolUse",
+  "agent_id": "agent-123",
+  "agent_type": "Explore",
+  "tool_name": "Edit",
+  "tool_input": { "file_path": "{{cwd}}/src/app.ts", "old_string": "2", "new_string": "3" },
+  "tool_response": { "filePath": "{{cwd}}/src/app.ts" },
+  "tool_use_id": "toolu_01SUB",
+  "duration_ms": 7
+}

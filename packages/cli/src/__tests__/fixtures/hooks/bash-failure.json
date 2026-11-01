@@ -1,0 +1,11 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": { "command": "npm test", "description": "Run test suite" },
+  "tool_use_id": "toolu_01FAIL",
+  "error": "Exit code 1\nError: SECRET-ERROR Cannot find module 'express'",
+  "is_interrupt": false,
+  "duration_ms": 4187
+}

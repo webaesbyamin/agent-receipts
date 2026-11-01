@@ -196,6 +196,9 @@ importers:
       '@agent-receipts/mcp-server':
         specifier: workspace:*
         version: link:../mcp-server
+      '@agent-receipts/schema':
+        specifier: workspace:*
+        version: link:../schema
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

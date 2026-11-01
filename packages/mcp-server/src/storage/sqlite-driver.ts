@@ -44,6 +44,24 @@ export function assertSupportedNode(): void {
   process.exit(1)
 }
 
+/**
+ * Run `fn` again while SQLite says the database is locked, for up to `totalMs`.
+ * For setup on a brand-new database: switching it to WAL needs a lock that
+ * SQLite won't wait for, so processes that start together (Claude Code hooks)
+ * can otherwise fail with "database is locked".
+ */
+export async function retryWhileLocked<T>(fn: () => T, totalMs = 5000): Promise<T> {
+  const until = Date.now() + totalMs
+  for (;;) {
+    try {
+      return fn()
+    } catch (err) {
+      if (!/locked|busy/i.test(String((err as Error)?.message)) || Date.now() > until) throw err
+      await new Promise((r) => setTimeout(r, 5 + Math.random() * 20))
+    }
+  }
+}
+
 export function openDatabase(path: string): SqlDatabase {
   return new NodeSqliteDatabase(path)
 }

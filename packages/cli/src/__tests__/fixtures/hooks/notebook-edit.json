@@ -1,0 +1,10 @@
+{
+  "session_id": "{{session}}",
+  "cwd": "{{cwd}}",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "NotebookEdit",
+  "tool_input": { "notebook_path": "{{cwd}}/analysis.ipynb", "cell_id": "c1", "new_source": "print(42)", "cell_type": "code", "edit_mode": "replace" },
+  "tool_response": { "new_source": "print(42)", "cell_id": "c1", "edit_mode": "replace" },
+  "tool_use_id": "toolu_01NB",
+  "duration_ms": 20
+}

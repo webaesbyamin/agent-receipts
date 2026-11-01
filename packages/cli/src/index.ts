@@ -21,6 +21,7 @@ import {
 } from '@agent-receipts/mcp-server'
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyAnyReceipt, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
+import { hooksCommand } from './hooks/commands.js'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts
@@ -46,6 +47,14 @@ Commands:
   watch [options]                   Watch for new receipts in real-time
   prompts <client>                  Show setup guide (claude-code, cursor, system)
   memory <subcommand>               Memory module commands
+  hooks <subcommand>                Sign a receipt for every Claude Code action
+
+Hooks subcommands:
+  hooks install [--scope user|project|local] [--store-commands] [--yes]
+                                    Add the hooks to Claude Code's settings (shows the change first)
+  hooks uninstall [--scope user|project|local] [--yes]
+                                    Remove them again, leaving the rest of the file as it was
+  hooks status                      Where they're installed, and any problems logged
 
 Memory subcommands:
   memory context                            Get structured memory context summary
@@ -1094,6 +1103,9 @@ async function main() {
       break
     case 'prompts':
       cmdPrompts(args[1])
+      break
+    case 'hooks':
+      process.exitCode = await hooksCommand(args.slice(1))
       break
     default:
       console.error(`Unknown command: ${command}`)
