@@ -34,3 +34,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm turbo test --continue ${{ matrix.filter && format('--filter={0}', matrix.filter) || '' }}
+
+  site-browser:
+    # receipts.webaes.com in a real browser: links, copy buttons, tabs, the page stamp,
+    # the real-receipt demo, the waitlist (mocked), and the layout at 360-1920px
+    name: site / browser checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo build --filter=@agent-receipts/site...
+      - run: pnpm --filter @agent-receipts/site exec playwright install --with-deps chromium
+      - run: pnpm --filter @agent-receipts/site test:browser
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-browser-traces
+          path: apps/site/test-results
+          retention-days: 7

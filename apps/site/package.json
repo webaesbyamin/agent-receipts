@@ -8,6 +8,7 @@
     "dev": "node scripts/generate.mjs && next dev -p 3275",
     "build": "node scripts/build.mjs",
     "test": "node scripts/check-guide.mjs && node --test \"test/*.test.mjs\"",
+    "test:browser": "playwright test",
     "typecheck": "node scripts/generate.mjs && tsc --noEmit"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@agent-receipts/crypto": "workspace:*",
     "@agent-receipts/magic-folder": "workspace:*",
+    "@playwright/test": "1.63.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^20.14.0",
     "@types/react": "^19.2.0",

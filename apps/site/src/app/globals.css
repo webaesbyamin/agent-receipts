@@ -89,14 +89,18 @@ h2 { font-size: clamp(40px, 6vw, 96px); line-height: 0.9; letter-spacing: -0.01e
 .grid > * { min-width: 0; }
 .mnote { font: 400 13px/1.5 var(--mono); color: var(--dim-2); margin: 0 0 8px; }
 .mnote::before { content: '↑ ' / ''; color: var(--ink); }
-@media (max-width: 1023px) { .grid > :not(.mnote) + .mnote { margin-top: 24px; } }
-@media (min-width: 1024px) {
+/* Notes go in the margin only where the margin is wide enough for them: below
+   1280px a note can wrap past the next row's note, so they sit under their section */
+@media (max-width: 1279px) { .grid > :not(.mnote) + .mnote { margin-top: 24px; } }
+@media (min-width: 1280px) {
   .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 32px; }
   .grid > * { grid-column: 1 / 10; }
   .grid > .full { grid-column: 1 / -1; }
   /* A note takes no height of its own, so it never stretches the line it points at; it runs down past it */
   .grid > .mnote { grid-column: 10 / 13; grid-row: var(--row); align-self: start; height: 0; overflow: visible; margin: 0; padding-top: 0.5em; font-size: 14px; }
   .mnote::before { content: '← ' / ''; }
+}
+@media (min-width: 1024px) {
   .sec { padding-bottom: 96px; }
   .hero { padding: 40px 0 96px; }
 }
