@@ -331,6 +331,33 @@ describe('hooks install / uninstall / status', () => {
     }
   })
 
+  it('a hand-formatted file comes back byte for byte; a change made after install is kept', async () => {
+    const prev = process.env['AGENT_RECEIPTS_DATA_DIR']
+    process.env['AGENT_RECEIPTS_DATA_DIR'] = dataDir
+    const log = console.log
+    console.log = () => {}
+    try {
+      const path = join(cwd, '.claude', 'settings.json')
+      await mkdir(dirname(path), { recursive: true })
+      const original = '{\n  "permissions": {\n    "allow": ["Bash(ls *)", "Read"]\n  },\n  "model":"opus"\n}'
+      await writeFile(path, original)
+      await hooksCommand(['install', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      await hooksCommand(['uninstall', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      expect(await readFile(path, 'utf-8')).toBe(original)
+
+      await hooksCommand(['install', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      const changed = parseSettings(await readFile(path, 'utf-8'))
+      changed['model'] = 'sonnet'
+      await writeFile(path, JSON.stringify(changed, null, 2))
+      await hooksCommand(['uninstall', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      const after = parseSettings(await readFile(path, 'utf-8'))
+      expect(after).toEqual({ permissions: { allow: ['Bash(ls *)', 'Read'] }, model: 'sonnet' })
+    } finally {
+      console.log = log
+      process.env['AGENT_RECEIPTS_DATA_DIR'] = prev
+    }
+  })
+
   it('a settings file that install created is removed again by uninstall', async () => {
     const prev = process.env['AGENT_RECEIPTS_DATA_DIR']
     process.env['AGENT_RECEIPTS_DATA_DIR'] = dataDir

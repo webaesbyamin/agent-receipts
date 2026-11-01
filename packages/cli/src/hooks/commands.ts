@@ -3,7 +3,7 @@
  * agent-receipts hooks uninstall [--scope …] [--yes]
  * agent-receipts hooks status
  */
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync, rmdirSync, readdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync, rmdirSync, readdirSync, chmodSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
@@ -16,7 +16,14 @@ import {
 } from './settings.js'
 import { AGENT_ID } from './claude-code.js'
 
-interface State { installs: Array<{ scope: Scope; settings: string; createdFile: boolean }> }
+/**
+ * What install changed, so uninstall can undo it exactly. `original` is the
+ * settings file's text before install (null if install created it). It can
+ * hold whatever the user keeps in settings.json, so this file is private (0600),
+ * like the signing key next to it.
+ */
+interface Install { scope: Scope; settings: string; createdFile: boolean; original?: string | null }
+interface State { installs: Install[] }
 
 const readText = (p: string): string | null => { try { return readFileSync(p, 'utf-8') } catch { return null } }
 const sha256 = (p: string) => { try { return createHash('sha256').update(readFileSync(p)).digest('hex') } catch { return null } }
@@ -27,7 +34,15 @@ function readState(dataDir: string): State {
 }
 function writeState(dataDir: string, state: State) {
   mkdirSync(dirname(statePath(dataDir)), { recursive: true })
-  writeFileSync(statePath(dataDir), JSON.stringify(state, null, 2) + '\n')
+  writeFileSync(statePath(dataDir), JSON.stringify(state, null, 2) + '\n', { mode: 0o600 })
+  try { chmodSync(statePath(dataDir), 0o600) } catch { /* Windows */ }
+}
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b))
+function sortKeys(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(sortKeys)
+  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys((v as Record<string, unknown>)[k])]))
+  return v
 }
 
 /** The hook script this CLI ships (dist/), copied next to the data so an npx cache clean-up can't break it. */
@@ -101,7 +116,9 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
       writeFileSync(path, after)
       const state = readState(dataDir)
       const prior = state.installs.find((i) => i.settings === path)
-      state.installs = [...state.installs.filter((i) => i.settings !== path), { scope, settings: path, createdFile: prior?.createdFile ?? before === null }]
+      // Keep the first original: a reinstall over our own hooks isn't a new original
+      const original = prior ? prior.original : before
+      state.installs = [...state.installs.filter((i) => i.settings !== path), { scope, settings: path, createdFile: prior?.createdFile ?? before === null, original }]
       writeState(dataDir, state)
     }
     console.log(`Installed. Hook script: ${script}`)
@@ -120,8 +137,14 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
     const state = readState(dataDir)
     const record = state.installs.find((i) => i.settings === path)
     const removed = removeOurHooks(parseSettings(before))
-    // A settings file that install created, now back to empty, is removed
-    const after = record?.createdFile && Object.keys(removed).length === 0 ? null : formatSettings(removed, before)
+    let after: string | null
+    if (record && record.original !== undefined && sameJson(removed, parseSettings(record.original))) {
+      // Nothing else changed since install: put the original file back byte for byte (or remove the one install created)
+      after = record.original
+    } else {
+      // The file changed since install: remove only our hooks
+      after = formatSettings(removed, before)
+    }
     showChange(path, before, after)
     if (!(await confirm('Apply this change?', yes))) return 1
     if (after === null) unlinkSync(path)

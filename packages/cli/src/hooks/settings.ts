@@ -172,8 +172,9 @@ export function lineDiff(before: string, after: string): string {
   let i = 0, j = 0
   while (i < a.length || j < b.length) {
     if (i < a.length && j < b.length && a[i] === b[j]) { ops.push([' ', a[i]!]); i++; j++ }
-    else if (j < b.length && (i >= a.length || dp[i]![j + 1]! >= dp[i + 1]![j]!)) { ops.push(['+', b[j]!]); j++ }
-    else { ops.push(['-', a[i]!]); i++ }
+    // On a tie, show the removed line before the added one
+    else if (i < a.length && (j >= b.length || dp[i + 1]![j]! >= dp[i]![j + 1]!)) { ops.push(['-', a[i]!]); i++ }
+    else { ops.push(['+', b[j]!]); j++ }
   }
   const near = ops.map((_, k) => ops.slice(Math.max(0, k - 3), k + 4).some(([t]) => t !== ' '))
   const lines: string[] = []

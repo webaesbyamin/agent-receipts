@@ -249,7 +249,8 @@ export async function recordSessionEnd(input: HookInput, opts: HookOptions): Pro
       status: 'completed',
       input_hash: hashData({ session_id: input.session_id, reason: input.reason ?? null }),
       output_hash: hashData(summary),
-      started_at: first ?? now.toISOString(),
+      // The summary is the session's last entry; its duration says when the session's work began
+      started_at: now.toISOString(),
       tags: ['claude-code', 'session-summary'],
       metadata: { claude_code: { event: 'SessionEnd', summary } },
     })
