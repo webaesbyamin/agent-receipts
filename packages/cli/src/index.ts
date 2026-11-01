@@ -22,6 +22,7 @@ import {
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyAnyReceipt, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
 import { hooksCommand } from './hooks/commands.js'
+import { proxyCommand } from './proxy/proxy.js'
 
 const HELP = `
 agent-receipts — CLI for managing Agent Receipts
@@ -48,6 +49,8 @@ Commands:
   prompts <client>                  Show setup guide (claude-code, cursor, system)
   memory <subcommand>               Memory module commands
   hooks <subcommand>                Sign a receipt for every Claude Code action
+  proxy [--name <n>] -- <command>   Run an MCP server (stdio) behind a proxy that signs
+                                    a receipt for every tool call
 
 Hooks subcommands:
   hooks install [--scope user|project|local] [--store-commands] [--yes]
@@ -1107,6 +1110,9 @@ async function main() {
     case 'hooks':
       process.exitCode = await hooksCommand(args.slice(1))
       break
+    case 'proxy':
+      // stdout belongs to the MCP protocol here: nothing else may be printed
+      process.exit(await proxyCommand(args.slice(1)))
     default:
       console.error(`Unknown command: ${command}`)
       console.log(HELP)

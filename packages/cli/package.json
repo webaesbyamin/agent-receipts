@@ -41,9 +41,11 @@
   "dependencies": {
     "@agent-receipts/mcp-server": "workspace:*",
     "@agent-receipts/crypto": "workspace:*",
-    "@agent-receipts/schema": "workspace:*"
+    "@agent-receipts/schema": "workspace:*",
+    "cross-spawn": "^7.0.6"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^20.0.0",
     "tsup": "^8.2.0",
     "typescript": "^5.4.0",
