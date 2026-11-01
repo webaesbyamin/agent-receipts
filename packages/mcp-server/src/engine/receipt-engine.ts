@@ -291,42 +291,7 @@ export class ReceiptEngine {
    */
   async verifyChain(chainId: string): Promise<ChainVerification> {
     const receipts = await this.store.getChain(chainId)
-    const publicKey = this.keyManager.getPublicKey()
-    const problems: string[] = []
-    const expired = this.store.getTombstoneHashes(chainId)
-    const byHash = new Map<string, ActionReceipt>()
-    for (const r of receipts) byHash.set(hashReceipt(r as Record<string, unknown>), r)
-
-    const linkedFrom = new Map<string, string>()
-    let genesisCount = 0
-    const rows = receipts.map((r) => {
-      const sig = verifyAnyReceipt(r as Record<string, unknown>, publicKey)
-      if (!sig.valid) problems.push(`${r.receipt_id}: signature does not verify`)
-      let linkValid: boolean | null = null
-      if (r.sig_version === 2 && r.status !== 'pending') {
-        const prev = r.prev_receipt_hash ?? null
-        if (prev === null) {
-          genesisCount++
-          linkValid = true
-        } else {
-          linkValid = byHash.has(prev) || expired.has(prev)
-          if (!linkValid) problems.push(`${r.receipt_id}: links to a receipt that is missing or was changed`)
-          const other = linkedFrom.get(prev)
-          if (other) problems.push(`${r.receipt_id}: forks the chain (same parent as ${other})`)
-          linkedFrom.set(prev, r.receipt_id)
-        }
-      }
-      return {
-        receipt_id: r.receipt_id,
-        status: r.status,
-        signature_valid: sig.valid,
-        sig_version: sig.sig_version,
-        link_valid: linkValid,
-      }
-    })
-    if (genesisCount > 1) problems.push(`chain has ${genesisCount} starting receipts (expected 1)`)
-
-    return { chain_id: chainId, valid: problems.length === 0, receipts: rows, problems }
+    return verifyChainReceipts(chainId, receipts, this.keyManager.getPublicKey(), this.store.getTombstoneHashes(chainId))
   }
 
   async get(receiptId: string): Promise<ActionReceipt | null> {
@@ -366,4 +331,53 @@ export class ReceiptEngine {
   async generateInvoice(options: InvoiceOptions): Promise<Invoice> {
     return generateInvoice(this.store, this.keyManager, options)
   }
+}
+
+/**
+ * Check every signature in a chain and every prev_receipt_hash link.
+ * Detects edited receipts, removed receipts that something links to, and
+ * forks. It cannot detect removal of the newest receipt (no hash chain can
+ * without an outside anchor). `expired` holds the hashes of receipts that TTL
+ * cleanup removed (tombstones), which still count as valid link targets.
+ */
+export function verifyChainReceipts(
+  chainId: string,
+  receipts: ActionReceipt[],
+  publicKey: string,
+  expired: Set<string> = new Set(),
+): ChainVerification {
+  const problems: string[] = []
+  const byHash = new Map<string, ActionReceipt>()
+  for (const r of receipts) byHash.set(hashReceipt(r as Record<string, unknown>), r)
+
+  const linkedFrom = new Map<string, string>()
+  let genesisCount = 0
+  const rows = receipts.map((r) => {
+    const sig = verifyAnyReceipt(r as Record<string, unknown>, publicKey)
+    if (!sig.valid) problems.push(`${r.receipt_id}: signature does not verify`)
+    let linkValid: boolean | null = null
+    if (r.sig_version === 2 && r.status !== 'pending') {
+      const prev = r.prev_receipt_hash ?? null
+      if (prev === null) {
+        genesisCount++
+        linkValid = true
+      } else {
+        linkValid = byHash.has(prev) || expired.has(prev)
+        if (!linkValid) problems.push(`${r.receipt_id}: links to a receipt that is missing or was changed`)
+        const other = linkedFrom.get(prev)
+        if (other) problems.push(`${r.receipt_id}: forks the chain (same parent as ${other})`)
+        linkedFrom.set(prev, r.receipt_id)
+      }
+    }
+    return {
+      receipt_id: r.receipt_id,
+      status: r.status,
+      signature_valid: sig.valid,
+      sig_version: sig.sig_version,
+      link_valid: linkValid,
+    }
+  })
+  if (genesisCount > 1) problems.push(`chain has ${genesisCount} starting receipts (expected 1)`)
+
+  return { chain_id: chainId, valid: problems.length === 0, receipts: rows, problems }
 }

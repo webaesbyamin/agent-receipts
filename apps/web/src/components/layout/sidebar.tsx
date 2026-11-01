@@ -19,6 +19,7 @@ import {
   BookOpen,
   Brain,
   Sparkles,
+  TerminalSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/receipts', label: 'Receipts', icon: Receipt },
   { href: '/chains', label: 'Chains', icon: Link2 },
+  { href: '/sessions', label: 'Sessions', icon: TerminalSquare },
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/constraints', label: 'Constraints', icon: CheckSquare },
   { href: '/judgments', label: 'Judgments', icon: Scale },
