@@ -55,6 +55,34 @@ npx @agent-receipts/cli verify <receipt-id>
 | `export <id>` | Export a single receipt as JSON |
 | `export --all` | Export all receipts as compact JSON |
 | `export --all --pretty` | Export all receipts as formatted JSON |
+| `verify-chain <chain_id>` | Check every signature and link in a chain |
+| `hooks install` | Sign a receipt for every Claude Code action (see below) |
+| `hooks uninstall` | Remove the hooks, leaving settings.json as it was |
+| `hooks status` | Where the hooks are installed, and any problems logged |
+
+## Automatic receipts for Claude Code
+
+```bash
+npx @agent-receipts/cli hooks install                    # every project (~/.claude/settings.json)
+npx @agent-receipts/cli hooks install --scope project    # this repo (.claude/settings.json)
+npx @agent-receipts/cli hooks install --scope local      # this repo, just you (.claude/settings.local.json)
+```
+
+Install shows the change to settings.json and asks first (`--yes` skips the question). From the next Claude Code session on, every file edit, file write, notebook edit and shell command gets its own signed receipt, chained per session (`chain_id` is Claude Code's session ID), and the session ends with a summary receipt: how many actions, which files, how long.
+
+- **Hashes only.** A receipt holds the SHA-256 of the tool's input and output and of each changed file (named relative to the project), never a command, file contents or output. `--store-commands` adds a short label for shell commands, such as `git commit …`, that keeps the program and subcommand and drops everything else.
+- **Never in Claude Code's way.** The hooks run in the background (`async`), print nothing, and always exit 0. Problems go to `~/.agent-receipts/hooks.log`. Each receipt is signed in its own hook process the moment the tool finishes: about 90 ms on Node 22–26.
+- **Check a session:** `agent-receipts verify-chain <session id>`.
+- In `claude -p` runs, Claude Code stops background hooks that are still running when the run ends, so a tool call in the last moment of a run can go unrecorded.
+
+The same hooks come as a Claude Code plugin:
+
+```bash
+claude plugin marketplace add webaesbyamin/agent-receipts
+claude plugin install agent-receipts@agent-receipts
+```
+
+Requires Node.js 22.16 or later on your `PATH`.
 
 ## License
 
