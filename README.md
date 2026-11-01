@@ -15,9 +15,42 @@ claude mcp add agent-receipts -- npx @agent-receipts/mcp-server
 [![npm version](https://img.shields.io/npm/v/@agent-receipts/mcp-server.svg)](https://www.npmjs.com/package/@agent-receipts/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-[Get started](#get-started) · [Magic Folder](#magic-folder-receipts-for-people-who-dont-code) · [Memory](#memory) · [How it's different](#how-its-different)
+[Automatic receipts](#automatic-receipts) · [Get started](#get-started) · [Magic Folder](#magic-folder-receipts-for-people-who-dont-code) · [Memory](#memory) · [How it's different](#how-its-different)
 
 ---
+
+## Automatic receipts
+
+Get a signed receipt for everything your agent does, without changing how you work.
+
+**Claude Code: one command.** Every file edit, file write, notebook edit and shell command gets its own signed receipt, chained per session, and the session ends with a summary (actions, files touched, duration):
+
+```bash
+npx @agent-receipts/cli hooks install            # or --scope project / --scope local
+```
+
+It shows the change to Claude Code's `settings.json` and asks first; `hooks uninstall` takes it out again. Or install it as a Claude Code plugin:
+
+```bash
+claude plugin marketplace add webaesbyamin/agent-receipts
+claude plugin install agent-receipts@agent-receipts
+```
+
+**Any MCP server: the proxy.** Put it in front of a stdio MCP server and every tool call through it is signed (`mcp.<server>.<tool>`), while every message passes through unchanged:
+
+```bash
+claude mcp add fs-receipted -- npx -y @agent-receipts/cli proxy --name fs -- npx -y @modelcontextprotocol/server-filesystem ~/Documents
+```
+
+Receipts hold hashes only (inputs, outputs, and each changed file), never commands, file contents or results. See them in the dashboard's Sessions view (`npx @agent-receipts/dashboard`) or check one with `agent-receipts verify-chain <session id>`. Setup for Claude Desktop and Cursor: [CLI README](packages/cli#receipts-for-any-mcp-server-the-proxy).
+
+**What these receipts do and don't prove:**
+
+- **They prove what Claude Code (or the MCP client) reported, signed outside the agent.** The hook and the proxy run as separate processes, and each receipt is signed the moment the tool finishes, so the agent can't edit a receipt afterwards without breaking it. They don't prove the work was right, only what was done and that the record hasn't changed.
+- **`claude -p` can stop the last one.** In a scripted run, Claude Code stops background hooks still running when the run ends, so a tool call in the last moment of a run can go unrecorded.
+- **The computer's owner controls the keys.** Receipts are signed with keys in `~/.agent-receipts` on your machine. They show the record wasn't changed after signing; someone who controls that machine could sign a false one. To show others, publish your public key so they know which key to trust.
+- **stdio MCP servers only for now.** Remote (HTTP) MCP servers aren't covered yet.
+
 
 ## Proof
 
@@ -171,13 +204,14 @@ Most AI tooling answers one of two questions. Memory tools answer *"What does my
 
 ## What's Inside
 
+- **Automatic receipts** — Claude Code hooks (and a plugin) and an MCP proxy that sign every action as it happens
 - **24 MCP tools** — memory, actions, verification, constraints, judgments, invoicing, bundles
 - **21 SDK methods** — full TypeScript API
-- **15 CLI commands + 9 memory subcommands** — terminal-first
-- **18 dashboard pages** — receipts, memory graph, chains, agents, constraints, judgments, invoices
-- **651 tests** (634 across the packages, 17 for the website) — zero TypeScript `any` in package source
+- **17 CLI commands + 9 memory and 3 hooks subcommands** — terminal-first
+- **20 dashboard pages** — receipts, sessions, memory graph, chains, agents, constraints, judgments, invoices
+- **714 tests** (697 across the packages, 17 for the website) — zero TypeScript `any` in package source
 - **Ed25519 + SHA-256** — via `@noble/ed25519` (pure JS, no native code); receipt format v2 signs every field
-- **SQLite + FTS5** — local-first with full-text memory search
+- **SQLite + FTS5** — Node's built-in SQLite, local-first with full-text memory search; no native modules to install
 
 ## Links
 
@@ -315,13 +349,13 @@ Most AI tooling answers one of two questions. Memory tools answer *"What does my
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@agent-receipts/schema`](packages/schema) | 0.5.1 | Zod schemas and TypeScript types |
-| [`@agent-receipts/crypto`](packages/crypto) | 0.5.1 | Ed25519 signing, verification, key management |
-| [`@agent-receipts/mcp-server`](packages/mcp-server) | 0.5.2 | MCP server with 24 tools |
-| [`@agent-receipts/sdk`](packages/sdk) | 0.5.2 | TypeScript SDK (21 methods) |
-| [`@agent-receipts/cli`](packages/cli) | 0.5.2 | Command-line interface |
-| [`@agent-receipts/dashboard`](packages/dashboard) | 0.5.2 | Mission Control web UI, on your own computer |
-| [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.1.4 | Drop-a-file job runner with signed, self-checking receipts |
+| [`@agent-receipts/schema`](packages/schema) | 0.6.0 | Zod schemas and TypeScript types |
+| [`@agent-receipts/crypto`](packages/crypto) | 0.6.0 | Ed25519 signing, verification, key management |
+| [`@agent-receipts/mcp-server`](packages/mcp-server) | 0.6.0 | MCP server with 24 tools |
+| [`@agent-receipts/sdk`](packages/sdk) | 0.6.0 | TypeScript SDK (21 methods) |
+| [`@agent-receipts/cli`](packages/cli) | 0.6.0 | Command-line interface, Claude Code hooks, MCP proxy |
+| [`@agent-receipts/dashboard`](packages/dashboard) | 0.6.0 | Mission Control web UI, on your own computer |
+| [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.2.0 | Drop-a-file job runner with signed, self-checking receipts |
 
 All MIT, all on [npm](https://www.npmjs.com/org/agent-receipts). Node.js 22.16 or later, using its built-in SQLite. (Node 22, and 24 before 24.15, call built-in SQLite experimental; Agent Receipts hides that one notice.)
 
