@@ -5,6 +5,14 @@ import { existsSync, readdirSync } from 'fs'
 import path from 'path'
 import os from 'os'
 
+// node:sqlite with FTS5 needs Node 22.16 or later (keep in step with mcp-server's MIN_NODE)
+const [nodeMajor = 0, nodeMinor = 0] = process.versions.node.split('.').map(Number)
+if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 16)) {
+  console.error(`Agent Receipts needs Node.js 22.16.0 or later, and this is Node.js ${process.versions.node}. ` +
+    'Install Node.js 24 LTS from https://nodejs.org (or with your version manager, e.g. `nvm install 24`), then run this again.')
+  process.exit(1)
+}
+
 const PORT = process.env.PORT || '3274'
 const DEFAULT_DATA_DIR = process.env.AGENT_RECEIPTS_DATA_DIR ||
   path.join(os.homedir(), '.agent-receipts')

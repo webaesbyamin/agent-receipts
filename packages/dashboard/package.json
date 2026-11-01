@@ -34,10 +34,7 @@
     "prepublishOnly": "npm run build:standalone"
   },
   "engines": {
-    "node": ">=22 <25"
-  },
-  "dependencies": {
-    "better-sqlite3": "^12.8.0"
+    "node": ">=22.16 <27"
   },
   "devDependencies": {
     "tsup": "^8.2.0",

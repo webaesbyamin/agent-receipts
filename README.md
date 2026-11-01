@@ -38,11 +38,11 @@ This isn't logging. Logs are mutable text files the agent writes about itself. R
 npx @agent-receipts/mcp-server
 ```
 
-That's it. No API key. No account. No cloud. No monthly fee. No data leaving your machine. SQLite database in `~/.agent-receipts/`. Works offline. Needs Node.js 22 or 24.
+That's it. No API key. No account. No cloud. No monthly fee. No data leaving your machine. SQLite database in `~/.agent-receipts/`. Works offline. Needs Node.js 22.16 or later.
 
 ## Get Started
 
-Needs Node.js 22 or 24.
+Needs Node.js 22.16 or later.
 
 ### 1. Add the MCP Server
 
@@ -98,12 +98,12 @@ npx @agent-receipts/cli memory entities  # See what your agent remembers
 Drop a file into a folder named after a job ("Write product descriptions", "Fix typos"). An agent does the work, and the result comes back in `Done/` with your untouched original and a one-page `receipt.html` that anyone can check, plus an approval step for anything client-facing.
 
 ```bash
-npm install -g --allow-scripts=better-sqlite3 @agent-receipts/magic-folder
+npm install -g @agent-receipts/magic-folder
 magic-folder init ~/"Magic Folder"
 magic-folder run ~/"Magic Folder" --engine ollama --issuer "Your Studio"
 ```
 
-Needs Node 22 or 24 and, for free local jobs, [Ollama](https://ollama.com). Step-by-step for Mac, Windows and Linux: [receipts.webaes.com/install](https://receipts.webaes.com/install).
+Needs Node 22.16 or later and, for free local jobs, [Ollama](https://ollama.com). Step-by-step for Mac, Windows and Linux: [receipts.webaes.com/install](https://receipts.webaes.com/install).
 
 The runner writes the receipt, not the agent: it hashes the real files and records the model, time and cost itself (on Claude, the cost is the Agent SDK's own estimate and is marked as one; on Ollama it's $0). See [packages/magic-folder](packages/magic-folder) and the static [verify page](apps/verify).
 
@@ -323,7 +323,7 @@ Most AI tooling answers one of two questions. Memory tools answer *"What does my
 | [`@agent-receipts/dashboard`](packages/dashboard) | 0.5.2 | Mission Control web UI, on your own computer |
 | [`@agent-receipts/magic-folder`](packages/magic-folder) | 0.1.4 | Drop-a-file job runner with signed, self-checking receipts |
 
-All MIT, all on [npm](https://www.npmjs.com/org/agent-receipts). Node.js 22 or 24.
+All MIT, all on [npm](https://www.npmjs.com/org/agent-receipts). Node.js 22.16 or later, using its built-in SQLite. (Node 22, and 24 before 24.15, call built-in SQLite experimental; Agent Receipts hides that one notice.)
 
 ## Roadmap
 

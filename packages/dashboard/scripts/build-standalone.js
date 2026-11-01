@@ -127,10 +127,9 @@ function removeEnvFiles(dir) {
 removeEnvFiles(STANDALONE_DIR)
 
 // Step 5c: Never bundle platform-specific native packages built on this machine.
-// better-sqlite3 comes from the dashboard's own dependency (right binary per
-// user). sharp/@img are only for next/image, which the app doesn't use
-// (images.unoptimized in next.config.ts).
-const NATIVE = ['better-sqlite3', 'sharp', '@img']
+// sharp/@img are only for next/image, which the app doesn't use
+// (images.unoptimized in next.config.ts). SQLite is Node's built-in node:sqlite.
+const NATIVE = ['sharp', '@img']
 function removeNative(dir) {
   for (const name of readdirSync(dir)) {
     const full = path.join(dir, name)

@@ -1,11 +1,9 @@
-import Database from 'better-sqlite3'
-
 /**
- * The small slice of SQLite the stores use, so they can run on either
- * better-sqlite3 or Node's built-in node:sqlite. Pick one with
- * AGENT_RECEIPTS_SQLITE=node|better-sqlite3 (default: better-sqlite3).
+ * The small slice of SQLite the stores use, on Node's built-in node:sqlite.
+ * Node 22.16 is the first 22.x whose SQLite has FTS5 (memory search needs it).
  */
-export type SqliteDriver = 'better-sqlite3' | 'node:sqlite'
+
+export const MIN_NODE = '22.16.0'
 
 export interface SqlStatement {
   run(...params: unknown[]): { changes: number }
@@ -14,7 +12,6 @@ export interface SqlStatement {
 }
 
 export interface SqlDatabase {
-  readonly driver: SqliteDriver
   readonly open: boolean
   exec(sql: string): void
   prepare(sql: string): SqlStatement
@@ -29,16 +26,29 @@ export interface SqlDatabase {
   close(): void
 }
 
-export function resolveDriver(): SqliteDriver {
-  const v = process.env.AGENT_RECEIPTS_SQLITE
-  return v === 'node' || v === 'node:sqlite' ? 'node:sqlite' : 'better-sqlite3'
+/** Whether this Node can run Agent Receipts (node:sqlite with FTS5). */
+export function isSupportedNode(version = process.versions.node): boolean {
+  const [major = 0, minor = 0] = version.split('.').map(Number)
+  return major > 22 || (major === 22 && minor >= 16)
 }
 
-export function openDatabase(path: string, driver: SqliteDriver = resolveDriver()): SqlDatabase {
-  return driver === 'node:sqlite' ? new NodeSqliteDatabase(path) : new BetterSqliteDatabase(path)
+export function unsupportedNodeMessage(version = process.versions.node): string {
+  return `Agent Receipts needs Node.js ${MIN_NODE} or later, and this is Node.js ${version}. ` +
+    'Install Node.js 24 LTS from https://nodejs.org (or with your version manager, e.g. `nvm install 24`), then run this again.'
 }
 
-// better-sqlite3 binds undefined as NULL; node:sqlite refuses it. Normalize for both.
+/** Stop with a clear message on a Node that is too old. For CLI entry points. */
+export function assertSupportedNode(): void {
+  if (isSupportedNode()) return
+  console.error(unsupportedNodeMessage())
+  process.exit(1)
+}
+
+export function openDatabase(path: string): SqlDatabase {
+  return new NodeSqliteDatabase(path)
+}
+
+// node:sqlite refuses to bind undefined; bind it as NULL, as the stores expect.
 function bindable(params: unknown[]): unknown[] {
   return params.map((p) => {
     if (p === undefined) return null
@@ -51,35 +61,12 @@ function bindable(params: unknown[]): unknown[] {
   })
 }
 
-class BetterSqliteDatabase implements SqlDatabase {
-  readonly driver = 'better-sqlite3' as const
-  private db: Database.Database
-  constructor(path: string) { this.db = new Database(path) }
-  get open() { return this.db.open }
-  exec(sql: string) { this.db.exec(sql) }
-  prepare(sql: string): SqlStatement {
-    const s = this.db.prepare(sql)
-    return {
-      run: (...p) => ({ changes: s.run(...bindable(p)).changes }),
-      get: (...p) => s.get(...bindable(p)),
-      all: (...p) => s.all(...bindable(p)),
-    }
-  }
-  pragma(statement: string) { this.db.pragma(statement) }
-  transaction<T>(fn: () => T, mode: 'deferred' | 'immediate' = 'deferred'): T {
-    const tx = this.db.transaction(fn)
-    return mode === 'immediate' ? tx.immediate() : tx()
-  }
-  close() { if (this.db.open) this.db.close() }
-}
-
 interface NodeStatement {
   run(...p: unknown[]): { changes: number | bigint }
   get(...p: unknown[]): unknown
   all(...p: unknown[]): unknown[]
 }
 interface NodeDatabaseSync {
-  readonly isOpen?: boolean
   exec(sql: string): void
   prepare(sql: string): NodeStatement
   close(): void
@@ -95,6 +82,7 @@ let nodeSqlite: NodeSqliteModule | undefined
  */
 function loadNodeSqlite(): NodeSqliteModule {
   if (nodeSqlite) return nodeSqlite
+  if (!isSupportedNode()) throw new Error(unsupportedNodeMessage())
   const emit = process.emitWarning
   process.emitWarning = function (this: unknown, warning: string | Error, ...rest: unknown[]) {
     const first = rest[0] as string | { type?: string } | undefined
@@ -104,9 +92,7 @@ function loadNodeSqlite(): NodeSqliteModule {
     return (emit as (...a: unknown[]) => void).call(process, warning, ...rest)
   } as typeof process.emitWarning
   try {
-    const mod = (process as unknown as { getBuiltinModule?: (id: string) => unknown }).getBuiltinModule?.('node:sqlite')
-    if (!mod) throw new Error(`node:sqlite is not available in Node ${process.version}`)
-    nodeSqlite = mod as NodeSqliteModule
+    nodeSqlite = (process as unknown as { getBuiltinModule(id: string): unknown }).getBuiltinModule('node:sqlite') as NodeSqliteModule
   } finally {
     process.emitWarning = emit
   }
@@ -114,16 +100,15 @@ function loadNodeSqlite(): NodeSqliteModule {
 }
 
 class NodeSqliteDatabase implements SqlDatabase {
-  readonly driver = 'node:sqlite' as const
   private db: NodeDatabaseSync
-  private isOpenFlag = true
+  private isOpen = true
   private depth = 0
   constructor(path: string) {
     this.db = new (loadNodeSqlite().DatabaseSync)(path)
-    // better-sqlite3 waits up to 5 s for a lock held by another connection; match it.
+    // Wait up to 5 s for a lock held by another connection (e.g. a concurrent hook)
     this.db.exec('PRAGMA busy_timeout = 5000')
   }
-  get open() { return this.isOpenFlag }
+  get open() { return this.isOpen }
   exec(sql: string) { this.db.exec(sql) }
   prepare(sql: string): SqlStatement {
     const s = this.db.prepare(sql)
@@ -150,8 +135,8 @@ class NodeSqliteDatabase implements SqlDatabase {
     }
   }
   close() {
-    if (!this.isOpenFlag) return
+    if (!this.isOpen) return
     this.db.close()
-    this.isOpenFlag = false
+    this.isOpen = false
   }
 }

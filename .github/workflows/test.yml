@@ -17,7 +17,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: [22, 24]
+        node: [22, 24, 26]
+        include:
+          # The oldest supported Node: the first 22.x whose built-in SQLite has FTS5
+          - os: ubuntu-latest
+            node: 22.16.0
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,8 +32,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm turbo test --continue
-      # v0.6 spike: the same suite on Node's built-in SQLite instead of better-sqlite3
-      - name: test (node:sqlite)
-        run: pnpm turbo test --continue
-        env:
-          AGENT_RECEIPTS_SQLITE: node

@@ -23,7 +23,7 @@
     "inspect"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.16 <27"
   },
   "bin": {
     "agent-receipts": "./dist/index.js",

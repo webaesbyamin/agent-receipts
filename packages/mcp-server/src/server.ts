@@ -8,8 +8,10 @@ import { ReceiptEngine } from './engine/receipt-engine.js'
 import { MemoryEngine } from './engine/memory-engine.js'
 import { registerAllTools } from './tools/index.js'
 import { SYSTEM_PROMPT_TEXT } from './prompts/system-prompt.js'
+import { assertSupportedNode } from './storage/sqlite-driver.js'
 
 async function main(): Promise<void> {
+  assertSupportedNode()
   const dataDir = ConfigManager.getDefaultDataDir()
 
   // Initialize storage

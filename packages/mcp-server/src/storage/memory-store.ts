@@ -390,11 +390,13 @@ export class MemoryStore {
     let results: SearchResult[]
 
     try {
-      // Try FTS search first
+      // Try FTS search first. CROSS JOIN makes SQLite start from the FTS match:
+      // some SQLite builds otherwise scan every live observation and run the
+      // match once per row (about 250 ms at 2,000 rows instead of about 1 ms).
       const ftsRows = this.db.prepare(`
         SELECT o.*, observations_fts.rank
         FROM observations_fts
-        JOIN observations o ON o.rowid = observations_fts.rowid
+        CROSS JOIN observations o ON o.rowid = observations_fts.rowid
         WHERE observations_fts MATCH ?
           AND o.forgotten_at IS NULL
           AND (o.expires_at IS NULL OR o.expires_at > datetime('now'))

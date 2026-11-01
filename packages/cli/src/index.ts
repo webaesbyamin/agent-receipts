@@ -17,6 +17,7 @@ import {
   formatInvoiceMarkdown,
   formatInvoiceHTML,
   seedDemoData,
+  assertSupportedNode,
 } from '@agent-receipts/mcp-server'
 import type { InvoiceOptions } from '@agent-receipts/mcp-server'
 import { verifyAnyReceipt, getPublicKeyFromPrivate } from '@agent-receipts/crypto'
@@ -1025,6 +1026,7 @@ Call \`track_action\` to create a signed receipt for significant actions.
 }
 
 async function main() {
+  assertSupportedNode()
   const args = process.argv.slice(2)
   const command = args[0]
 

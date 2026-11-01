@@ -7,8 +7,7 @@
       "outputs": ["dist/**", ".next/**"]
     },
     "test": {
-      "dependsOn": ["build"],
-      "env": ["AGENT_RECEIPTS_SQLITE"]
+      "dependsOn": ["build"]
     },
     "lint": {
       "dependsOn": ["^build"]

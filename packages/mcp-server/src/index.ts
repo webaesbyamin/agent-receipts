@@ -7,8 +7,8 @@ export { ConfigManager } from './storage/config-manager.js'
 
 // Memory
 export { MemoryStore } from './storage/memory-store.js'
-export { openDatabase, resolveDriver } from './storage/sqlite-driver.js'
-export type { SqlDatabase, SqlStatement, SqliteDriver } from './storage/sqlite-driver.js'
+export { openDatabase, assertSupportedNode, isSupportedNode, unsupportedNodeMessage, MIN_NODE } from './storage/sqlite-driver.js'
+export type { SqlDatabase, SqlStatement } from './storage/sqlite-driver.js'
 export type { SearchResult, ProvenanceChain, MemoryRecallResult } from './storage/memory-store.js'
 
 // Engine

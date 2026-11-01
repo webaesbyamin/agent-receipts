@@ -22,7 +22,7 @@
     "claude"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.16 <27"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

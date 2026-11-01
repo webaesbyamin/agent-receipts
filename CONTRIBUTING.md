@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- Node.js 22 or 24
+- Node.js 22.16 or later (24 recommended)
 - pnpm 9+
 
 ### Setup
