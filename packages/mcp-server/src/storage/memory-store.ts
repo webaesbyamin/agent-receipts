@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3'
 import type {
   Entity,
   Observation,
@@ -9,6 +8,7 @@ import type {
   ConfidenceLevel,
 } from '@agent-receipts/schema'
 import type { PaginatedResult } from '../types.js'
+import type { SqlDatabase } from './sqlite-driver.js'
 
 export interface SearchResult {
   entity: Entity
@@ -38,7 +38,7 @@ const CONFIDENCE_ORDER: Record<string, number> = {
 }
 
 export class MemoryStore {
-  constructor(private db: Database.Database) {}
+  constructor(private db: SqlDatabase) {}
 
   init(): void {
     this.db.exec(`

@@ -28,3 +28,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm turbo test --continue
+      # v0.6 spike: the same suite on Node's built-in SQLite instead of better-sqlite3
+      - name: test (node:sqlite)
+        run: pnpm turbo test --continue
+        env:
+          AGENT_RECEIPTS_SQLITE: node

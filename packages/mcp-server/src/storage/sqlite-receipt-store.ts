@@ -1,10 +1,10 @@
 import { readdir, mkdir } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
 import type { ActionReceipt } from '@agent-receipts/schema'
 import { hashReceipt } from '@agent-receipts/crypto'
 import type { ReceiptFilter, PaginatedResult } from '../types.js'
+import { openDatabase, type SqlDatabase } from './sqlite-driver.js'
 
 const SORTABLE_COLUMNS = new Set([
   'timestamp', 'completed_at', 'cost_usd',
@@ -14,7 +14,7 @@ const SORTABLE_COLUMNS = new Set([
 export class SqliteReceiptStore {
   private dbPath: string
   private receiptsDir: string
-  private db!: Database.Database
+  private db!: SqlDatabase
 
   constructor(private dataDir: string) {
     this.dbPath = join(dataDir, 'receipts.db')
@@ -24,7 +24,7 @@ export class SqliteReceiptStore {
   async init(): Promise<void> {
     await mkdir(this.dataDir, { recursive: true })
 
-    this.db = new Database(this.dbPath)
+    this.db = openDatabase(this.dbPath)
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
 
@@ -104,7 +104,7 @@ export class SqliteReceiptStore {
     )`)
 
     let migrated = 0
-    const tx = this.db.transaction(() => {
+    this.db.transaction(() => {
       for (const file of jsonFiles) {
         try {
           // Synchronous read for transaction performance
@@ -117,7 +117,6 @@ export class SqliteReceiptStore {
         }
       }
     })
-    tx()
 
     if (migrated > 0) {
       console.log(`Migrated ${migrated} receipts from JSON files to SQLite`)
@@ -152,13 +151,13 @@ export class SqliteReceiptStore {
     }
   }
 
-  getDb(): Database.Database {
+  getDb(): SqlDatabase {
     return this.db
   }
 
   /** Close the database. On Windows its files can't be moved or deleted while it's open. */
   close(): void {
-    if (this.db?.open) this.db.close()
+    this.db?.close()
   }
 
   /**
@@ -250,15 +249,14 @@ export class SqliteReceiptStore {
    * the chain. `build` must be synchronous.
    */
   finalizeAtTip(chainId: string, build: (tip: ActionReceipt | null) => ActionReceipt): ActionReceipt {
-    const run = this.db.transaction(() => {
+    return this.db.transaction(() => {
       const row = this.db.prepare(
         `SELECT data FROM receipts WHERE chain_id = ? AND status != 'pending' ORDER BY rowid DESC LIMIT 1`
       ).get(chainId) as { data: string } | undefined
       const receipt = build(row ? (JSON.parse(row.data) as ActionReceipt) : null)
       this.saveSync(receipt)
       return receipt
-    })
-    return run.immediate()
+    }, 'immediate')
   }
 
   /**
@@ -310,7 +308,7 @@ export class SqliteReceiptStore {
         tombstone.run(hashReceipt(r as Record<string, unknown>), r.receipt_id, r.chain_id, row.expires_at, now)
         deleted += remove.run(r.receipt_id).changes
       }
-    })()
+    })
 
     return { deleted, total }
   }
