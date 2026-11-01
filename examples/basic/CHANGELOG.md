@@ -1,5 +1,12 @@
 # @agent-receipts/example-basic
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`33cff63`](https://github.com/webaesbyamin/agent-receipts/commit/33cff63f2d38ebd770a7c26a0cceadbd613b04b3)]:
+  - @agent-receipts/sdk@0.6.0
+
 ## 0.1.4
 
 ### Patch Changes

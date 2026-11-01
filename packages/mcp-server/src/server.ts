@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   // Create MCP server
   const server = new McpServer({
     name: 'agent-receipts',
-    version: '0.5.2',
+    version: '0.6.0',
   })
 
   // Register all tools (including memory)

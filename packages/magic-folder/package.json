@@ -1,6 +1,6 @@
 {
   "name": "@agent-receipts/magic-folder",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Drop a file in a folder, get the work back with a signed receipt anyone can verify",
   "license": "MIT",
   "author": "Amin Suleiman <hello@webaes.com> (https://webaes.com)",
