@@ -3,7 +3,7 @@
  * agent-receipts hooks uninstall [--scope …] [--yes]
  * agent-receipts hooks status
  */
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync, rmdirSync, readdirSync, chmodSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync, rmdirSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
@@ -12,21 +12,30 @@ import { createHash } from 'node:crypto'
 import { ConfigManager, SqliteReceiptStore, isSupportedNode, MIN_NODE } from '@agent-receipts/mcp-server'
 import {
   SCOPES, HOOK_SCRIPT, settingsPath, addOurHooks, removeOurHooks, installedEvents, installedScript,
-  parseSettings, formatSettings, lineDiff, type Scope,
+  parseSettings, formatSettings, lineDiff, ourHooks, type Scope,
 } from './settings.js'
 import { AGENT_ID } from './claude-code.js'
 
 /**
- * What install changed, so uninstall can undo it exactly. `original` is the
- * settings file's text before install (null if install created it). It can
- * hold whatever the user keeps in settings.json, so this file is private (0600),
- * like the signing key next to it.
+ * What install did, so uninstall can undo it: the hook entries it added and a
+ * hash of the settings file as install left it. Nothing else from the
+ * settings file is kept here (it can hold secrets in its env section).
  */
-interface Install { scope: Scope; settings: string; createdFile: boolean; original?: string | null }
+interface Install {
+  scope: Scope
+  settings: string
+  /** Install created the settings file (it didn't exist before). */
+  createdFile: boolean
+  /** The matcher groups install added, per event. */
+  added: Record<string, unknown[]>
+  /** SHA-256 of the settings file right after install. */
+  fileSha256: string
+}
 interface State { installs: Install[] }
 
 const readText = (p: string): string | null => { try { return readFileSync(p, 'utf-8') } catch { return null } }
 const sha256 = (p: string) => { try { return createHash('sha256').update(readFileSync(p)).digest('hex') } catch { return null } }
+const sha256Text = (t: string) => createHash('sha256').update(t).digest('hex')
 
 function statePath(dataDir: string) { return join(dataDir, 'hooks', 'installed.json') }
 function readState(dataDir: string): State {
@@ -34,15 +43,7 @@ function readState(dataDir: string): State {
 }
 function writeState(dataDir: string, state: State) {
   mkdirSync(dirname(statePath(dataDir)), { recursive: true })
-  writeFileSync(statePath(dataDir), JSON.stringify(state, null, 2) + '\n', { mode: 0o600 })
-  try { chmodSync(statePath(dataDir), 0o600) } catch { /* Windows */ }
-}
-
-const sameJson = (a: unknown, b: unknown) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b))
-function sortKeys(v: unknown): unknown {
-  if (Array.isArray(v)) return v.map(sortKeys)
-  if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys((v as Record<string, unknown>)[k])]))
-  return v
+  writeFileSync(statePath(dataDir), JSON.stringify(state, null, 2) + '\n')
 }
 
 /** The hook script this CLI ships (dist/), copied next to the data so an npx cache clean-up can't break it. */
@@ -100,7 +101,8 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
       return 1
     }
     const script = installedScriptPath(dataDir)
-    const after = formatSettings(addOurHooks(settings, { script, storeCommands: args.includes('--store-commands'), dataDir: customDataDir }), before)
+    const hookOpts = { script, storeCommands: args.includes('--store-commands'), dataDir: customDataDir }
+    const after = formatSettings(addOurHooks(settings, hookOpts), before)
     console.log(`Agent Receipts will sign a receipt for every file edit, file write, notebook edit and shell command Claude Code makes (${scope} scope), and a summary when the session ends.`)
     console.log(args.includes('--store-commands')
       ? 'Shell commands get a hash and a short redacted label (like "git commit"). No file contents or output are stored.'
@@ -116,9 +118,9 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
       writeFileSync(path, after)
       const state = readState(dataDir)
       const prior = state.installs.find((i) => i.settings === path)
-      // Keep the first original: a reinstall over our own hooks isn't a new original
-      const original = prior ? prior.original : before
-      state.installs = [...state.installs.filter((i) => i.settings !== path), { scope, settings: path, createdFile: prior?.createdFile ?? before === null, original }]
+      state.installs = [...state.installs.filter((i) => i.settings !== path), {
+        scope, settings: path, createdFile: prior?.createdFile ?? before === null, added: ourHooks(hookOpts), fileSha256: sha256Text(after),
+      }]
       writeState(dataDir, state)
     }
     console.log(`Installed. Hook script: ${script}`)
@@ -136,15 +138,11 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
     }
     const state = readState(dataDir)
     const record = state.installs.find((i) => i.settings === path)
-    const removed = removeOurHooks(parseSettings(before))
-    let after: string | null
-    if (record && record.original !== undefined && sameJson(removed, parseSettings(record.original))) {
-      // Nothing else changed since install: put the original file back byte for byte (or remove the one install created)
-      after = record.original
-    } else {
-      // The file changed since install: remove only our hooks
-      after = formatSettings(removed, before)
-    }
+    // Remove our hook entries and nothing else
+    const removed = removeOurHooks(parseSettings(before), record?.added)
+    // A settings file that install created and nobody else has touched since goes away again
+    const untouched = record?.createdFile && record.fileSha256 === sha256Text(before)
+    const after = untouched && Object.keys(removed).length === 0 ? null : formatSettings(removed, before)
     showChange(path, before, after)
     if (!(await confirm('Apply this change?', yes))) return 1
     if (after === null) unlinkSync(path)
@@ -173,6 +171,8 @@ export async function hooksCommand(args: string[], opts: { projectDir?: string; 
       if (script) {
         const hash = sha256(script)
         console.log(`         hook script ${hash === null ? 'MISSING' : hash === shipped ? 'up to date' : 'from another version (run hooks install again)'}: ${script}`)
+        const record = readState(dataDir).installs.find((i) => i.settings === path)
+        if (record && text !== null && record.fileSha256 !== sha256Text(text)) console.log('         settings file changed since install (fine; uninstall removes only our entries)')
       }
     }
     const node = spawnSync('node', ['-v'], { encoding: 'utf-8', shell: process.platform === 'win32' })

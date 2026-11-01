@@ -79,12 +79,19 @@ export function isOurs(h: Handler): boolean {
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 
+const canonical = (v: unknown): string => JSON.stringify(v, (_k, x) =>
+  x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, (x as Json)[k]])) : x)
+
 /**
- * Settings with our hooks removed. Groups and events that held only our hooks
- * go too, and so does an empty `hooks` object that only held ours, so an
- * install followed by an uninstall gives back the original settings.
+ * Settings with our hooks removed: handlers that run our script, plus any
+ * handler identical to one install recorded adding (`added`). Groups and
+ * events that held only our hooks go too, and so does an empty `hooks` object
+ * that only held ours. Everything else stays as it is.
  */
-export function removeOurHooks(settings: Json): Json {
+export function removeOurHooks(settings: Json, added?: Record<string, unknown[]>): Json {
+  const recorded = new Set(Object.values(added ?? {}).flatMap((groups) =>
+    (groups as MatcherGroup[]).flatMap((g) => (g?.hooks ?? []).map(canonical))))
+  const ours = (h: Handler) => isOurs(h) || recorded.has(canonical(h))
   const out = clone(settings)
   const hooks = out['hooks']
   if (!hooks || typeof hooks !== 'object' || Array.isArray(hooks)) return out
@@ -94,7 +101,7 @@ export function removeOurHooks(settings: Json): Json {
     const kept: MatcherGroup[] = []
     for (const g of groups as MatcherGroup[]) {
       if (!g || !Array.isArray(g.hooks)) { kept.push(g); continue }
-      const rest = g.hooks.filter((h) => !isOurs(h))
+      const rest = g.hooks.filter((h) => !ours(h))
       if (rest.length === g.hooks.length) { kept.push(g); continue }
       removedAny = true
       if (rest.length > 0) kept.push({ ...g, hooks: rest })

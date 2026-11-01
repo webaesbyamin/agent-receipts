@@ -309,7 +309,7 @@ describe('settings.json merge', () => {
 })
 
 describe('hooks install / uninstall / status', () => {
-  it('install at project scope, then uninstall: the original file comes back byte for byte', async () => {
+  it('install at project scope, then uninstall: our entries go, everything else stays', async () => {
     const prev = process.env['AGENT_RECEIPTS_DATA_DIR']
     process.env['AGENT_RECEIPTS_DATA_DIR'] = dataDir
     const log = console.log
@@ -326,15 +326,17 @@ describe('hooks install / uninstall / status', () => {
       expect(existsSync(join(dataDir, 'hooks', HOOK_SCRIPT))).toBe(true)
 
       expect(await hooksCommand(['uninstall', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })).toBe(0)
+      // Same 2-space layout here, so the file even comes back identical
       expect(await readFile(path, 'utf-8')).toBe(original)
       expect(existsSync(join(dataDir, 'hooks', HOOK_SCRIPT))).toBe(false)
+      expect(existsSync(join(dataDir, 'hooks', 'installed.json'))).toBe(false)
     } finally {
       console.log = log
       process.env['AGENT_RECEIPTS_DATA_DIR'] = prev
     }
   })
 
-  it('a hand-formatted file comes back byte for byte; a change made after install is kept', async () => {
+  it('a hand-formatted file comes back with the same settings; a change made after install is kept', async () => {
     const prev = process.env['AGENT_RECEIPTS_DATA_DIR']
     process.env['AGENT_RECEIPTS_DATA_DIR'] = dataDir
     const log = console.log
@@ -346,7 +348,7 @@ describe('hooks install / uninstall / status', () => {
       await writeFile(path, original)
       await hooksCommand(['install', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
       await hooksCommand(['uninstall', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
-      expect(await readFile(path, 'utf-8')).toBe(original)
+      expect(parseSettings(await readFile(path, 'utf-8'))).toEqual(parseSettings(original))
 
       await hooksCommand(['install', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
       const changed = parseSettings(await readFile(path, 'utf-8'))
@@ -359,6 +361,37 @@ describe('hooks install / uninstall / status', () => {
       console.log = log
       process.env['AGENT_RECEIPTS_DATA_DIR'] = prev
     }
+  })
+
+  it('installed.json keeps only our entries and a hash: never the settings file (secrets in env stay out)', async () => {
+    const prev = process.env['AGENT_RECEIPTS_DATA_DIR']
+    process.env['AGENT_RECEIPTS_DATA_DIR'] = dataDir
+    const log = console.log
+    console.log = () => {}
+    try {
+      const path = join(cwd, '.claude', 'settings.json')
+      await mkdir(dirname(path), { recursive: true })
+      await writeFile(path, JSON.stringify({ env: { ANTHROPIC_API_KEY: 'sk-ant-SECRET-1', DB_PASSWORD: 'hunter2-SECRET' }, model: 'opus' }, null, 2))
+      await hooksCommand(['install', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      const stateText = await readFile(join(dataDir, 'hooks', 'installed.json'), 'utf-8')
+      expect(stateText).not.toContain('SECRET')
+      expect(stateText).not.toContain('opus')
+      const state = JSON.parse(stateText)
+      expect(Object.keys(state.installs[0]).sort()).toEqual(['added', 'createdFile', 'fileSha256', 'scope', 'settings'])
+      expect(Object.keys(state.installs[0].added)).toEqual(['PostToolUse', 'PostToolUseFailure', 'SessionEnd'])
+      expect(state.installs[0].fileSha256).toBe(createHash('sha256').update(await readFile(path, 'utf-8')).digest('hex'))
+      await hooksCommand(['uninstall', '--scope', 'project', '--yes'], { projectDir: cwd, home: dir })
+      expect(parseSettings(await readFile(path, 'utf-8'))).toEqual({ env: { ANTHROPIC_API_KEY: 'sk-ant-SECRET-1', DB_PASSWORD: 'hunter2-SECRET' }, model: 'opus' })
+    } finally {
+      console.log = log
+      process.env['AGENT_RECEIPTS_DATA_DIR'] = prev
+    }
+  })
+
+  it('uninstall also removes an entry install recorded even if its script was renamed by hand', () => {
+    const recorded = { PostToolUse: [{ matcher: 'Edit', hooks: [{ type: 'command', command: 'node', args: ['/x/renamed.mjs', 'post-tool-use'], async: true }] }] }
+    const settings = { hooks: { PostToolUse: [...recorded.PostToolUse, { matcher: 'Bash', hooks: [{ type: 'command', command: '/home/u/lint.sh' }] }] } }
+    expect(removeOurHooks(settings, recorded)).toEqual({ hooks: { PostToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: '/home/u/lint.sh' }] }] } })
   })
 
   it('a settings file that install created is removed again by uninstall', async () => {
