@@ -8,9 +8,9 @@ import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { SqliteReceiptStore, KeyManager, ConfigManager, ReceiptEngine } from '@agent-receipts/mcp-server'
 import type { ActionReceipt } from '@agent-receipts/schema'
-import { runHook, commandLabel, SESSION_END_ACTION } from '../hooks/claude-code.js'
+import { runHook, commandLabel, parseHookArgs, SESSION_END_ACTION, INFLIGHT_WAIT_MS } from '../hooks/claude-code.js'
 import {
-  addOurHooks, removeOurHooks, installedEvents, parseSettings, formatSettings, lineDiff, ourHooks, isOurs, settingsPath, HOOK_SCRIPT, TOOL_MATCHER,
+  addOurHooks, removeOurHooks, installedEvents, parseSettings, formatSettings, lineDiff, ourHooks, isOurs, settingsPath, pluginHooksFile, HOOK_SCRIPT, TOOL_MATCHER,
 } from '../hooks/settings.js'
 import { hooksCommand } from '../hooks/commands.js'
 
@@ -393,6 +393,31 @@ function runBundle(args: string[], input: string): Promise<{ code: number | null
     p.stdin.end(input)
   })
 }
+
+describe('the Claude Code plugin (plugins/agent-receipts)', () => {
+  const plugin = join(here, '..', '..', '..', '..', 'plugins', 'agent-receipts')
+
+  it('runs the same hook as the CLI, and its hooks.json comes from the same code', async () => {
+    const hooksJson = JSON.parse(await readFile(join(plugin, 'hooks', 'hooks.json'), 'utf-8'))
+    expect(hooksJson).toEqual(pluginHooksFile())
+    const sum = async (p: string) => createHash('sha256').update(await readFile(p)).digest('hex')
+    expect(await sum(join(plugin, 'hooks', HOOK_SCRIPT))).toBe(await sum(HOOK_BUNDLE))
+  })
+
+  it('names itself consistently in its manifest and the marketplace', async () => {
+    const manifest = JSON.parse(await readFile(join(plugin, '.claude-plugin', 'plugin.json'), 'utf-8'))
+    const market = JSON.parse(await readFile(join(plugin, '..', '..', '.claude-plugin', 'marketplace.json'), 'utf-8'))
+    const entry = market.plugins.find((p: { name: string }) => p.name === manifest.name)
+    expect(entry.source).toBe('./plugins/agent-receipts')
+  })
+
+  it('waits at most 1 s at session end (plugin hook timeouts do not raise the 1.5 s budget)', () => {
+    const args = (pluginHooksFile() as { hooks: Record<string, Array<{ hooks: Array<{ args: string[]; timeout?: number }> }>> }).hooks['SessionEnd']![0]!.hooks[0]!
+    expect(args.timeout).toBeUndefined()
+    expect(parseHookArgs(args.args.slice(1)).inflightWaitMs).toBe(1000)
+    expect(parseHookArgs(['session-end']).inflightWaitMs).toBe(INFLIGHT_WAIT_MS)
+  })
+})
 
 describe('timing', () => {
   it('one tool call, signed and stored in its own process, takes well under a second', async () => {

@@ -18,8 +18,8 @@ import type { FileManifestEntry, ActionReceipt } from '@agent-receipts/schema'
 export const AGENT_ID = 'claude-code'
 export const SESSION_END_ACTION = 'claude_code.session_end'
 const MAX_FILES = 200
-/** How long the session summary waits for this session's in-flight tool hooks. */
-const INFLIGHT_WAIT_MS = 3000
+/** How long the session summary waits for this session's in-flight tool hooks (settings hooks get 10 s in all). */
+export const INFLIGHT_WAIT_MS = 3000
 /** An in-flight marker older than this belongs to a hook that died; ignore it. */
 const INFLIGHT_STALE_MS = 30_000
 
@@ -44,16 +44,20 @@ export interface HookInput {
 export interface HookOptions {
   dataDir: string
   storeCommands: boolean
+  /** Session summary only: how long to wait for tool hooks still signing. */
+  inflightWaitMs?: number
   /** For tests: the clock. */
   now?: () => Date
 }
 
-export function parseHookArgs(argv: string[]): { mode: string; storeCommands: boolean; dataDir: string } {
-  const at = argv.indexOf('--data-dir')
+export function parseHookArgs(argv: string[]): { mode: string; storeCommands: boolean; dataDir: string; inflightWaitMs: number } {
+  const value = (flag: string) => { const i = argv.indexOf(flag); return i >= 0 ? argv[i + 1] : undefined }
+  const wait = Number(value('--inflight-wait-ms'))
   return {
     mode: argv[0] ?? '',
     storeCommands: argv.includes('--store-commands'),
-    dataDir: at >= 0 && argv[at + 1] ? argv[at + 1]! : ConfigManager.getDefaultDataDir(),
+    dataDir: value('--data-dir') || ConfigManager.getDefaultDataDir(),
+    inflightWaitMs: Number.isFinite(wait) && wait >= 0 ? wait : INFLIGHT_WAIT_MS,
   }
 }
 
@@ -215,7 +219,7 @@ async function waitForInflight(dataDir: string, sessionId: string, deadline: num
 /** The session summary receipt (SessionEnd), linked into the session's chain. */
 export async function recordSessionEnd(input: HookInput, opts: HookOptions): Promise<ActionReceipt> {
   const now = (opts.now ?? (() => new Date()))()
-  await waitForInflight(opts.dataDir, input.session_id, Date.now() + INFLIGHT_WAIT_MS)
+  await waitForInflight(opts.dataDir, input.session_id, Date.now() + (opts.inflightWaitMs ?? INFLIGHT_WAIT_MS))
   const { store, engine } = await openEngine(opts.dataDir)
   try {
     const chain = (await store.getChain(input.session_id)).filter((r) => r.agent_id === AGENT_ID && r.action !== SESSION_END_ACTION)
@@ -259,7 +263,7 @@ export async function recordSessionEnd(input: HookInput, opts: HookOptions): Pro
  * <data dir>/hooks.log and the hook exits 0, so Claude Code is never blocked.
  */
 export async function runHook(argv: string[], stdin: string, now?: () => Date): Promise<void> {
-  const { mode, storeCommands, dataDir } = parseHookArgs(argv)
+  const { mode, storeCommands, dataDir, inflightWaitMs } = parseHookArgs(argv)
   let marker: string | null = null
   try {
     if (!isSupportedNode()) throw new Error(unsupportedNodeMessage())
@@ -271,7 +275,7 @@ export async function runHook(argv: string[], stdin: string, now?: () => Date): 
       throw new Error('hook input is not valid JSON')
     }
     if (!input || typeof input.session_id !== 'string' || !input.session_id) throw new Error('hook input has no session_id')
-    const opts = { dataDir, storeCommands, now }
+    const opts = { dataDir, storeCommands, inflightWaitMs, now }
     if (mode === 'post-tool-use') {
       try {
         mkdirSync(inflightDir(dataDir), { recursive: true })

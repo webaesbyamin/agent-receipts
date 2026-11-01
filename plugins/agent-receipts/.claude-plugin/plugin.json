@@ -1,0 +1,15 @@
+{
+  "name": "agent-receipts",
+  "displayName": "Agent Receipts",
+  "version": "0.6.0",
+  "description": "A signed receipt for every file edit, file write, notebook edit and shell command Claude Code makes, and a summary when the session ends. Hashes only: no commands, file contents or output.",
+  "author": {
+    "name": "Amin Suleiman",
+    "email": "hello@webaes.com",
+    "url": "https://webaes.com"
+  },
+  "homepage": "https://receipts.webaes.com",
+  "repository": "https://github.com/webaesbyamin/agent-receipts",
+  "license": "MIT",
+  "keywords": ["receipts", "audit", "signing", "hooks"]
+}

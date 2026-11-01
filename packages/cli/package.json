@@ -33,7 +33,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/sync-plugin.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

@@ -1,0 +1,15 @@
+{
+  "name": "agent-receipts",
+  "description": "Agent Receipts by Webaes",
+  "owner": {
+    "name": "Amin Suleiman",
+    "email": "hello@webaes.com"
+  },
+  "plugins": [
+    {
+      "name": "agent-receipts",
+      "source": "./plugins/agent-receipts",
+      "description": "A signed receipt for every file edit, file write, notebook edit and shell command Claude Code makes"
+    }
+  ]
+}

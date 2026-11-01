@@ -37,6 +37,11 @@ export interface HookOptions {
   storeCommands?: boolean
   /** Only when not the default ~/.agent-receipts. */
   dataDir?: string
+  /**
+   * For the Claude Code plugin: plugin hook timeouts don't raise SessionEnd's
+   * 1.5 s budget, so the summary waits at most 1 s for tool hooks still signing.
+   */
+  plugin?: boolean
 }
 
 /** The hooks Agent Receipts adds, in settings.json's shape. Exec form: `node <script> <mode>`. */
@@ -50,7 +55,19 @@ export function ourHooks(opts: HookOptions): Record<string, MatcherGroup[]> {
     PostToolUse: [tool()],
     // A failed tool call (e.g. a command that exits non-zero) fires this instead of PostToolUse
     PostToolUseFailure: [tool()],
-    SessionEnd: [{ hooks: [{ type: 'command', command: 'node', args: [opts.script, 'session-end', ...extra], timeout: SESSION_END_TIMEOUT }] }],
+    SessionEnd: [{
+      hooks: [opts.plugin
+        ? { type: 'command', command: 'node', args: [opts.script, 'session-end', '--inflight-wait-ms', '1000', ...extra] }
+        : { type: 'command', command: 'node', args: [opts.script, 'session-end', ...extra], timeout: SESSION_END_TIMEOUT }],
+    }],
+  }
+}
+
+/** The plugin's hooks/hooks.json (plugins/agent-receipts in this repo). */
+export function pluginHooksFile(): Record<string, unknown> {
+  return {
+    description: 'Agent Receipts: a signed receipt for every file edit, file write, notebook edit and shell command, and a session summary',
+    hooks: ourHooks({ script: '${CLAUDE_PLUGIN_ROOT}/hooks/' + HOOK_SCRIPT, plugin: true }),
   }
 }
 

@@ -24,4 +24,12 @@ export default defineConfig([
     // Some bundled dependencies still call require(); give the ESM bundle one
     banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
   },
+  {
+    // For scripts/sync-plugin.mjs: the plugin's hooks.json comes from the same code as `hooks install`
+    entry: { 'plugin-hooks': 'src/hooks/settings.ts' },
+    format: ['esm'],
+    outExtension: () => ({ js: '.mjs' }),
+    clean: false,
+    platform: 'node',
+  },
 ])
