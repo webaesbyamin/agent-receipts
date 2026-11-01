@@ -180,7 +180,8 @@ describe('receipts for tools/call', () => {
     expect(byLatency.map((r) => r.action)).toEqual(['mcp.fake.echo', 'mcp.fake.slow', 'mcp.fake.slow'])
     expect(byLatency[2]!.latency_ms).toBeGreaterThanOrEqual(380)
     expect(byLatency[1]!.latency_ms).toBeGreaterThanOrEqual(180)
-    expect(byLatency[1]!.latency_ms).toBeLessThan(byLatency[2]!.latency_ms!)
+    // Windows pipes can deliver both responses in one read, so the two can tie
+    expect(byLatency[1]!.latency_ms).toBeLessThanOrEqual(byLatency[2]!.latency_ms!)
     expect((await verify(rs[0]!.chain_id)).valid).toBe(true)
   })
 
