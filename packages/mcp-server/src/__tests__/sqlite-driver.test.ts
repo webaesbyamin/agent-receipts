@@ -86,6 +86,14 @@ describe('node:sqlite driver', () => {
     a.close(); b.close()
   })
 
+  it('receipt store: WAL with synchronous NORMAL, as 0.5.x had (FULL flushes every commit)', async () => {
+    const store = new SqliteReceiptStore(dir)
+    await store.init()
+    expect(store.getDb().prepare('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' })
+    expect(store.getDb().prepare('PRAGMA synchronous').get()).toEqual({ synchronous: 1 })
+    store.close()
+  })
+
   it('receipt store: append-only and tombstones', async () => {
     const store = new SqliteReceiptStore(dir)
     await store.init()

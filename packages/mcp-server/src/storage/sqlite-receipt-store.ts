@@ -27,6 +27,10 @@ export class SqliteReceiptStore {
     this.db = openDatabase(this.dbPath)
     await retryWhileLocked(() => {
       this.db.pragma('journal_mode = WAL')
+      // Node's SQLite defaults to FULL in WAL mode: a disk flush on every commit, which
+      // is very slow on Windows. NORMAL is what better-sqlite3 (0.5.x) built in: safe
+      // from corruption and from app crashes; only a power cut can drop the last commits.
+      this.db.pragma('synchronous = NORMAL')
       this.db.pragma('foreign_keys = ON')
 
       this.db.exec(`
