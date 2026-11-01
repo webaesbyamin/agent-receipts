@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtemp, rm, mkdir, writeFile, readFile } from 'node:fs/promises'
 import { readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -13,6 +13,9 @@ import {
   addOurHooks, removeOurHooks, installedEvents, parseSettings, formatSettings, lineDiff, ourHooks, isOurs, settingsPath, pluginHooksFile, HOOK_SCRIPT, TOOL_MATCHER,
 } from '../hooks/settings.js'
 import { hooksCommand } from '../hooks/commands.js'
+
+// Each hook signs and stores in a fresh process or store; Windows CI runners are slow at that
+vi.setConfig({ testTimeout: 60_000 })
 
 const here = dirname(fileURLToPath(import.meta.url))
 const FIXTURES = join(here, 'fixtures', 'hooks')
