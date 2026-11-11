@@ -4,7 +4,7 @@ import { OSES, TROUBLE, UNINSTALL } from '../../../content/install.mjs'
 import { Code } from '../../components/Code'
 import { GITHUB } from '../../components/Chrome'
 
-const TITLE = 'Install Magic Folder | Mac, Windows & Linux | Agent Receipts'
+const TITLE = 'Install Magic Folder | Mac, Windows & Linux | Webaes'
 const DESCRIPTION = 'Set up Magic Folder step by step: Node 24, free local AI with Ollama, and a folder that returns every job with a signed receipt. Mac, Windows and Linux.'
 
 export const metadata: Metadata = {
