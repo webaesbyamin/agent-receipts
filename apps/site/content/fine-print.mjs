@@ -7,7 +7,7 @@ export const FINE_PRINT = [
   ['Which computers?', 'Mac, Windows and Linux, with Node.js 22.16 or later. The <a href="/install" data-install-link>install guide</a> walks through each one.'],
   ['Can it record what my coding agent does, automatically?', 'Yes. <code>npx @agent-receipts/cli hooks install</code> adds hooks to Claude Code (or install the Claude Code plugin), and every file edit, file write, notebook edit and shell command gets a signed receipt, chained per session, with a summary when the session ends. For any other MCP server, <code>agent-receipts proxy</code> signs every tool call. Receipts hold hashes, never commands, file contents or results. They prove what Claude Code reported, signed outside the agent the moment each tool finished; not that the work was right. In a scripted <code>claude -p</code> run, the last tool call can go unrecorded, and remote (HTTP) MCP servers aren’t covered yet. Your keys stay on your computer, so you control them: publish your public key so others know which one to trust.'],
   ['Do I need a subscription?', 'No. With Ollama, a free program, jobs run on your own computer. Claude is optional, with your own Anthropic API key.'],
-  ['What does it cost?', 'Nothing. Magic Folder and Agent Receipts are free and open source under the MIT licence.'],
+  ['What does it cost?', 'Nothing. Magic Folder and Agent Receipts are free and open source under the MIT license.'],
   ['Where do I get help?', 'Open an issue on <a href="https://github.com/webaesbyamin/agent-receipts/issues">GitHub</a>.'],
   ['Who holds my waitlist email?', 'Buttondown, which sends the confirmation and, if it gets built, the one email saying so. See the <a href="https://webaes.com/privacy-policy">webaes.com privacy policy</a>.'],
 ]
