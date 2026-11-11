@@ -46,8 +46,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
-        mono: ['IBM Plex Mono', 'Fira Code', 'monospace'],
+        sans: ['var(--font-plex-sans)', 'IBM Plex Sans', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-plex-mono)', 'IBM Plex Mono', 'Fira Code', 'monospace'],
       },
     },
   },
