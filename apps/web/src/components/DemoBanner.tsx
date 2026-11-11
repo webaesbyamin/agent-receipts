@@ -17,6 +17,13 @@ export function DemoBanner() {
       >
         Run locally with your own agents &rarr;
       </a>
+      {' · '}
+      <a
+        href="https://www.webaes.com/privacy-policy"
+        className="underline text-amber-800 dark:text-amber-200"
+      >
+        Privacy Policy
+      </a>
     </div>
   )
 }
